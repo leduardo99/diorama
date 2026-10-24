@@ -315,7 +315,7 @@ function vfxKit(project: string, theme: KitTheme): KitFile[] {
  * origin, with \`ctx.t\` running 0 → 1 across it, and reads the materials of its roles, never the theme.
  *
  * \`spark\` is the kit's first effect, written by \`npm run new-kit\`: a flash that swells and fades out, its last frame
- * empty. Light is flat 2D drawn with \`@core/draw\` in \`object.custom\`; anything solid would be a volume part.
+ * empty. Light is drawn with \`@core/draw\` shapes in \`object.custom\`; anything solid would be a volume part.
  */
 
 import { Polygon, alpha } from '@core/draw';

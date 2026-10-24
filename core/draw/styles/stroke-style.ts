@@ -41,7 +41,7 @@ export class StrokeStyle<P extends object = {}> {
   }
 
   /**
-   * Renders a polyline or closed loop onto the 2D context using this style,
+   * Renders a polyline or closed loop onto the canvas context using this style,
    * with the renderer named in attrs.renderer ('ribbon' when unset).
    */
   render(ctx: CanvasRenderingContext2D, points: Point[], closed = false): void {

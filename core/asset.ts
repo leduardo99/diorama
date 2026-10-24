@@ -59,13 +59,13 @@ export interface Drawable {
 /** Edge mode of an asset: 'native' keeps smooth edges, 'none' makes them hard, 'dither' uses an ordered Bayer pattern. */
 export type AntialiasingMode = 'native' | 'none' | 'dither';
 
-/** Context passed to `render`: the canvas, its 2D context and the render context fields. */
+/** Context passed to `render`: the canvas, its drawing context and the render context fields. */
 export interface FullRenderContext extends AssetRenderContext {
   /** The root container element */
   root: HTMLElement;
   /** The automatically created and scaled Canvas element */
   canvas: HTMLCanvasElement;
-  /** The 2D rendering context ready for drawing */
+  /** The canvas's drawing context, ready for drawing */
   ctx: CanvasRenderingContext2D;
 }
 
@@ -281,7 +281,7 @@ export function createCanvas(
   });
 
   if (!ctx) {
-    throw new Error('Failed to acquire 2D canvas context');
+    throw new Error('Failed to acquire a canvas drawing context');
   }
 
   if (opts?.crisp) {

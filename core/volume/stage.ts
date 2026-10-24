@@ -131,7 +131,7 @@ export class StageObject {
     }
   }
 
-  /** Adds a custom drawing (a 2D flame, glow or smear) sorted inside the object at the depth of a world point. */
+  /** Adds a custom drawing (a flame, glow or smear drawn with `@core/draw`) sorted inside the object at the depth of a world point. */
   custom(at: Vec3, draw: (ctx: CanvasRenderingContext2D, cam: Camera) => void, options: Omit<StageOptions, 'layer'> = {}): this {
     const cam = this.camera;
     if (this.hiding) return this;

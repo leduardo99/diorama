@@ -1,7 +1,7 @@
 /**
  * @core/draw - Base Shape & CompoundShape classes
  *
- * Closed 2D geometry with chainable CSG booleans, in-place transforms, immutable deformations,
+ * Closed geometry with chainable CSG booleans, in-place transforms, immutable deformations,
  * anchors and unified drawing.
  *
  * Mutation contract:

@@ -115,7 +115,7 @@ export function runeShape(): Shape {
 /** Style of a glowing mark (a rune) laid on stone or timber: the glow role's saturated base and a small halo. */
 export const soulMark = (glow: VolumeStyle) => ({ fill: glow.ramp.base, shadow: { color: alpha(glow.ramp.base, 0.9), x: 0, y: 0, blur: 3.5 } });
 
-/** A glowing flame or lantern core: the glow role's saturated base with a pale core and a halo, drawn flat (a sprite-like 2D effect). */
+/** A glowing flame or lantern core: the glow role's saturated base with a pale core and a halo, drawn as a shape, not a volume. */
 export function glowFlame(c: CanvasRenderingContext2D, glow: VolumeStyle, at: Point, size: number, strength = 0.9): void {
   const r = glow.ramp;
   const flame = Polygon.circle(size, { cx: at.x, cy: at.y, segments: 20 }).union(Polygon.triangle(size * 1.7, size * 2.6, { cx: at.x, cy: at.y - size * 1.9 })).roundCorners(size * 0.4);

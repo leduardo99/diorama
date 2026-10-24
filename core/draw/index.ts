@@ -1,5 +1,5 @@
 /**
- * @core/draw - flat 2D drawing for Diorama.
+ * @core/draw - the drawing layer of Diorama.
  *
  * Shapes, paths, booleans, deformations, fill and stroke styles, procedural textures and color helpers.
  * `@core/volume` projects every part into these shapes; effects and the HUD draw with them directly.

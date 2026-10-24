@@ -1,14 +1,14 @@
 /**
- * @core/draw - 2D Polygon Inset / Outset Offset Engine
+ * @core/draw - Polygon Inset / Outset Offset Engine
  * 
- * Computes uniform 2D parallel curve offsets (inset for d < 0, outset for d > 0)
+ * Computes uniform parallel curve offsets (inset for d < 0, outset for d > 0)
  * using edge normal displacement and miter intersection with bevel clamping.
  */
 
 import type { OffsetOptions, Point } from '../types.js';
 
 /**
- * Calculates the signed area of a 2D polygon using the Shoelace formula.
+ * Calculates the signed area of a polygon using the Shoelace formula.
  * In screen coordinates (Y down):
  * - area > 0: Clockwise (CW)
  * - area < 0: Counter-Clockwise (CCW)

@@ -5,7 +5,7 @@
  * What a prop does through these helpers:
  * - the contact shadow and the pool of light on the floor go into `ctx.ground`, which the engine draws before
  *   the parts and their contour, so they lie under every part from every facing and never cross the ink line;
- * - small 2D things that belong to the prop (a flame, a glow, a wisp) are `object.custom` drawings
+ * - small drawn things that belong to the prop (a flame, a glow, a wisp) are `object.custom` drawings
  *   sorted at a world point, with `on` when they must lie over their host from every side;
  * - bones, candles and the skull are built here once, so the bone pile, the coffin and the candle
  *   cluster share one hand.

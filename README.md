@@ -15,7 +15,7 @@ Everything is deterministic: the same source exports the same pixels. Sheets are
 - **Props and scenery** (`@core/volume`). Objects built from solids, round volumes, tubes and decals, projected through one 3/4 camera and rendered in 1, 4 or 8 facings. Scenery kits on the game's own grid: floors with transitions, walls and fences that connect, props, decals, and scenes saved as data. Scenery is alive: pieces rest in states and play clips between them (doors, chests, levers, breakables, flames), and the sheets carry the navigation a game needs.
 - **Characters and gear** (`@core/rig`). Skeletons written as data (humanoid, quadruped, spider, bird, serpent, or your own), gaits with planted feet and an exported ground speed, clips with events, sockets and root motion, exported in 8 facings with a manifest. Armor, weapons and garments are reusable parts that dress characters as outfits.
 - **Effects, item icons and the HUD.** Visual effects cued on character events, items and inventory icons with rarity tiers, and interface pieces: nine-slice panels and buttons, bars, bitmap fonts and cursors.
-- **A drawing layer** (`@core/draw`). Flat 2D geometry, paths, styles and procedural textures under all of the above.
+- **A drawing layer** (`@core/draw`). Geometry, paths, styles and procedural textures: what volumes, effects and the HUD are drawn with.
 - **A viewer.** A local web app to browse every export, play characters and scenes, dress characters and paint scenes.
 - **Skills and guides for coding agents**, so an agent can produce assets that clear a quality floor and check its own work.
 
@@ -32,7 +32,7 @@ npm run check -- soulkeeper
 npm run example
 ```
 
-`npm run check -- soulkeeper` type checks the sample, checks its layout and that it is deterministic. `npm run example` exports Soulkeeper, the sample game (`examples/soulkeeper`, 165 sheets, about five minutes). Exports are never versioned, so a fresh clone has none until you run it; after it the viewer has something to show and the skills have a finished project to read.
+`npm run check -- soulkeeper` type checks the sample, checks its layout and that it is deterministic. `npm run example` exports Soulkeeper, the sample game (`examples/soulkeeper`, 163 sheets, about five minutes). Exports are never versioned, so a fresh clone has none until you run it; after it the viewer has something to show and the skills have a finished project to read.
 
 To open the viewer: on Windows, run `dev.bat`; on macOS and Linux, run `sh dev.sh`. Any system can run `npm run view` and then open `http://localhost:5173`.
 
@@ -132,7 +132,7 @@ npm run view
 
 Your projects live in `projects/<project>/`, laid out as above. Create one with `npm run new-project -- <project>`; it starts with `src/theme.ts` (the palette, the camera and the materials, to make your own), an empty `sheets/` and a `.gitignore` for `review/`.
 
-Soulkeeper, the sample game (`examples/soulkeeper`), shows the tool at work in one genre: a small dark-fantasy JRPG set in a necropolis, whose playable slice (a crypt and its battle) comes with the game packages. For now it is its art, 165 sheets. It has five characters (a guard, a captain, the necromancer Malvek, a wolf and a spider) with a gear kit of 28 parts, a scenery kit with floors, walls, fences, doors, a chest, a lever and breakable urns, four scenes, ten effects, 31 item icons and 11 HUD pieces. Beside them, `characters/necromancer` is a flat 2D illustration of Malvek (a portrait and an idle loop drawn with `@core/draw` alone), not a rig character. It is the worked example the skills point to; read its `src/` and `sheets/`, and run `npm run example` to export it.
+Soulkeeper, the sample game (`examples/soulkeeper`), shows the tool at work in one genre: a small dark-fantasy JRPG set in a necropolis, whose playable slice (a crypt and its battle) comes with the game packages. For now it is its art, 163 sheets. It has five characters (a guard, a captain, the necromancer Malvek, a wolf and a spider) with a gear kit of 28 parts, a scenery kit with floors, walls, fences, doors, a chest, a lever and breakable urns, four scenes, ten effects, 31 item icons and 11 HUD pieces. It is the worked example the skills point to; read its `src/` and `sheets/`, and run `npm run example` to export it.
 
 ## Skills and documentation for agents
 
@@ -158,6 +158,6 @@ Diorama is released under the [MIT License](LICENSE). Third-party components and
 
 ## Acknowledgements
 
-**Special thanks to [MrMagma](https://www.youtube.com/channel/UCNYXxX72LuCUCpuSz_R42zg)**, the creator of NoctAssetForge. Diorama grew out of his tool: it started as an extension of NoctAssetForge, and parts of its code (the 2D drawing layer, the asset and export pipeline, the CLI) come from it, used and relicensed here with his permission. Thank you for building it and for letting it become an open-source project.
+**Special thanks to [MrMagma](https://www.youtube.com/channel/UCNYXxX72LuCUCpuSz_R42zg)**, the creator of NoctAssetForge. Diorama grew out of his tool: it started as an extension of NoctAssetForge, and parts of its code (the drawing layer, the asset and export pipeline, the CLI) come from it, used and relicensed here with his permission. Thank you for building it and for letting it become an open-source project.
 
 Diorama is developed with [Claude Code](https://claude.com/claude-code): most of its code, guides and sample art were written by Claude (Anthropic) working with the maintainer, and commits carry a `Co-Authored-By` line saying so. The banner above is a scene, characters and effects exported from the sample project.

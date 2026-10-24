@@ -397,7 +397,7 @@ export const reliquary: ScenePiece<Record<string, never>> = ctx => {
     chestObj.add(under, { fill: mixTone(lining, RAMPS.sash.dark, 0.35), stroke: hairline(alpha(iron.ramp.lit, 0.45), 0.6) }, { on: lidSolid });
   }
 
-  // A bone candle on the lid, burning with soul fire (a round volume plus a 2D flame sorted at its wick): it rides the lid and goes out as the chest opens.
+  // A bone candle on the lid, burning with soul fire (a round volume plus a drawn flame sorted at its wick): it rides the lid and goes out as the chest opens.
   const candle = new Frame3(onLid(-1, WIDTH / 2 - 9, LID_RISE - 0.6), lid.forward, lid.right, lid.up);
   const candleBody = Round.cylinder(candle, 1.9, 6, 1.7);
   // On the lid's top while it lies on the chest; once the lid stands up the candle is on the side away from the camera or towards it, and depth decides.

@@ -90,7 +90,7 @@ function createRng(seed?: string | number): Rng
 
 ### `createNoise2D`
 
-Creates a 2D simplex noise function with optional seed.
+Creates a simplex noise function of x and y, with an optional seed.
 Returns values roughly in range [-1, 1].
 
 ```ts
@@ -125,7 +125,7 @@ function packGrid<T extends RectItem>(items: T[], options?: GridPackOptions): Pa
 
 ### `packCompact`
 
-Compact Packing (Growing 2D Bin Packing):
+Compact Packing (growing rectangle bin packing):
 Packs rectangles as tightly as possible without overlap.
 Emergent resolution expanding horizontally or vertically to maintain a balanced aspect ratio.
 
@@ -286,7 +286,7 @@ type AntialiasingMode = "native" | "none" | "dither"
 
 ### `FullRenderContext`
 
-Context passed to `render`: the canvas, its 2D context and the render context fields.
+Context passed to `render`: the canvas, its drawing context and the render context fields.
 
 ```ts
 interface FullRenderContext {
@@ -294,7 +294,7 @@ interface FullRenderContext {
   root: HTMLElement;
   /** The automatically created and scaled Canvas element */
   canvas: HTMLCanvasElement;
-  /** The 2D rendering context ready for drawing */
+  /** The canvas's drawing context, ready for drawing */
   ctx: CanvasRenderingContext2D;
   /** Logical width of one frame. The exported image is `width × scale` (times `frames` across, for a strip). */
   width: number;
@@ -466,9 +466,9 @@ type NoiseFunction2D = (x: number, y: number) => number
 
 Diorama - Sheet & Atlas Packing Algorithms
 
-Provides deterministic 2D layout algorithms for group exports:
+Provides deterministic layout algorithms for group exports:
 1. packGrid: Uniform cell grid with emergent dimensions (increments row first, then col).
-2. packCompact: 2D rectangle bin-packing for minimal area without overlaps.
+2. packCompact: rectangle bin-packing for minimal area without overlaps.
 
 ```ts
 interface RectItem {

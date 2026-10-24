@@ -2,7 +2,7 @@
 
 How to use each module of the engine, and when. A guide explains the choices the engine cannot make for you; the exact signatures are in the generated [API reference](../api/), and the layout of a project is in [ARCHITECTURE.md](../ARCHITECTURE.md). The skills in `.agents/skills/` read these guides for you: start from [`diorama`](../../.agents/skills/diorama/SKILL.md).
 
-## `@core/draw`: flat 2D drawing
+## `@core/draw`: the drawing layer
 
 [`core/draw/README.md`](../../core/draw/README.md) stays with its module. Geometry, paths, styles and procedural textures; volumes, effects and the HUD draw with them. Reference: [geometry](../api/draw-geometry.md), [paths](../api/draw-paths.md), [styles](../api/draw-styles.md), [textures](../api/draw-textures.md).
 

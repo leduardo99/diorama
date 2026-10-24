@@ -1,6 +1,6 @@
 /**
  * Helpers shared by the effects of the project (`projectiles.ts`, `impacts.ts`, `ground.ts`,
- * `bursts.ts`). Effects are light and colour, so they are 2D drawings made through
+ * `bursts.ts`). Effects are light and colour, so they are drawings made through
  * `object.custom` / `ground.custom` at the effect's origin (the kit's flames are drawn the same
  * way): this file holds the small tools those drawings share.
  *

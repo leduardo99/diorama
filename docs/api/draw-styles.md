@@ -50,7 +50,7 @@ new StrokeStyle<P extends object = {}>(attrs?: StrokeOptions & P): StrokeStyle<P
 - `.with<P2 extends object = P>(overrides: Partial<StrokeOptions & P & P2>): StrokeStyle<P & P2>`
   Derives a new StrokeStyle with specific attribute overrides. Keys that are not StrokeOptions keys are kept and merged too.
 - `.render(ctx: CanvasRenderingContext2D, points: Point[], closed?: boolean): void`
-  Renders a polyline or closed loop onto the 2D context using this style, with the renderer named in attrs.renderer ('ribbon' when unset).
+  Renders a polyline or closed loop onto the canvas context using this style, with the renderer named in attrs.renderer ('ribbon' when unset).
 
 ---
 
@@ -207,7 +207,7 @@ interface ShapeStyleOptions {
   stroke?: StrokeStyle<{}> | StrokeOptions;
   /** Outline alignment relative to perimeter */
   strokePosition?: StrokePosition;
-  /** 2D Drop or soft diffused shadow */
+  /** A drop or soft diffused shadow */
   shadow?: ShadowOptions;
   /** Safe clipping callback for internal illustrations/textures */
   inside?: InsideCallback;

@@ -294,7 +294,7 @@ export class Solid implements Placed {
   }
 
   /**
-   * Extrudes a 2D profile into a solid. The profile is drawn in the frame's ground plane
+   * Extrudes a profile into a solid. The profile is drawn in the frame's ground plane
    * (x = forward, y = side to the right) and rises `height` along the frame's up axis.
    * Use a frame turned on its side (`Frame3`) to extrude along other axes.
    */
@@ -637,7 +637,7 @@ export class Blob implements Placed {
 }
 
 /**
- * A flat 2D `@core/draw` shape laid on a surface (emblem, keyhole, rune, plank seam, window): the
+ * A `@core/draw` shape laid on a surface (emblem, keyhole, rune, plank seam, window): the
  * shape's x runs along `u` and its y along `v` from `origin`. Hidden when the surface
  * faces away from the camera. Styled with a plain `ShapeStyle`.
  *

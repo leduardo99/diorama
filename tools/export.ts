@@ -197,7 +197,7 @@ ${pc.bold('Frames and directions:')}
 
 ${pc.bold('Options:')}
   --grid               Export group into an emergent uniform grid (maxW x maxH cells, grows row first)
-  --compact            Export group packed compactly without overlap (emergent 2D bin packing)
+  --compact            Export group packed compactly without overlap (emergent rectangle bin packing)
   --gap=<px>           Minimum pixel spacing between assets (default: 0)
   --cols=<num>         Manual column count for grid (e.g. --cols=4 for 4-column walk animation strip)
   --sheet-name=<name>  Custom name for sheet file (default: <folder>-grid.png or <folder>-compact.png)

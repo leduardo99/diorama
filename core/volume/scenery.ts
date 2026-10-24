@@ -791,7 +791,7 @@ function inSceneFloor(c: CanvasRenderingContext2D, scene: SceneData, catalog: Sc
 }
 
 /**
- * Draws a scene into a 2D context with the catalog's pieces, the way a game lays out the sheets
+ * Draws a scene into a canvas context with the catalog's pieces, the way a game lays out the sheets
  * (see `layoutScene`): floors first, lowest priority first, each tile clipped to itself and all
  * to the scene's cells; then decals; then walls, fences and props by where they stand. `origin` is
  * the screen position of cell (0, 0)'s centre. For an editor that redraws often, use

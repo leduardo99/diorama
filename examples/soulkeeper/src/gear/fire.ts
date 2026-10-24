@@ -1,6 +1,6 @@
 /**
  * Soul fire, drawn flat: the teardrop flame every fire part of the kit paints (`fireCrown`,
- * `palmFlame`, the lantern's soul). Flames are 2D shapes that always rise up the screen, so they
+ * `palmFlame`, the lantern's soul). Flames are drawn shapes that always rise up the screen, so they
  * are drawn through `object.custom` at a projected point, never as volumes.
  *
  * Colors come from the `glow` role's ramp, so another outfit burns in another color: the saturated

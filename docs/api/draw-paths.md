@@ -304,7 +304,7 @@ interface WobbleOptions {
   steps?: number;
   /** Deterministic PRNG seed */
   seed?: number;
-  /** Personality style of the wobble: - 'smooth' (default): continuous organic curve (Simplex Noise 2D) - 'chiseled': faceted straight segments (chiseled stone, chipped wood, low-poly) - 'stepped': orthogonal/stepped cuts */
+  /** Personality style of the wobble: - 'smooth' (default): continuous organic curve (simplex noise) - 'chiseled': faceted straight segments (chiseled stone, chipped wood, low-poly) - 'stepped': orthogonal/stepped cuts */
   style?: WobbleStyle;
   /** Average segment length in pixels for chiseled/stepped mode (default: 14) */
   segmentLength?: number;

@@ -244,7 +244,7 @@ new Solid(faces: Face[]): Solid
 **Static Factories:**
 
 - `Solid.extrude(frame: Frame3, profile: Shape | Point[], height: number): Solid`
-  Extrudes a 2D profile into a solid. The profile is drawn in the frame's ground plane (x = forward, y = side to the right) and rises `height` along the frame's up axis. Use a frame turned on its side (`Frame3`) to extrude along other axes.
+  Extrudes a profile into a solid. The profile is drawn in the frame's ground plane (x = forward, y = side to the right) and rises `height` along the frame's up axis. Use a frame turned on its side (`Frame3`) to extrude along other axes.
 - `Solid.box(frame: Frame3, length: number, width: number, height: number): Solid`
   A box standing on the frame origin: `length` along forward, `width` along side, `height` up. Centered on forward and side.
 
@@ -376,7 +376,7 @@ new Blob(parts: (Round | Tube)[]): Blob
 
 ### `Decal`
 
-A flat 2D `@core/draw` shape laid on a surface (emblem, keyhole, rune, plank seam, window): the
+A `@core/draw` shape laid on a surface (emblem, keyhole, rune, plank seam, window): the
 shape's x runs along `u` and its y along `v` from `origin`. Hidden when the surface
 faces away from the camera. Styled with a plain `ShapeStyle`.
 
@@ -469,7 +469,7 @@ new StageObject(owner: Stage, camera: Camera, order: number, options?: ObjectOpt
 - `.hidden<T>(place: () => T): T`
   Places the parts that `place` adds without drawing them: they are still there for other parts to rest `on` (a helm on a skull that an inventory icon does not show), but add no pixels, no contour and no footprint.
 - `.custom(at: Vec3, draw: (ctx: CanvasRenderingContext2D, cam: Camera) => void, options?: Omit<StageOptions, "layer">): this`
-  Adds a custom drawing (a 2D flame, glow or smear) sorted inside the object at the depth of a world point.
+  Adds a custom drawing (a flame, glow or smear drawn with `@core/draw`) sorted inside the object at the depth of a world point.
 - `.key(): number`
   Depth of where the object stands, used to sort it against other objects.
 - `.draw(ctx: CanvasRenderingContext2D): void`
@@ -1014,7 +1014,7 @@ const FLOOR_EDGE: FloorEdge
 
 ### `drawScene`
 
-Draws a scene into a 2D context with the catalog's pieces, the way a game lays out the sheets
+Draws a scene into a canvas context with the catalog's pieces, the way a game lays out the sheets
 (see `layoutScene`): floors first, lowest priority first, each tile clipped to itself and all
 to the scene's cells; then decals; then walls, fences and props by where they stand. `origin` is
 the screen position of cell (0, 0)'s centre. For an editor that redraws often, use

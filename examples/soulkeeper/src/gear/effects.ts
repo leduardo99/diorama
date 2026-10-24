@@ -2,7 +2,7 @@
  * Effects: what a held weapon leaves in the air during a clip. They are parts too, so an outfit
  * lists them after the weapon and rests them `on` its blade, but they draw nothing as gear: they
  * read the clip (`kit.clip.events`, `kit.t`, `kit.poseAt`) and the pose's channels, and each draws
- * a 2D shape through `object.custom`.
+ * a drawn shape through `object.custom`.
  * - `weaponSmear`: one crescent of the blade's sweep just before the clip's `hit` event;
  * - `chargedEdge`: a glowing edge over the blade while `extra.charge` (0..1) is up;
  * - `groundShockwave`: a crescent of fire spreading over the floor from where the blade struck,

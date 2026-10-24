@@ -75,7 +75,7 @@ Read the guide for a module before using it (the [guides index](../../../docs/gu
 
 - `@core/volume`: 2.5D volumes in the project's 3/4 camera: props, scenery kits and scenes, armor, effects, item icons, optionally rendered in several facings (`directions`). Parts are `@core/draw` shapes, so the theme's ramps, strokes and textures apply. Export at `scale: 2`.
 - `@core/rig`: skeletons, gaits and clips for characters and creatures, exported in 8 facings (4 for grid-only characters) with a manifest for games and the viewer's Playground (`new-asset --engine rig`). Skins, gear and outfits are drawn with `@core/volume`.
-- `@core/draw`: flat 2D drawing (`Polygon`, `Path`, `PathBuilder`, styles, hatch, stipple, grit). Volume and rig call it for you. You use it directly for decals, effects and the HUD in `core/ui.ts` (nine-slice panels, bars, bitmap fonts, cursors).
+- `@core/draw`: the drawing layer (`Polygon`, `Path`, `PathBuilder`, styles, hatch, stipple, grit). Volume and rig call it for you. You use it directly for decals, effects and the HUD in `core/ui.ts` (nine-slice panels, bars, bitmap fonts, cursors).
 - `@core`: the asset contract, deterministic PRNG, noise, colors, sheet packing.
 
 Sizes are logical. The exported image is `width × scale` (per frame, for animations). `width: 96, scale: 2` exports 192 px. Assets are declared with `defineAsset` from `@core`, or with the module's own declaration: `defineCharacter` from `@core/rig`, and `defineSceneAsset`, `defineTileSet`, `defineEffect`, `defineItemIcon`, `defineGearAsset` and the interface helpers for kits (see the guides).

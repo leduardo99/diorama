@@ -16,7 +16,7 @@
 | A creature's body, a skull with a jaw, any mass that tucks in (waist, neck) | `Blob` of `Round`s and `Tube`s | A loft is the convex hull of its rings and cannot tuck in; a blob is the union of convex masses with one outline. |
 | Columns, candles, bottles, legs of furniture | `Round.cylinder`, `Round.lathe` | The top cap is drawn as a lit face when the camera sees it. |
 | Limbs, ropes, horns, handles, roots | `Tube` | A tapered ribbon through 3D points. |
-| Emblems, keyholes, seams, windows, runes on a surface | `Decal` | A 2D `@core/draw` shape laid on the surface, hidden when the surface faces away. |
+| Emblems, keyholes, seams, windows, runes on a surface | `Decal` | A `@core/draw` shape laid on the surface, hidden when the surface faces away. |
 | Belts, bracelets, ribs, collars, barrel hoops | `Tube` through `visibleArc(cam, center, a, b, rx, ry)` | Only the half of the ring that faces the camera, so the back half never crosses the front. |
 | The same band around an ellipsoid (rib hoops on an abdomen, a collar on a round body) | `Tube` through `bandOnEllipsoid(cam, frame, forward, side, up, at, { axis })` | The ring follows the curved surface (`ringOnEllipsoid` gives the ring itself). |
 
@@ -54,7 +54,7 @@ The stage sorts in two levels, like sprites in an isometric game:
 - **Form shading** of round parts uses all three tones of the ramp. The core shadow, on the side away from the light, and the highlight, along the lit edge, are crescents whose width follows the part's thickness within a min/max. Small parts still read, and big ones get a broad shadow. Tune it per material with `form` (`FORM_DEFAULTS` are the engine's): `highlight: false` for matte cloth, a wider highlight for polished metal, a `rim` color for reflected light.
 - **Line hierarchy.** The project's `Camera` takes `contour: { width, color }`: one ink line around the silhouette of every stage object, under its parts. Each material's `stroke` is then the line *between* parts. Make it a darker shade of the material (selective outline), thinner than the contour, so inner details separate without black wires. Round parts draw their own line under their fill, so the visible width is the stroke width and the shading bands stay visible. `stage.object({ contour })` overrides the contour per object.
 - Decals take plain `@core/draw` `ShapeStyle` tokens (`SHAPE_STYLES.*`) or small style objects built from theme tokens, the same as the rest of the art. A decal is flat: on a curved surface keep it small or it floats off the body. A decal is laid out as a viewer looking at that face reads it: x to the viewer's right, y down, so runes and text are never mirrored. Remember the face's own tone (see guide 01): a carving filled with the ramp's `dark` disappears on a face that is already dark.
-- 2D effects that belong to the object (a flame, a glow, a smear) go through `stage.custom(at, draw, { on })`, so they sort with the object.
+- Drawn effects that belong to the object (a flame, a glow, a smear) go through `stage.custom(at, draw, { on })`, so they sort with the object.
 
 ## 5. Quick decision table
 

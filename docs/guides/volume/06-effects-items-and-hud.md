@@ -36,7 +36,7 @@ A project keeps its effects in `src/vfx/` and exports `VFX: EffectCatalog` from 
 - `ctx.frame` faces the heading: build a projectile along `forward`.
 - The floor is `ctx.height` below the origin. Draw a projectile's glow pool or shadow there, so it reads as flying.
 - `ctx.seed` is the same in every frame and facing, so random details hold still while the effect plays; animate them with `t`.
-- Use `@core/volume` parts for anything solid (a bone shard) and `object.custom` 2D drawing for light, smoke and sparks.
+- Use `@core/volume` parts for anything solid (a bone shard) and `object.custom` drawings for light, smoke and sparks.
 
 **What makes an effect read:**
 - a clear silhouette in the first frames (anticipation), the peak early, then a fall-off;
@@ -93,7 +93,7 @@ The atlas says `role: 'icon'` and the item (id, label, kind, rarity with its lab
 
 ## 3. The HUD and menus
 
-Interface pieces are 2D (`@core/draw`), drawn in `src/ui/` and exported by one sheet each in `sheets/ui/`:
+Interface pieces are drawn with `@core/draw` (no camera, no volumes) in `src/ui/` and exported by one sheet each in `sheets/ui/`:
 
 | Piece | Function | What the atlas carries |
 | :--- | :--- | :--- |

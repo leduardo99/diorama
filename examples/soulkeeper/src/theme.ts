@@ -206,40 +206,10 @@ export const SHAPE_STYLES = {
     stroke: STROKES.fine,
   }),
 
-  // Flat 2D character materials (the necromancer, drawn with @core/draw): its key light is the soul lantern, top right.
-  // Volume assets (props, rig characters) take their light from CAMERA instead (upper left).
-  robe: new ShapeStyle({
-    fill: RAMPS.robe.base,
-    celShade: { shade: RAMPS.robe.dark, lightPivot: 'topRight', litScale: { x: 0.72, y: 0.92 } },
-    stroke: STROKES.outline,
-  }),
-  robeShadow: new ShapeStyle({
-    fill: RAMPS.robe.dark,
-    stroke: STROKES.outline,
-  }),
-  sash: new ShapeStyle({
-    fill: RAMPS.sash.base,
-    celShade: { shade: RAMPS.sash.dark, lightPivot: 'topRight', litScale: { x: 0.7, y: 0.8 } },
-    stroke: STROKES.detail,
-  }),
+  // Flat materials laid on volume props as decals (carved stone, cracks, glowing eyes): the props' light comes from CAMERA.
   bone: new ShapeStyle({
     fill: RAMPS.bone.base,
     celShade: { shade: RAMPS.bone.dark, lightPivot: 'topRight', litScale: { x: 0.78, y: 0.8 } },
-    stroke: STROKES.detail,
-  }),
-  flesh: new ShapeStyle({
-    fill: RAMPS.flesh.base,
-    celShade: { shade: RAMPS.flesh.dark, lightPivot: 'topRight', litScale: 0.8 },
-    stroke: STROKES.detail,
-  }),
-  wood: new ShapeStyle({
-    fill: RAMPS.wood.base,
-    celShade: { shade: RAMPS.wood.dark, lightPivot: 'right', litScale: { x: 0.6, y: 1 } },
-    stroke: STROKES.outline,
-  }),
-  iron: new ShapeStyle({
-    fill: RAMPS.iron.base,
-    celShade: { shade: RAMPS.iron.dark, lightPivot: 'topRight', litScale: 0.75 },
     stroke: STROKES.detail,
   }),
   soul: new ShapeStyle({

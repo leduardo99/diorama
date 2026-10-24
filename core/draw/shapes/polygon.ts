@@ -776,7 +776,7 @@ function applyPolygonWobble(
     return result;
   }
 
-  // 3. SMOOTH WOBBLE (default): Dense continuous 2D Simplex wave
+  // 3. SMOOTH WOBBLE (default): Dense continuous simplex wave
   const dense: Point[] = [];
   const targetStepDist = 6.0;
 

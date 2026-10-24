@@ -22,7 +22,7 @@ export interface WobbleOptions {
   seed?: number;
   /**
    * Personality style of the wobble:
-   * - 'smooth' (default): continuous organic curve (Simplex Noise 2D)
+   * - 'smooth' (default): continuous organic curve (simplex noise)
    * - 'chiseled': faceted straight segments (chiseled stone, chipped wood, low-poly)
    * - 'stepped': orthogonal/stepped cuts
    */
@@ -425,7 +425,7 @@ export interface ShapeStyleOptions {
   stroke?: import('./styles/stroke-style.js').StrokeStyle | StrokeOptions;
   /** Outline alignment relative to perimeter */
   strokePosition?: StrokePosition;
-  /** 2D Drop or soft diffused shadow */
+  /** A drop or soft diffused shadow */
   shadow?: ShadowOptions;
   /** Safe clipping callback for internal illustrations/textures */
   inside?: InsideCallback;

@@ -11,7 +11,7 @@ import { createRng } from './random.js';
 export type { NoiseFunction2D };
 
 /**
- * Creates a 2D simplex noise function with optional seed.
+ * Creates a simplex noise function of x and y, with an optional seed.
  * Returns values roughly in range [-1, 1].
  */
 export function createNoise2D(seed?: number | string): NoiseFunction2D {

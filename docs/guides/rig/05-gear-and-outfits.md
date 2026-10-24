@@ -52,7 +52,7 @@ For example, a helm exports its dome geometry, so a crest can rest on it without
   - Give the part's `PartInfo.wield.sockets` a `tip` that calls the same `held`, so the drawing and the socket agree and the socket follows the weapon into any outfit (see Holding in §5).
   - In the left hand an item reads the off-hand channels: pass `channel: weaponChannel(ctx.at.side)`.
   - A longer weapon is an option of the part (`length`), passed to its effects and its socket helper too.
-- **Flat 2D effects** (flames, glows, smears) go through `object.custom(at, draw, { on })`:
+- **Drawn effects** (flames, glows, smears) go through `object.custom(at, draw, { on })`:
   - A custom drawing sorts at its own point, so fire behind a skull is placed behind the head along `camera.viewDir`.
   - A lick of flame over a surface checks `cam.faces` so it does not show through from behind.
   - Effects that start at events (a smear before `hit`, a shockwave after `release`) read `ctx.kit.clip.events` and `ctx.kit.t`.

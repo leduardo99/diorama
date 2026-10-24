@@ -607,7 +607,7 @@ function defineCharacterAsset(o: CharacterAssetOptions): AssetDefinition
 
 ### `drawCharacterFrame`
 
-Draws one frame of a character into a 2D context, exactly as its exported sheet does: the
+Draws one frame of a character into a canvas context, exactly as its exported sheet does: the
 pose at normalized time `t` and facing `facing` (radians; π/2 faces the camera), the contact
 shadow and the skin, with the world origin at `o.pivot`. Editors and previews (the viewer's
 customizer) call it to show a character live without exporting it.

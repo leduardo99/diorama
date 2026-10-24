@@ -3,7 +3,7 @@
  *
  * A tilted orthographic camera with one project light, local frames that turn objects to
  * any facing, and volumes (faceted solids, round bodies, tubes, decals) that project into
- * `@core/draw` shapes, so project themes style them like any other 2D drawing.
+ * `@core/draw` shapes, so project themes style them like any other drawing.
  */
 
 import '../draw/index.js';

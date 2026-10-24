@@ -4,7 +4,7 @@
  *
  * The flask is two volumes: the glass (a lathe, pale cool blue-grey) and the liquid (a smaller lathe of the soul crystal's
  * ramp, drawn over the glass), so a rim of glass stays visible round the liquid and the flask reads as full. The liquid's
- * surface is a flat pale ellipse on its top; the bubbles and the glint on the glass are flat 2D over the volume. (No blur
+ * surface is a flat pale ellipse on its top; the bubbles and the glint on the glass are drawn over the volume. (No blur
  * shadow: the icon measures the item before fitting it, and a halo in px would shrink every fit.) The soul green is the one saturated thing in the icon.
  *
  * Detail tiers: primary = the flask's round belly and the cork; secondary = the liquid with its surface, the neck cord,
@@ -53,7 +53,7 @@ export const soulPotion: ItemPiece = ctx => {
   o.add(tail(1, 1.8), leather, { on: flask });
   o.add(tail(-1, 3.0), leather, { on: flask });
   o.add(Round.ellipsoid(b.moved(2.5, 0.3 - 0.9, 7.1), 0.55, 0.55, 0.7), bone, { on: flask });
-  // Light and bubbles are flat 2D: sorted over the liquid from every side.
+  // Light and bubbles are drawn shapes, sorted over the liquid from every side.
   const at = (f: number, s: number, u: number) => cam.project(b.at(f, s, u));
   o.custom(b.at(0, 0, 4), c => {
     const hi = at(-2.4, -2.6, 5.0);
