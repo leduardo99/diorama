@@ -53,9 +53,11 @@ new DioramaCharacter(scene: Scene, character: Character<SheetRef>, pos: Vec2, op
 - `steering: Input` — What it is steered by on the next step: set by its `controls`, or by the game (any length; none to stand).
 - `floor: Floor` — What the ground allows of a move.
 - `projection: Projection | null` — Its own projection; null for the plugin's, or its camera's.
-- `controls: KeyboardControls | null` — The keyboard, when the plugin's `controls` gave it one: read at the start of each step.
+- `order: number` — Where it is drawn among the actors on one level (`depthKey`'s order): the order the plugin added it in, which the plugin sets.
 - `aim: Vec2 | null` — Where its `fly` cues head (a floor point); null to fly along the facing the action started with.
 - `fired: ClipEvent<SheetRef>[]` — The events its clips fired on its last step.
+- `controls: KeyboardControls | null` — The keyboard, when the plugin's `controls` gave it one: read at the start of each step. Its own: replacing it, or destroying the character, destroys it.
+- `drawnWith: Projection` — Where its floor points are drawn now, and its effects' (`projection`, else the plugin's, else its camera).
 - `character: Character<SheetRef>` — The character it plays: its clips, the bindings of its controls (`locomotion`, `actions`), its camera and cues.
 
 **Instance Methods:**
@@ -90,7 +92,7 @@ new KeyboardControls(scene: Scene): KeyboardControls
 - `.read(character: DioramaCharacter): void`
   Sets the character's steering from W, A, S, D and Shift, and plays the actions of the digits pressed since the last read.
 - `.destroy(): void`
-  Stops listening to the digits.
+  Stops listening to the digits (the character does it when it is destroyed, or given other controls). The keys stay the scene's.
 
 ---
 
@@ -126,7 +128,7 @@ new DioramaPlugin(scene: Scene, pluginManager: PluginManager, pluginKey: string)
 
 **Properties:**
 
-- `projection: Projection | null` — Where every floor point is drawn; null for each character's own camera with the floor's origin at world (0, 0).
+- `projection: Projection | null` — Where floor points are drawn (a character's own `projection` aside), its effects' with them; null for each character's own camera, the floor's origin at world (0, 0).
 - `blocked: ((from: Vec2, to: Vec2, fx: Fx<SheetRef>) => Vec2 | null) | undefined` — Where the floor stops a projectile (a scene's `flightStop`); none lets it fly its whole range.
 - `events: EventEmitter` — `clip`, `fxstart` and `fx` (`EVENTS`), for every character and effect of the scene.
 - `add: { character: (of: string | Character<SheetRef>, pos: Vec2, options: CharacterOptions) => DioramaCharacter; nineSlice: (x: number, y: number, path: string, width: number, height: number, state?: string | undefined) => DioramaNineSlice; }` — Game objects made from the loaded sheets, added to the scene.
@@ -147,13 +149,17 @@ new DioramaPlugin(scene: Scene, pluginManager: PluginManager, pluginKey: string)
 - `.ui(path: string): UiSheet<SheetRef>`
   A loaded interface piece by its sheet path.
 - `.controls(character: DioramaCharacter): KeyboardControls`
-  Keyboard controls for a character, read at the start of each of its steps (`KeyboardControls`).
+  Keyboard controls for a character, read at the start of each of its steps (`KeyboardControls`); the ones it had are destroyed.
+- `.enlist(character: DioramaCharacter): void`
+  A character joins the scene (its constructor calls it): it gets the next order. When a scene has added more characters than `depthKey`'s orders hold, the ones still there are numbered again from 0, in the order they came.
+- `.dismiss(character: DioramaCharacter): void`
+  A character was destroyed: the effects that follow it, or loop until its clip changes, end on the next step (an `end` event).
 - `.imageOf(fx: Fx<SheetRef>): Image | undefined`
   The Image an effect is drawn with.
 - `.clip(event: ClipEvent<SheetRef>, character: DioramaCharacter): void`
-  A character's clip event: passed on (`clip`), and the effects it cues start. Characters call it on their steps.
-- `.play(fx: Fx<SheetRef>): Image`
-  Plays an effect (one of `cues`, or one of your own) from now on.
+  A character's clip event: passed on (`clip`), and the effects it cues start where it is drawn. Characters call it on their steps.
+- `.play(fx: Fx<SheetRef>, by?: DioramaCharacter | null): Image`
+  Plays an effect (one of `cues`, or one of your own) from now on, drawn where `by` is drawn (its `drawnWith`): by default the character whose actor it follows or loops with, else the plugin's `projection`, else the camera of its character. It gets the next order; when a scene has started more effects than `depthKey`'s orders hold, the ones playing are numbered again from 0, in the order they started.
 
 ---
 
@@ -226,7 +232,9 @@ function addSheetTexture(textures: TextureManager, key: string, image: HTMLImage
 
 ### `libraryOf`
 
-Everything a game has loaded so far, as the runtime's library: its characters, effects, interface pieces, icons and sprites.
+Everything a game has loaded so far, as the runtime's library: its characters, effects, interface pieces, icons and
+sprites. The sheets are taken in the order of their paths, as the viewer lists them, whatever order they came in: a
+character's clips are always in the same order.
 
 ```ts
 function libraryOf(game: Game): Library<SheetRef>
@@ -237,8 +245,8 @@ function libraryOf(game: Game): Library<SheetRef>
 ### `loadSheets`
 
 Queues sheets on a scene's loader, with every sheet they need by the contract: call it in `preload` (elsewhere, start the
-loader and wait for its `complete` event). Sheets the game already loaded are not fetched again. What cannot be fetched or
-read is a warning (`console.warn`, and the plugin's `warnings`), never an error: the rest still loads.
+loader and wait for its `complete` event). Sheets the game already has as textures are not fetched again. What cannot be
+fetched or read is a warning (`console.warn`, and the plugin's `warnings`), never an error: the rest still loads.
 
 ```ts
 function loadSheets(scene: Scene, paths: string | string[], options?: LoadOptions): void
@@ -372,7 +380,7 @@ How a character is put on the floor.
 
 ```ts
 interface CharacterOptions {
-  /** Your id for it, unique among the characters of a scene: the runtime hands it back on events, and it orders equal depths. */
+  /** Your id for it, unique among the characters of a scene: the runtime hands it back on events (`event.actor.id`). Any number: equal depths are ordered by `order`, not by it. */
   id: number;
   /** The clip it starts in (a key of its manifest), default its idle. */
   clip?: string;

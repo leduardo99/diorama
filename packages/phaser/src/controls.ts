@@ -2,7 +2,8 @@
  * Keyboard controls from a character's manifest (`controls`, which the runtime turns into `locomotion` and `actions`): W, A,
  * S and D steer, Shift runs in the last move clip, and 1 to 9 play the actions in the runtime's order (attack, skill, dodge,
  * jump...). The keys are read at the start of the character's step: steering is what is held then, and a digit pressed since
- * the last step plays its action even when it was let go before the step came.
+ * the last step plays its action even when it was let go before the step came. The keys are not captured: Phaser's capture
+ * would stop every W, A, S, D, Shift and digit on the whole window, and a text field on the page could not be typed in.
  */
 
 import Phaser from 'phaser';
@@ -19,12 +20,13 @@ export class KeyboardControls {
   /** The digits pressed since the last read, in order (a key's `down` comes as the browser sends it, between steps). */
   private readonly pressed: number[] = [];
   private readonly listeners: (() => void)[];
+  private destroyed = false;
 
   constructor(scene: Phaser.Scene) {
     const keyboard = scene.input.keyboard;
     if (!keyboard) throw new Error('@diorama/phaser: keyboard controls need the keyboard plugin (input.keyboard is on by default in the game config)');
-    this.moves = keyboard.addKeys('W,A,S,D,SHIFT') as Moves;
-    this.actions = ACTION_KEYS.map((name) => keyboard.addKey(name));
+    this.moves = keyboard.addKeys('W,A,S,D,SHIFT', false) as Moves;
+    this.actions = ACTION_KEYS.map((name) => keyboard.addKey(name, false));
     this.listeners = this.actions.map((key, index) => {
       const listener = () => this.pressed.push(index);
       key.on(Phaser.Input.Keyboard.Events.DOWN, listener);
@@ -34,6 +36,7 @@ export class KeyboardControls {
 
   /** Sets the character's steering from W, A, S, D and Shift, and plays the actions of the digits pressed since the last read. */
   read(character: DioramaCharacter) {
+    if (this.destroyed) return;
     const { W, A, S, D, SHIFT } = this.moves;
     character.steering = { dx: Number(D.isDown) - Number(A.isDown), dy: Number(S.isDown) - Number(W.isDown), run: SHIFT.isDown };
     for (const index of this.pressed.splice(0)) {
@@ -42,9 +45,12 @@ export class KeyboardControls {
     }
   }
 
-  /** Stops listening to the digits. */
+  /** Stops listening to the digits (the character does it when it is destroyed, or given other controls). The keys stay the scene's. */
   destroy() {
+    if (this.destroyed) return;
+    this.destroyed = true;
     this.actions.forEach((key, index) => key.off(Phaser.Input.Keyboard.Events.DOWN, this.listeners[index]));
+    this.pressed.length = 0;
   }
 
   /** The action each digit plays, for a legend: `[['1', 'slash'], ['2', 'cleave'], ...]`. */

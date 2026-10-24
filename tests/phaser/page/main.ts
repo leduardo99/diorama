@@ -1,7 +1,8 @@
 /**
- * The page tests/phaser/smoke.test.ts drives: the canvas renderer on a transparent canvas, the loop asleep (the test steps
- * it), and the generated fixtures (tests/phaser/fixtures.ts) loaded from /fixtures/ with a small texture limit (`?max=`),
- * so every sheet is cut into bands. `window.smoke` hands the test what it reads.
+ * The page tests/phaser/smoke.test.ts drives: the canvas renderer, or WebGL with `?renderer=webgl`, on a transparent
+ * canvas, the loop asleep (the test steps it), and the generated fixtures (tests/phaser/fixtures.ts) loaded from
+ * /fixtures/ with a small texture limit (`?max=`), so the sheets larger than it are cut into bands. `window.smoke` hands
+ * the test what it reads.
  */
 
 import Phaser from 'phaser';
@@ -12,6 +13,7 @@ const SIZE = { width: 320, height: 240 };
 /** Where the floor's origin is on the canvas. */
 const ORIGIN = { x: 120, y: 140 };
 const query = new URLSearchParams(location.search);
+const webgl = query.get('renderer') === 'webgl';
 
 /** What the test reads: the character, the effects, the events so far and the canvas's pixels. */
 export interface Smoke {
@@ -20,6 +22,8 @@ export interface Smoke {
   state: () => ReturnType<typeof stateOf>;
   pixels: (x: number, y: number, width: number, height: number) => number[];
   add: (id: number, x: number, y: number) => void;
+  /** Moves a game object to the back of the display list, so its place there is the wrong one for its depth. */
+  toBack: (name: string) => void;
   order: () => string[];
 }
 
@@ -61,12 +65,12 @@ function stateOf(scene: SmokeScene) {
     camera: { x: camera.scrollX, y: camera.scrollY, roundPixels: camera.roundPixels },
     renderer: scene.game.renderer.type === Phaser.CANVAS ? 'canvas' : 'webgl',
     character: {
-      x: c.x, y: c.y, texture: c.texture.key, frame: c.frame.name, originX: c.displayOriginX, originY: c.displayOriginY, depth: c.depth,
+      x: c.x, y: c.y, texture: c.texture.key, frame: c.frame.name, band: c.frame.sourceIndex, originX: c.displayOriginX, originY: c.displayOriginY, depth: c.depth,
       pos: { ...c.actor.pos }, clip: c.actor.act?.clip.key ?? c.actor.clip.key, row: c.actor.row,
     },
     effects: scene.diorama.effects.map((fx) => {
       const image = scene.diorama.imageOf(fx)!;
-      return { id: fx.sheet.id, x: image.x, y: image.y, frame: image.frame.name, depth: image.depth, pos: { ...fx.pos }, lift: fx.lift };
+      return { id: fx.sheet.id, x: image.x, y: image.y, frame: image.frame.name, row: fx.row, originX: image.displayOriginX, originY: image.displayOriginY, depth: image.depth, pos: { ...fx.pos }, lift: fx.lift };
     }),
     clips: [...log.clips],
     fx: [...log.fx],
@@ -76,7 +80,7 @@ function stateOf(scene: SmokeScene) {
 }
 
 const game = new Phaser.Game(withDiorama({
-  type: Phaser.CANVAS,
+  type: webgl ? Phaser.WEBGL : Phaser.CANVAS,
   parent: 'game',
   width: SIZE.width,
   height: SIZE.height,
@@ -85,6 +89,8 @@ const game = new Phaser.Game(withDiorama({
   audio: { noAudio: true },
   scale: { mode: Phaser.Scale.NONE, zoom: 1 },
   scene: SmokeScene,
+  // WebGL keeps the frame it drew, so the test can read it after the step.
+  render: { preserveDrawingBuffer: true },
   callbacks: { postBoot: sleepOnStart },
 }));
 const scene = () => game.scene.getScene('smoke') as SmokeScene;
@@ -94,9 +100,23 @@ const smoke: Smoke = {
   ready: false,
   step,
   state: () => stateOf(scene()),
-  pixels: (x, y, width, height) => Array.from(game.canvas.getContext('2d')!.getImageData(x, y, width, height).data),
+  pixels: (x, y, width, height) => {
+    // A 2D canvas is read as it is; WebGL's drawing is copied onto one first.
+    let canvas = game.canvas;
+    if (webgl) {
+      canvas = document.createElement('canvas');
+      canvas.width = game.canvas.width;
+      canvas.height = game.canvas.height;
+      canvas.getContext('2d')!.drawImage(game.canvas, 0, 0);
+    }
+    return Array.from(canvas.getContext('2d')!.getImageData(x, y, width, height).data);
+  },
   add: (id, x, y) => {
     scene().diorama.add.character('characters/dummy', { x, y }, { id }).setName(`dummy-${id}`);
+  },
+  toBack: (name) => {
+    const object = scene().children.getByName(name);
+    if (object) scene().children.sendToBack(object);
   },
   order: () => {
     scene().children.depthSort();

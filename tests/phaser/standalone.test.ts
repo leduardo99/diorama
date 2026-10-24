@@ -3,19 +3,23 @@
  * types, strict), in this process, as tests/runtime/standalone.test.ts does for the runtime. Its one path alias is
  * `@diorama/runtime`, and `phaser` resolves to the types Phaser ships. The program may read nothing else: no file of
  * core/, no other package, no Node types. Its package.json depends on the runtime and asks for Phaser as a peer, at the
- * version the repository pins.
+ * version the repository pins. Paths are compared as real paths: TypeScript reads files through symlinks (a node_modules
+ * that is a link, a temp folder under /tmp on macOS) by where they really are.
  */
 
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, realpathSync } from 'node:fs';
 import { relative, resolve, sep } from 'node:path';
 import ts from 'typescript';
 
 console.log('🧪 Checking that @diorama/phaser compiles alone (the DOM, Phaser\'s types and the runtime only)...\n');
 
+/** Where a file or folder really is, links followed. */
+const real = (path: string) => realpathSync(path);
 const PACKAGE = resolve('packages/phaser');
-const RUNTIME = resolve('packages/runtime/src');
-const PHASER_TYPES = resolve('node_modules/phaser/types');
+const RUNTIME = real(resolve('packages/runtime/src'));
+const PHASER_TYPES = real(resolve('node_modules/phaser/types'));
+const REAL_PACKAGE = real(PACKAGE);
 const configFile = resolve(PACKAGE, 'tsconfig.json');
 const read = ts.readConfigFile(configFile, ts.sys.readFile);
 assert.equal(read.error, undefined, 'the package has its own tsconfig.json');
@@ -47,15 +51,21 @@ function compile(extra: Record<string, string> = {}) {
   return { program, errors: ts.getPreEmitDiagnostics(program).filter((d) => d.category === ts.DiagnosticCategory.Error) };
 }
 
+/** The real path of a file the program read (a virtual probe file is where the package really is). */
+const readPath = (file: string) => {
+  const path = resolve(file);
+  return path.startsWith(PACKAGE + sep) ? REAL_PACKAGE + path.slice(PACKAGE.length) : real(path);
+};
+
 /** The files a program reads from outside the package, the runtime, Phaser's types and the language's own library. */
 const outsideOf = (program: ts.Program) =>
-  program.getSourceFiles().map((f) => resolve(f.fileName)).filter((f) => ![PACKAGE, RUNTIME, PHASER_TYPES].some((dir) => f.startsWith(dir + sep)) && !/[\\/]typescript[\\/]lib[\\/]lib\.[^\\/]+\.d\.ts$/.test(f));
+  program.getSourceFiles().map((f) => readPath(f.fileName)).filter((f) => ![REAL_PACKAGE, RUNTIME, PHASER_TYPES].some((dir) => f.startsWith(dir + sep)) && !/[\\/]typescript[\\/]lib[\\/]lib\.[^\\/]+\.d\.ts$/.test(f));
 
 // 1. The package alone: no errors, and it reads only its own files, the runtime's sources, Phaser's types and the libraries.
 const alone = compile();
 assert.equal(alone.errors.length, 0, `@diorama/phaser does not compile on its own:\n${alone.errors.map(show).join('\n')}`);
 assert.deepEqual(outsideOf(alone.program), [], 'it reads nothing but the package, the runtime, Phaser\'s types and the language library');
-const reads = alone.program.getSourceFiles().map((f) => resolve(f.fileName));
+const reads = alone.program.getSourceFiles().map((f) => readPath(f.fileName));
 assert.ok(reads.some((f) => f === resolve(RUNTIME, 'index.ts')), 'the runtime comes through its alias');
 assert.ok(reads.some((f) => f === resolve(PHASER_TYPES, 'phaser.d.ts')), 'phaser resolves to the types it ships');
 assert.ok(alone.program.getRootFileNames().some((f) => f.endsWith('src/index.ts')) && alone.program.getRootFileNames().some((f) => f.endsWith('src/sheets.ts')), 'both entries are compiled');
@@ -63,7 +73,7 @@ assert.ok(alone.program.getRootFileNames().some((f) => f.endsWith('src/index.ts'
 // 2. The checks bite: the engine, a Node module or another package does not compile, or is caught reading outside.
 const probes: Array<[string, string, RegExp]> = [
   ['src/probe-core.ts', "import { createRng } from '@core';\nexport const rng = createRng;\n", /Cannot find module '@core'/],
-  ['src/probe-node.ts', "import { readFileSync } from 'node:fs';\nexport const read = readFileSync;\n", /Cannot find module 'node:fs'/],
+  ['src/probe-node.ts', "import { readFileSync, realpathSync } from 'node:fs';\nexport const read = readFileSync;\n", /Cannot find module 'node:fs'/],
   ['src/probe-node-global.ts', 'export const cwd = process.cwd();\n', /Cannot find name 'process'/],
 ];
 for (const [path, source, expected] of probes) {

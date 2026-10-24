@@ -60,8 +60,11 @@ export class SandboxScene extends Phaser.Scene {
       .setScrollFactor(0).setDepth(HUD_DEPTH + 1);
     this.readout = this.add.text(44, 108, '', { fontFamily: 'monospace', fontSize: '13px', color: '#e6a15c' }).setScrollFactor(0).setDepth(HUD_DEPTH + 1);
 
-    this.diorama.events.on(EVENTS.CLIP, (event: ClipEvent) => this.note(`${event.clip.key} ${event.name} (frame ${event.frame})`));
-    this.diorama.events.on(EVENTS.FX, (event: FxEvent) => this.note(`${event.fx.sheet.id} ${event.name}`));
+    // The plugin's events outlive a restart of the scene: these listeners go when it shuts down, so a restart adds them once.
+    const onClip = (event: ClipEvent) => this.note(`${event.clip.key} ${event.name} (frame ${event.frame})`);
+    const onFx = (event: FxEvent) => this.note(`${event.fx.sheet.id} ${event.name}`);
+    this.diorama.events.on(EVENTS.CLIP, onClip).on(EVENTS.FX, onFx);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.diorama.events.off(EVENTS.CLIP, onClip).off(EVENTS.FX, onFx));
     for (const warning of this.diorama.warnings) this.note(`warning: ${warning}`);
   }
 

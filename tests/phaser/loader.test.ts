@@ -134,7 +134,8 @@ for (const frame of packedBanded.frames) {
   assert.deepEqual([band.x + frame.x, band.y + frame.y], [source.x, source.y], `${frame.name} keeps its place`);
   assert.ok(frame.x + frame.width <= band.width && frame.y + frame.height <= band.height && band.width <= 32 && band.height <= 32, `${frame.name} lies inside a band of at most 32 px`);
 }
-// The sample's widest sheets: crypt-flags, 90 floor tiles of 96 × 72 in a strip 8640 px wide, over WebGL's usual 8192.
+// A strip as wide as the sample's crypt-flags (90 floor tiles of 96 × 72, 8640 px), over WebGL's usual 8192. Synthetic: the
+// sample's exports are not versioned, and its widest (crypt-wall, iron-fence, ruined-wall) are 9216 px.
 const flags = readSheet('scenery/crypt-flags', { meta: { mode: 'strip', frameCount: 90, frameWidth: 96, frameHeight: 72, width: 8640, height: 72, data: { role: 'floor' } }, frames: Object.fromEntries(Array.from({ length: 90 }, (_, i) => [`frame_${i}`, cell(i * 96, 0, 96, 72)])) });
 const flagsPlan = planTexture(flags, { width: 8640, height: 72 }, 8192);
 assert.deepEqual(flagsPlan.bands.map((b) => [b.x, b.width]), [[0, 8160], [8160, 480]], '85 tiles, then the last 5');

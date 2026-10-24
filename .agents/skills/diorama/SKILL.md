@@ -36,7 +36,7 @@ The rules the layout check enforces (the eight of [docs/ARCHITECTURE.md](../../.
 - **Generated sheets** are written by their command from a kit's catalog and are never edited: `sheets/gear/` (`gear-items`), `sheets/scenery/` (`scenery-items`), `sheets/vfx/` (`vfx-items`) and `sheets/icons/` (`item-icons`). To change one, change `src/<kit>/catalog.ts` and run the command with `--force`.
 - **One direction.** `src/` never imports `sheets/`, and a sheet never imports another sheet.
 - **Mirrors.** Every sheet has its export in `assets/` at the same path, and every asset has its sheet.
-- **A game is apart.** `game/` never imports `@core` or `../src`, `src/` never imports it, and it holds no images: it reads `assets/` through the packages.
+- **A game is apart.** Everything `game/` imports or loads is a relative path inside `game/` or one of `@diorama/runtime`, `@diorama/phaser`, `@diorama/phaser/sheets` and `phaser` (never `@core`, `../src` or a root path); `src/` and `sheets/` never import a game, and it holds no images: it reads `assets/` through the packages.
 
 `npm run check -- <project>` runs the type check, then these rules, then the determinism lint (`Math.random`, the clock and raw colors outside `src/theme.ts`, see Rejection rules), and every message says what to move where or what to use instead. After an export run `npm run layout -- <project> --strict`, which also fails on a sheet that was never exported and on an asset that has no sheet. To see a finished project in this layout, `npm run example` exports Soulkeeper, the sample game (`examples/soulkeeper`; about five minutes; `assets/` is not versioned, so a fresh clone has none), and the skills point to its `src/` for technique.
 

@@ -2,7 +2,8 @@
  * A character as a Phaser Sprite, played by the runtime's clip player rather than by Phaser's animations: each step steers
  * its actor (`steer`, which also moves the clocks, root motion included), shows the frame the runtime says (`shownFrame`,
  * by its atlas name on the sheet's texture) with its feet on the actor's floor point, and sorts it by `depthKey` with the
- * actor's id as the order. Positions are rounded to whole pixels, so every frame is drawn pixel for pixel.
+ * order the plugin added it in, so actors on one level are drawn in that order whatever their ids and the display list.
+ * Positions are rounded to whole pixels, so every frame is drawn pixel for pixel.
  */
 
 import Phaser from 'phaser';
@@ -17,7 +18,7 @@ import { frameNameOf } from './sheets.js';
 
 /** How a character is put on the floor. */
 export interface CharacterOptions {
-  /** Your id for it, unique among the characters of a scene: the runtime hands it back on events, and it orders equal depths. */
+  /** Your id for it, unique among the characters of a scene: the runtime hands it back on events (`event.actor.id`). Any number: equal depths are ordered by `order`, not by it. */
   id: number;
   /** The clip it starts in (a key of its manifest), default its idle. */
   clip?: string;
@@ -41,8 +42,8 @@ export class DioramaCharacter extends Phaser.GameObjects.Sprite {
   floor: Floor;
   /** Its own projection; null for the plugin's, or its camera's. */
   projection: Projection | null;
-  /** The keyboard, when the plugin's `controls` gave it one: read at the start of each step. */
-  controls: KeyboardControls | null = null;
+  /** Where it is drawn among the actors on one level (`depthKey`'s order): the order the plugin added it in, which the plugin sets. */
+  order = 0;
   /** Where its `fly` cues head (a floor point); null to fly along the facing the action started with. */
   aim: Vec2 | null = null;
   /** The events its clips fired on its last step. */
@@ -50,6 +51,9 @@ export class DioramaCharacter extends Phaser.GameObjects.Sprite {
 
   /** Its character's camera: tilt and export scale, the floor's origin at world (0, 0). */
   private readonly camera: Projection;
+  /** The plugin of its scene, which plays the effects its clips cue (kept after it is destroyed, for its effects still playing). */
+  private readonly plugin: DioramaPlugin | null;
+  private keys: KeyboardControls | null = null;
 
   constructor(scene: Phaser.Scene, character: Character, pos: Vec2, options: CharacterOptions) {
     const clip = options.clip === undefined ? undefined : character.clips.find((c) => c.key === options.clip);
@@ -61,17 +65,30 @@ export class DioramaCharacter extends Phaser.GameObjects.Sprite {
     this.floor = options.floor ?? FREE_FLOOR;
     this.projection = options.projection ?? null;
     this.camera = projectionOf(null, { tilt: character.tilt, scale: character.scale });
+    this.plugin = (scene as { diorama?: DioramaPlugin }).diorama ?? null;
+    this.plugin?.enlist(this);
+    this.once(Phaser.GameObjects.Events.DESTROY, this.destroyed, this);
     this.sync();
+  }
+
+  /** The keyboard, when the plugin's `controls` gave it one: read at the start of each step. Its own: replacing it, or destroying the character, destroys it. */
+  get controls(): KeyboardControls | null {
+    return this.keys;
+  }
+
+  set controls(controls: KeyboardControls | null) {
+    if (this.keys && this.keys !== controls) this.keys.destroy();
+    this.keys = controls;
+  }
+
+  /** Where its floor points are drawn now, and its effects' (`projection`, else the plugin's, else its camera). */
+  get drawnWith(): Projection {
+    return this.projection ?? this.plugin?.projection ?? this.camera;
   }
 
   /** The character it plays: its clips, the bindings of its controls (`locomotion`, `actions`), its camera and cues. */
   get character(): Character {
     return this.actor.character!;
-  }
-
-  /** The plugin of its scene, which plays the effects its clips cue. */
-  private get plugin(): DioramaPlugin | null {
-    return (this.scene as { diorama?: DioramaPlugin } | null)?.diorama ?? null;
   }
 
   /** Starts an action (a clip key), if priority and `cancel` allow it; false when refused. Its first events come with the next step. */
@@ -115,9 +132,15 @@ export class DioramaCharacter extends Phaser.GameObjects.Sprite {
     const { frame, rect, clip } = shownFrame(this.actor);
     const name = frameNameOf(clip.atlas, rect);
     if (this.texture.key !== frame.sheet || this.frame.name !== name) this.setTexture(frame.sheet, name);
-    const feet = toScreen(this.projection ?? this.plugin?.projection ?? this.camera, this.actor.pos);
+    const feet = toScreen(this.drawnWith, this.actor.pos);
     this.setPosition(Math.round(feet.x), Math.round(feet.y));
-    this.setDepth(depthKey(feet.y, 'actor', this.actor.id));
+    this.setDepth(depthKey(feet.y, 'actor', this.order));
     return this;
+  }
+
+  /** Destroyed: its keyboard stops listening, and the plugin ends the effects that follow it or loop with its clip. */
+  private destroyed() {
+    this.controls = null;
+    this.plugin?.dismiss(this);
   }
 }

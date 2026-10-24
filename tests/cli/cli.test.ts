@@ -515,22 +515,36 @@ export default defineAsset({
   const sample = JSON.parse(run('npm run --silent layout -- soulkeeper --json').stdout);
   assert.ok(sample.ok && sample.errors.length === 0, `examples/soulkeeper follows the layout: ${JSON.stringify(sample.errors.slice(0, 3))}`);
 
-  // 10b. game serves a project's game/ and prints where: it refuses a project without one, and when a dev server already
-  // answers on the port it only prints the URL.
+  // 10b. game serves a project's game/ and prints where: it refuses a project without one; when this repository's dev
+  // server already answers on the port (it says who it is at /__api/server) it only prints the URL, and any other program
+  // there, a page server or another checkout's dev server, is an error.
   const noGame = run(`npm run --silent game -- ${layoutProject}`);
   assert.ok(noGame.code !== 0 && noGame.stderr.includes(`projects/${layoutProject}/game/index.html does not exist`), `game needs a game/index.html: ${noGame.stderr}`);
-  const devServer = createServer((_req, res) => {
-    res.setHeader('Content-Type', 'text/html');
-    res.end('<!DOCTYPE html>');
-  });
-  await new Promise<void>((done) => devServer.listen(0, done));
-  const port = (devServer.address() as { port: number }).port;
-  try {
-    const served = await promisify(execFile)(process.execPath, ['--import', 'tsx', 'tools/cli.ts', 'game', 'soulkeeper', '--port', String(port)], { encoding: 'utf8', env: { ...process.env, NO_COLOR: '1' } });
-    assert.ok(served.stdout.includes('already serves the game') && served.stdout.trim().endsWith(`http://localhost:${port}/examples/soulkeeper/game/`), `game prints the page's URL: ${served.stdout}`);
-  } finally {
-    devServer.close();
-  }
+  /** Runs `game soulkeeper` against a server on a free port that answers with `answer`; never throws. */
+  const gameAgainst = async (answer: (url: string) => { type: string; body: string }) => {
+    const server = createServer((req, res) => {
+      const { type, body } = answer(req.url ?? '');
+      res.setHeader('Content-Type', type);
+      res.end(body);
+    });
+    await new Promise<void>((done) => server.listen(0, done));
+    const port = (server.address() as { port: number }).port;
+    try {
+      const out = await promisify(execFile)(process.execPath, ['--import', 'tsx', 'tools/cli.ts', 'game', 'soulkeeper', '--port', String(port)], { encoding: 'utf8', env: { ...process.env, NO_COLOR: '1' } });
+      return { port, code: 0, stdout: out.stdout, stderr: out.stderr };
+    } catch (err: any) {
+      return { port, code: err.code ?? 1, stdout: String(err.stdout ?? ''), stderr: String(err.stderr ?? '') };
+    } finally {
+      server.close();
+    }
+  };
+  const identity = (root: string) => (url: string) => (url.startsWith('/__api/server') ? { type: 'application/json', body: JSON.stringify({ app: 'diorama', root }) } : { type: 'text/html', body: '<!DOCTYPE html>' });
+  const ours = await gameAgainst(identity(resolve('.')));
+  assert.ok(ours.code === 0 && ours.stdout.includes('already serves the game') && ours.stdout.trim().endsWith(`http://localhost:${ours.port}/examples/soulkeeper/game/`), `game prints the page's URL when this repository's dev server serves it: ${ours.stdout}${ours.stderr}`);
+  const page = await gameAgainst(() => ({ type: 'text/html', body: '<!DOCTYPE html>' }));
+  assert.ok(page.code !== 0 && page.stderr.includes(`port ${page.port} is taken by another program: it answers, but it is not this repository's dev server`), `a server that only answers with a page is not the dev server: ${page.stdout}${page.stderr}`);
+  const elsewhere = await gameAgainst(identity('/somewhere/else/diorama'));
+  assert.ok(elsewhere.code !== 0 && elsewhere.stderr.includes('the dev server of another checkout of Diorama (/somewhere/else/diorama)'), `another checkout's dev server is not this one's: ${elsewhere.stdout}${elsewhere.stderr}`);
 
   // 11. new-kit: each kit's catalog.ts, index.ts and first piece, on a project with a space profile; the generator commands,
   // new-scene and the export work on them, and the project passes check --strict once exported.

@@ -36,7 +36,7 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, dirname, extname, join, relative, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { deflateSync, inflateSync } from 'node:zlib';
@@ -547,7 +547,7 @@ function printLayout(project: ProjectRef, report: LayoutReport, strict: boolean)
 function layout(positionals: string[], flags: Record<string, string | true>): void {
   const project = requireProject(positionals[0]);
   const strict = Boolean(flags['strict']);
-  const report = checkLayout(project.dir, project.name);
+  const report = checkLayout(project.dir, project.name, ROOT);
   const ok = (strict ? report.errors.length + report.warnings.length : report.errors.length) === 0;
   if (flags['json']) printJson({ project: project.name, dir: project.rel, ok, strict, ...report } as unknown as Json);
   else printLayout(project, report, strict);
@@ -573,7 +573,7 @@ function check(positionals: string[], flags: Record<string, string | true>): voi
   // The project's src/ and sheets/ with the repository's tsconfig (tools/typecheck.ts, the check export runs too).
   const types = typeCheckProject(project, ROOT);
   const { projectErrors } = types;
-  const report = checkLayout(project.dir, project.name);
+  const report = checkLayout(project.dir, project.name, ROOT);
   const layoutOk = (strict ? report.errors.length + report.warnings.length : report.errors.length) === 0;
   const lint = lintProject(project.dir);
   const ok = projectErrors.length === 0 && layoutOk && lint.length === 0;
@@ -607,14 +607,31 @@ function check(positionals: string[], flags: Record<string, string | true>): voi
 // game
 // ---------------------------------------------------------------------------
 
-/** Whether a page answers at a URL: then a dev server (npm run view) already serves the repository there. */
-async function answers(url: string): Promise<boolean> {
+/** A folder's real path, links followed (the folder itself when it cannot be read). */
+const realDir = (dir: string) => {
   try {
-    const response = await fetch(url, { headers: { accept: 'text/html' }, signal: AbortSignal.timeout(2000) });
-    return response.ok && (response.headers.get('content-type') ?? '').includes('text/html');
+    return realpathSync(dir);
   } catch {
-    return false;
+    return resolve(dir);
   }
+};
+
+/**
+ * What answers on a port: nothing; this repository's dev server (npm run view, `npm run game`), which says so at
+ * /__api/server (vite.config.ts) with the folder it serves; the dev server of another checkout of Diorama; or some other
+ * program.
+ */
+async function serverOn(port: number): Promise<{ kind: 'none' | 'ours' | 'other' } | { kind: 'diorama'; root: string }> {
+  let response: Response;
+  try {
+    response = await fetch(`http://localhost:${port}/__api/server`, { headers: { accept: 'application/json' }, signal: AbortSignal.timeout(2000) });
+  } catch {
+    // Nothing answers (or nothing that speaks HTTP: then the dev server cannot take the port, and says so).
+    return { kind: 'none' };
+  }
+  const body = (await response.json().catch(() => null)) as { app?: unknown; root?: unknown } | null;
+  if (!response.ok || body?.app !== 'diorama' || typeof body.root !== 'string') return { kind: 'other' };
+  return realDir(body.root) === realDir(ROOT) ? { kind: 'ours' } : { kind: 'diorama', root: body.root };
 }
 
 /** Serves a project's game/ (rule 8) with the viewer's dev server, which resolves @diorama/phaser and serves assets/ next to it. */
@@ -625,11 +642,14 @@ async function game(positionals: string[], flags: Record<string, string | true>)
   const port = flags['port'] === undefined ? 5173 : Number(flags['port']);
   if (!Number.isInteger(port) || port <= 0 || port > 65535) fail(`--port must be a port number, not "${flags['port']}".`);
   const url = `http://localhost:${port}/${project.rel}/${LAYOUT.game}/`;
-  if (await answers(url)) {
+  const answering = await serverOn(port);
+  if (answering.kind === 'ours') {
     console.log(pc.green(`${project.name}: the dev server on port ${port} already serves the game:`));
     console.log(url);
     return;
   }
+  if (answering.kind === 'diorama') fail(`port ${port} is taken by the dev server of another checkout of Diorama (${answering.root}), which does not serve this one's projects.`, 'Stop it, or pass --port <another>.');
+  if (answering.kind === 'other') fail(`port ${port} is taken by another program: it answers, but it is not this repository's dev server (npm run view).`, 'Stop it, or pass --port <another>.');
   const { createServer } = await import('vite');
   const server = await createServer({ configFile: resolve(ROOT, 'vite.config.ts'), root: ROOT, server: { port, strictPort: true } });
   try {
@@ -1787,8 +1807,8 @@ const USAGE: Record<string, string> = {
   'new-kit': 'npm run new-kit -- <project> scenery|gear|vfx|items [--force] [--json]\n  Starts a kit in src/<kit>/ (docs/ARCHITECTURE.md, Kits): catalog.ts (what editors and the generator command read), index.ts (what other code imports) and a first piece in a family file, written with the engine\'s types and the project\'s theme (CAMERA, the VOLUMES materials) and space profile (src/space.ts, when it has one):\n    scenery  src/scenery/props.ts, a crate prop (SCENERY)                then scenery-items, export scenery/, scenery-test; new-scene works on it\n    gear     src/gear/heads.ts, a helm, and bodies.ts, a mannequin body (CATALOG, and CHARACTERS with a mannequin that wears it)   then gear-items, export gear/\n    vfx      src/vfx/bursts.ts, a spark burst (VFX)                       then vfx-items, export vfx/\n    items    src/items/gems.ts, a gem with its rarity tiers (ITEMS)       then item-icons, export icons/\n  The first piece is a block-out that renders, so the kit\'s generator, the export and check --strict pass on it; make it the project\'s own. Refuses to overwrite an existing kit\'s files unless --force (the kit\'s other files stay).',
   list: 'npm run list -- [project] [--json]\n  Sheets, exported assets and review files (review/) of one project or of all of them (projects/, then examples/).',
   check: 'npm run check -- <project> [--strict] [--json]\n  Type-checks the project\'s src/, sheets/ and game/ with the repository\'s tsconfig (errors in the engine and package files it imports are counted apart), then checks its layout (npm run layout) and that src/ and sheets/ are deterministic (game/ is not linted): no Math.random, no Date or performance.now, and no raw color literals (#hex, rgb(), hsl()) outside src/theme.ts, each reported with its file and line. Fails on any of them; --strict also fails on sheets not exported yet and assets without a sheet.',
-  layout: 'npm run layout -- <project> [--strict] [--json]\n  Checks the project against the rules of docs/ARCHITECTURE.md: only src/, sheets/, assets/, review/, game/, STYLE.md, README.md, diorama.config.json (only outDir, scale, format, cols and gap) and .gitignore at its root; no underscore prefixes and kebab-case names in src/ and sheets/ (markdown notes in src/ may use capitals); sheets are thin (no function or class, at most 20 lines of code) and generated ones keep their "Generated by" line; src/ never imports sheets/ and sheets never import sheets; a kit with catalog.ts has index.ts; assets/ holds only PNG and JSON; game/ holds code and data only (no images: they come from assets/, through the packages), never imports @core or the project\'s other places, and src/ never imports it. Sheets without an export and assets without a sheet are warnings (errors with --strict).',
-  game: 'npm run game -- <project> [--port N]\n  Serves the project\'s game (game/index.html, rule 8 of docs/ARCHITECTURE.md) with the viewer\'s dev server and prints its URL, http://localhost:5173/<projects|examples>/<project>/game/; the page loads the exports from the project\'s assets/. When a dev server (npm run view) already answers on the port, it only prints the URL. Ctrl+C stops the server it started.\n  --port  the port to serve on (default 5173, the viewer\'s)',
+  layout: 'npm run layout -- <project> [--strict] [--json]\n  Checks the project against the rules of docs/ARCHITECTURE.md: only src/, sheets/, assets/, review/, game/, STYLE.md, README.md, diorama.config.json (only outDir, scale, format, cols and gap) and .gitignore at its root; no underscore prefixes and kebab-case names in src/ and sheets/ (markdown notes in src/ may use capitals); sheets are thin (no function or class, at most 20 lines of code) and generated ones keep their "Generated by" line; src/ never imports sheets/ and sheets never import sheets; a kit with catalog.ts has index.ts; assets/ holds only PNG and JSON; game/ holds code and data only (no images: they come from assets/, through the packages), and every import and URL of its code, CSS and page is a relative path that stays inside game/ or one of @diorama/runtime, @diorama/phaser, @diorama/phaser/sheets and phaser (a dynamic import or a glob: a static ./ or ../ path); src/ and sheets/ never import a game, their imports resolved with the repository\'s tsconfig.json. Sheets without an export and assets without a sheet are warnings (errors with --strict).',
+  game: 'npm run game -- <project> [--port N]\n  Serves the project\'s game (game/index.html, rule 8 of docs/ARCHITECTURE.md) with the viewer\'s dev server and prints its URL, http://localhost:5173/<projects|examples>/<project>/game/; the page loads the exports from the project\'s assets/. When this repository\'s dev server (npm run view) already answers on the port, it only prints the URL; another program on the port is an error. Ctrl+C stops the server it started.\n  --port  the port to serve on (default 5173, the viewer\'s)',
   inspect: 'npm run inspect -- <file.png> [--json]\n  Size, content bounds, edges reached, transparency and distinct colors; with the atlas JSON next to the PNG, each cell (touching its edges, empty, pivot to content bottom, height above the pivot against the space profile); the quality numbers (value spread, tone levels, ink, accent) with warnings by role; the rig\'s motion check and the character manifest of a character sheet (with the cued effects looked up in assets/vfx/).',
   contact: 'npm run contact -- <file.png> [--with <b.png>] [--rows W,SW] [--frames 0-3] [--zoom N] [--bg <hex>] [--gray] [--out <png>] [--json]\n  Zoomed review sheet: one row per direction (or one row of frames) on a flat background.\n  --with    a second sheet drawn under the first, with the same rows and frames and the cells aligned (before and after, or one character against another). Both need the same cell size unless --zoom is given: each band then keeps its own cell size, left-aligned\n  --rows    only these directions (names from the atlas, in the order given; a UI sheet\'s states and, on a 16-facing sheet, the 8 compass names work too)\n  --frames  only these frame columns: 0-3, 0,2,5 or 0-2,5\n  --zoom    whole number; default 2 (more for small cells) while the sheet stays under 4000px wide, else 1\n  --bg      six hex digits, default 6e6a64. Write --bg 6e6a64 or quote it, --bg "#6e6a64": an unquoted # starts a shell comment\n  --gray    desaturate for the value test.\n  Written to <project>/review/contact/<asset path>[-vs-<b>]-contact[-<rows>][-f<frames>][-gray].png.',
   'new-scene': 'npm run new-scene -- <project> <name> --scene <file.json> [--force] [--json]\n  Turns a scene saved as JSON (SceneData, e.g. from the viewer\'s scene painter) into src/scenes/<name>.ts (SCENE) and sheets/scenes/<name>.ts (defineSceneAsset). The scene is validated against src/scenery/catalog.ts first.',

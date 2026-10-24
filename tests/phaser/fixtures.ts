@@ -198,6 +198,17 @@ export function expectedCell(clipKey: string, row: number, frame: number): numbe
 const fxPixel = (seed: number, row: number, frame: number, x: number, y: number, size: number): Rgba =>
   (x - size / 2 + 0.5) ** 2 + (y - size / 2 + 0.5) ** 2 <= (size / 2 - 1) ** 2 ? [(seed * 90 + frame * 30) % 256, (row * 50 + x * 9) % 256, (y * 9) % 256, 255] : [0, 0, 0, 0];
 
+/** Each effect's colour seed and frame size (px): what `expectedFx` draws. */
+export const FX = { spark: { seed: 1, size: 16 }, bolt: { seed: 2, size: 12 }, burst: { seed: 3, size: 20 } } as const;
+
+/** The pixels an effect's frame must draw (its whole cell, row by row, RGBA), and its size. */
+export function expectedFx(id: keyof typeof FX, row: number, frame: number): number[] {
+  const { seed, size } = FX[id];
+  const out: number[] = [];
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) out.push(...fxPixel(seed, row, frame, x, y, size));
+  return out;
+}
+
 function effectSheet(seed: number, effect: Record<string, unknown>, size: number, rows: number): { atlas: Atlas; png: Buffer } {
   const frameCount = Number(effect.frames);
   const directions = rows > 1 ? DIRS : [];
@@ -238,8 +249,8 @@ export function writeFixtures(dir: string) {
     writeFileSync(join(dir, dirname(path), atlas.meta.image!), png);
   };
   CLIPS.forEach((clip, index) => write(`characters/dummy/${clip.key}`, clipSheet(index, clip.key === 'idle')));
-  write('vfx/spark', effectSheet(1, { id: 'spark', kind: 'impact', frames: 3, fps: 12, loop: false, events: [{ frame: 1, name: 'hit' }] }, 16, 1));
-  write('vfx/bolt', effectSheet(2, { id: 'bolt', kind: 'projectile', frames: 2, fps: 12, loop: true, travel: { speed: 120, range: 60 }, follows: 'burst', followsSheet: 'vfx/burst', events: [] }, 12, 4));
-  write('vfx/burst', effectSheet(3, { id: 'burst', kind: 'impact', frames: 3, fps: 12, loop: false, events: [{ frame: 1, name: 'hit' }] }, 20, 1));
+  write('vfx/spark', effectSheet(FX.spark.seed, { id: 'spark', kind: 'impact', frames: 3, fps: 12, loop: false, events: [{ frame: 1, name: 'hit' }] }, FX.spark.size, 1));
+  write('vfx/bolt', effectSheet(FX.bolt.seed, { id: 'bolt', kind: 'projectile', frames: 2, fps: 12, loop: true, travel: { speed: 120, range: 60 }, follows: 'burst', followsSheet: 'vfx/burst', events: [] }, FX.bolt.size, 4));
+  write('vfx/burst', effectSheet(FX.burst.seed, { id: 'burst', kind: 'impact', frames: 3, fps: 12, loop: false, events: [{ frame: 1, name: 'hit' }] }, FX.burst.size, 1));
   write('ui/panel', { atlas: panel, png: encodePng(PANEL.size, PANEL.size, panelPixel) });
 }

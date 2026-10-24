@@ -158,6 +158,9 @@ function dioramaApiPlugin(): Plugin {
         next();
       });
 
+      // Who this server is: `npm run game` asks, to tell this repository's dev server from any other program on its port.
+      server.middlewares.use('/__api/server', (_req, res) => sendJson(res, 200, { app: 'diorama', root: repo }));
+
       server.middlewares.use('/__api/assets', async (_req, res) => {
         try {
           sendJson(res, 200, await buildAssetCatalog(repo));

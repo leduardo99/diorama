@@ -1,7 +1,9 @@
 /**
  * The scene plugin, `this.diorama` in every scene of a game made with `withDiorama`: it loads sheets by the contract, puts
  * characters and nine-slices on the scene, gives a character keyboard controls, and plays the effects characters cue
- * (`cues`, then `stepFx` after every character has stepped), each an Image on its sheet's texture sorted by `depthKey`.
+ * (`cues`, then `stepFx` after every character has stepped), each an Image on its sheet's texture sorted by `depthKey`,
+ * where the character that cued it is drawn. It numbers the scene's characters and effects in the order they came, the
+ * `order` of their depth keys, so things of one kind on one level never tie.
  */
 
 import Phaser from 'phaser';
@@ -22,15 +24,19 @@ import { frameNameOf } from './sheets.js';
  */
 export const DEPTH = { ground: -(2 ** 52), groundEffects: -(2 ** 51) } as const;
 
-/** An effect playing, its Image, and the order it started in (the `order` of its depth key). */
+/** Orders of one kind on one level that `depthKey` tells apart: 0 to 65535. */
+const ORDERS = 2 ** 16;
+
+/** An effect playing, its Image, the character that cued it (where it is drawn), and the order it started in (the `order` of its depth key). */
 interface Playing {
   fx: Fx;
   image: Phaser.GameObjects.Image;
+  by: DioramaCharacter | null;
   order: number;
 }
 
 export class DioramaPlugin extends Phaser.Plugins.ScenePlugin {
-  /** Where every floor point is drawn; null for each character's own camera with the floor's origin at world (0, 0). */
+  /** Where floor points are drawn (a character's own `projection` aside), its effects' with them; null for each character's own camera, the floor's origin at world (0, 0). */
   projection: Projection | null = null;
   /** Where the floor stops a projectile (a scene's `flightStop`); none lets it fly its whole range. */
   blocked: FxWorld['blocked'] = undefined;
@@ -46,7 +52,12 @@ export class DioramaPlugin extends Phaser.Plugins.ScenePlugin {
 
   private readonly host: Phaser.Scene;
   private playing: Playing[] = [];
+  /** The order the next effect gets. */
   private started = 0;
+  /** The scene's characters, in the order they were added. */
+  private actors: DioramaCharacter[] = [];
+  /** The order the next character gets. */
+  private added = 0;
 
   constructor(scene: Phaser.Scene, pluginManager: Phaser.Plugins.PluginManager, pluginKey: string) {
     super(scene, pluginManager, pluginKey);
@@ -66,24 +77,32 @@ export class DioramaPlugin extends Phaser.Plugins.ScenePlugin {
   private sceneStart() {
     const events = this.host.sys.events;
     events.on(Phaser.Scenes.Events.POST_UPDATE, this.postUpdate, this);
-    events.once(Phaser.Scenes.Events.CREATE, this.created, this);
+    events.once(Phaser.Scenes.Events.CREATE, this.unround, this);
     events.once(Phaser.Scenes.Events.SHUTDOWN, this.shutdown, this);
+    this.unround();
   }
 
   /**
-   * On canvas, the cameras' `roundPixels` goes off: `pixelArt` (which `withDiorama` turns on) forces it on, and on canvas it
-   * draws frames half a pixel too large. The binding rounds positions to whole pixels itself.
+   * On canvas, the cameras' `roundPixels` goes off, the scene's cameras' and the ones added later (the camera manager's
+   * default): `pixelArt` (which `withDiorama` turns on) forces it on, and on canvas it draws frames half a pixel too large.
+   * The binding rounds positions to whole pixels itself.
    */
-  private created() {
+  private unround() {
     if (this.host.game.renderer.type !== Phaser.CANVAS) return;
-    for (const camera of this.host.cameras.cameras) camera.setRoundPixels(false);
+    const cameras = this.host.cameras;
+    cameras.roundPixels = false;
+    for (const camera of cameras.cameras) camera.setRoundPixels(false);
   }
 
   private shutdown() {
     const events = this.host.sys.events;
     events.off(Phaser.Scenes.Events.POST_UPDATE, this.postUpdate, this);
+    events.off(Phaser.Scenes.Events.CREATE, this.unround, this);
     for (const { image } of this.playing) image.destroy();
     this.playing = [];
+    this.started = 0;
+    this.actors = [];
+    this.added = 0;
   }
 
   override destroy() {
@@ -123,9 +142,31 @@ export class DioramaPlugin extends Phaser.Plugins.ScenePlugin {
     return ui;
   }
 
-  /** Keyboard controls for a character, read at the start of each of its steps (`KeyboardControls`). */
+  /** Keyboard controls for a character, read at the start of each of its steps (`KeyboardControls`); the ones it had are destroyed. */
   controls(character: DioramaCharacter): KeyboardControls {
-    return (character.controls = new KeyboardControls(this.host));
+    const controls = new KeyboardControls(this.host);
+    character.controls = controls;
+    return controls;
+  }
+
+  /**
+   * A character joins the scene (its constructor calls it): it gets the next order. When a scene has added more characters
+   * than `depthKey`'s orders hold, the ones still there are numbered again from 0, in the order they came.
+   */
+  enlist(character: DioramaCharacter) {
+    if (this.added >= ORDERS) {
+      this.actors.forEach((one, order) => (one.order = order));
+      this.added = this.actors.length;
+      for (const one of this.actors) one.sync();
+    }
+    character.order = this.added++;
+    this.actors.push(character);
+  }
+
+  /** A character was destroyed: the effects that follow it, or loop until its clip changes, end on the next step (an `end` event). */
+  dismiss(character: DioramaCharacter) {
+    this.actors = this.actors.filter((one) => one !== character);
+    for (const { fx } of this.playing) if (fx.follow?.actor === character.actor || fx.until?.actor === character.actor) fx.done = true;
   }
 
   /** The effects playing now. */
@@ -138,15 +179,25 @@ export class DioramaPlugin extends Phaser.Plugins.ScenePlugin {
     return this.playing.find((p) => p.fx === fx)?.image;
   }
 
-  /** A character's clip event: passed on (`clip`), and the effects it cues start. Characters call it on their steps. */
+  /** A character's clip event: passed on (`clip`), and the effects it cues start where it is drawn. Characters call it on their steps. */
   clip(event: ClipEvent, character: DioramaCharacter) {
     this.events.emit(EVENTS.CLIP, event, character);
-    for (const fx of cues(event, this.library.effects, { aim: character.aim ?? undefined })) this.play(fx);
+    for (const fx of cues(event, this.library.effects, { aim: character.aim ?? undefined })) this.play(fx, character);
   }
 
-  /** Plays an effect (one of `cues`, or one of your own) from now on. */
-  play(fx: Fx): Phaser.GameObjects.Image {
-    const playing = { fx, image: this.host.add.image(0, 0, fx.sheet.asset.path), order: this.started++ % 2 ** 16 };
+  /**
+   * Plays an effect (one of `cues`, or one of your own) from now on, drawn where `by` is drawn (its `drawnWith`): by default
+   * the character whose actor it follows or loops with, else the plugin's `projection`, else the camera of its character.
+   * It gets the next order; when a scene has started more effects than `depthKey`'s orders hold, the ones playing are
+   * numbered again from 0, in the order they started.
+   */
+  play(fx: Fx, by: DioramaCharacter | null = this.actors.find((one) => one.actor === (fx.follow ?? fx.until)?.actor) ?? null): Phaser.GameObjects.Image {
+    if (this.started >= ORDERS) {
+      this.playing.forEach((one, order) => (one.order = order));
+      this.started = this.playing.length;
+      for (const one of this.playing) this.sync(one);
+    }
+    const playing: Playing = { fx, image: this.host.add.image(0, 0, fx.sheet.asset.path), by, order: this.started++ };
     this.playing.push(playing);
     this.sync(playing);
     this.events.emit(EVENTS.FX_START, fx);
@@ -156,36 +207,41 @@ export class DioramaPlugin extends Phaser.Plugins.ScenePlugin {
   /** After every character stepped: the effects move on (`stepFx`), the ones that ended go, their events are emitted, and impacts start. */
   private postUpdate(_time: number, delta: number) {
     if (!this.playing.length) return;
-    const before = new Map(this.playing.map((p) => [p.fx, p]));
+    const all = new Map(this.playing.map((p) => [p.fx, p]));
+    const gone = new Map(all);
     const { fx, events } = stepFx(this.effects as Fx[], delta / 1000, { effects: this.library.effects, blocked: this.blocked });
     const kept: Playing[] = [];
     const impacts: Fx[] = [];
     for (const one of fx) {
-      const playing = before.get(one);
+      const playing = all.get(one);
       if (!playing) impacts.push(one);
       else {
-        before.delete(one);
+        gone.delete(one);
         kept.push(playing);
         this.sync(playing);
       }
     }
-    for (const { image } of before.values()) image.destroy();
+    for (const { image } of gone.values()) image.destroy();
     this.playing = kept;
     for (const event of events) this.events.emit(EVENTS.FX, event);
-    for (const impact of impacts) this.play(impact);
+    // An impact is drawn where the projectile it follows was.
+    for (const impact of impacts) this.play(impact, (impact.from && all.get(impact.from)?.by) ?? null);
   }
 
-  /** Where every floor point of a character's effect is drawn. */
-  private projectionFor(character: Character | null, scale: number): Projection {
-    return this.projection ?? projectionOf(null, { tilt: character?.tilt ?? DEFAULT_TILT, scale: character?.scale ?? scale });
+  /** Where every floor point of an effect is drawn: where the character that cued it is drawn, else the plugin's projection, else its character's camera. */
+  private projectionFor({ fx, by }: Playing): Projection {
+    if (by) return by.drawnWith;
+    const character: Character | null = fx.character;
+    return this.projection ?? projectionOf(null, { tilt: character?.tilt ?? DEFAULT_TILT, scale: character?.scale ?? fx.sheet.scale });
   }
 
   /** Shows an effect's frame (its row, its age) with its origin on its point, lifted, at whole px, and its depth. */
-  private sync({ fx, image, order }: Playing) {
+  private sync(playing: Playing) {
+    const { fx, image, order } = playing;
     const rects = fx.sheet.rects(fx.row);
     const name = frameNameOf(fx.sheet.atlas, rects[frameOfFx(fx)] ?? rects[0]);
     if (image.frame.name !== name) image.setFrame(name);
-    const projection = this.projectionFor(fx.character, fx.sheet.scale);
+    const projection = this.projectionFor(playing);
     const at = toScreen(projection, fx.pos, fx.lift);
     image.setPosition(Math.round(at.x), Math.round(at.y));
     image.setDepth(fx.sheet.layer === 'ground' ? DEPTH.groundEffects + order : depthKey(toScreen(projection, fx.pos).y, 'fx', order));
