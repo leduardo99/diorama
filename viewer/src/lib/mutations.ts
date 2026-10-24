@@ -91,7 +91,7 @@ export function useDeleteProject() {
   });
 }
 
-/** Runs tools/cli.ts or tools/export.ts; the Novo dialog shows the output itself. */
+/** Runs tools/cli.ts or tools/export.ts; the New dialog shows the output itself. */
 export function useCli() {
   const refresh = useRefreshCatalog();
   return useMutation({

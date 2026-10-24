@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
 import { Rich, useT } from '@/i18n';
 import { projectsQuery } from '@/lib/queries';
-import { NovoModal } from '@/modals/novo-modal';
+import { NewModal } from '@/modals/new-modal';
 
 export const Route = createFileRoute('/')({
   beforeLoad: async ({ context: { queryClient } }) => {
@@ -35,7 +35,7 @@ function NoProjects() {
         </EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
-        <Button onClick={() => void NiceModal.show(NovoModal, { tab: 'new-project' })}>{t('projects.none.create')}</Button>
+        <Button onClick={() => void NiceModal.show(NewModal, { tab: 'new-project' })}>{t('projects.none.create')}</Button>
       </EmptyContent>
     </Empty>
   );

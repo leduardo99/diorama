@@ -11,7 +11,7 @@ import { copyText } from '@/lib/clipboard';
 import { projectDir, projectUrl } from '@/lib/project-paths';
 import { projectsQuery } from '@/lib/queries';
 import { DeleteProjectModal } from '@/modals/delete-project-modal';
-import { NovoModal } from '@/modals/novo-modal';
+import { NewModal } from '@/modals/new-modal';
 
 /**
  * What can be done with the project in use: add an asset, export it, open its game (when it has `game/index.html`), copy
@@ -36,11 +36,11 @@ export function ProjectMenu({ project }: { project: string }) {
       </Tooltip>
       <DropdownMenuContent align="start" className="w-56">
         <DropdownMenuGroup>
-          <DropdownMenuItem onSelect={() => void NiceModal.show(NovoModal, { tab: 'new-asset', project })}>
+          <DropdownMenuItem onSelect={() => void NiceModal.show(NewModal, { tab: 'new-asset', project })}>
             <PlusIcon />
             {t('projects.menu.newAsset')}
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => void NiceModal.show(NovoModal, { tab: 'export', project })}>
+          <DropdownMenuItem onSelect={() => void NiceModal.show(NewModal, { tab: 'export', project })}>
             <UploadIcon />
             {t('projects.menu.export')}
           </DropdownMenuItem>

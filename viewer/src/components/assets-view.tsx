@@ -16,7 +16,7 @@ import { useEntrySelection } from '@/lib/use-asset-selection';
 import { useGridColumns } from '@/lib/use-grid-columns';
 import type { AssetFileMeta } from '@/lib/types';
 import { DeleteAssetsModal } from '@/modals/delete-assets-modal';
-import { NovoModal } from '@/modals/novo-modal';
+import { NewModal } from '@/modals/new-modal';
 import { AssetGrid } from './asset-grid';
 import { AssetTable } from './asset-table';
 import { AssetToolbar, gridSizes, type GridSize } from './asset-toolbar';
@@ -127,11 +127,11 @@ export function AssetsView() {
               </EmptyDescription>
             </EmptyHeader>
             <EmptyContent className="flex-row justify-center">
-              <Button variant="outline" onClick={() => void NiceModal.show(NovoModal, { tab: 'new-asset', project })}>
+              <Button variant="outline" onClick={() => void NiceModal.show(NewModal, { tab: 'new-asset', project })}>
                 <PlusIcon data-icon="inline-start" />
                 {t('assets.empty.newAsset')}
               </Button>
-              {sheetCount > 0 && <Button onClick={() => void NiceModal.show(NovoModal, { tab: 'export', project })}>{t('assets.empty.exportProject')}</Button>}
+              {sheetCount > 0 && <Button onClick={() => void NiceModal.show(NewModal, { tab: 'export', project })}>{t('assets.empty.exportProject')}</Button>}
             </EmptyContent>
           </Empty>
         ) : shown === 0 ? (

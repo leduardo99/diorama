@@ -12,7 +12,7 @@ import { createTranslator, LANGS, useT } from '@/i18n';
 import { useWindowKeydown } from '@/lib/hotkeys';
 import { projectsQuery } from '@/lib/queries';
 import { SECTION_PATHS, type Section } from '@/lib/sections';
-import { NovoModal } from '@/modals/novo-modal';
+import { NewModal } from '@/modals/new-modal';
 
 /** An example project is found by the word for it in every language, whichever one the interface speaks. */
 const EXAMPLE_KEYWORDS = LANGS.map((lang) => createTranslator(lang).t('projects.switcher.example'));
@@ -77,7 +77,7 @@ export function ProjectSwitcher({ project, section }: { project: string | undefi
                 value={`${t('projects.switcher.new')} ${t('common.create')}`}
                 onSelect={() => {
                   setOpen(false);
-                  void NiceModal.show(NovoModal, { tab: 'new-project' });
+                  void NiceModal.show(NewModal, { tab: 'new-project' });
                 }}
               >
                 <FolderPlusIcon />

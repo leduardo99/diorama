@@ -8,7 +8,7 @@ import { assetsQuery, projectsQuery } from '@/lib/queries';
 import { isTyping, useWindowKeydown } from '@/lib/hotkeys';
 import { Rich, useT } from '@/i18n';
 import { AppHeader } from '@/components/app-header';
-import { NovoModal } from '@/modals/novo-modal';
+import { NewModal } from '@/modals/new-modal';
 import { ShortcutsModal } from '@/modals/shortcuts-modal';
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
@@ -50,7 +50,7 @@ function Shell() {
     if (document.querySelector('[role="dialog"], [role="alertdialog"]')) return;
     if (e.key === 'n' || e.key === 'N') {
       e.preventDefault();
-      void NiceModal.show(NovoModal, {});
+      void NiceModal.show(NewModal, {});
     } else if (e.key === '?') {
       e.preventDefault();
       void NiceModal.show(ShortcutsModal);

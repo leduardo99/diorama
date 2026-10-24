@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useT } from '@/i18n';
 import { sectionOf } from '@/lib/sections';
-import { NovoModal } from '@/modals/novo-modal';
+import { NewModal } from '@/modals/new-modal';
 import { ShortcutsModal } from '@/modals/shortcuts-modal';
 import { LanguageSwitch } from './language-switch';
 import { ProjectMenu } from './project-menu';
@@ -33,7 +33,7 @@ export function AppHeader() {
       {project && <ProjectMenu project={project} />}
 
       <div className="ml-auto flex items-center gap-1">
-        <Button variant="outline" size="sm" onClick={() => void NiceModal.show(NovoModal, {})}>
+        <Button variant="outline" size="sm" onClick={() => void NiceModal.show(NewModal, {})}>
           <PlusIcon data-icon="inline-start" />
           {t('header.new')}
           <Kbd>N</Kbd>
