@@ -21,9 +21,9 @@ interface Check {
 const checks: Check[] = [];
 const add = (label: string, ok: boolean, fix?: string) => checks.push({ label, ok, fix });
 
-// 1. Node version (package.json "engines" is >=20).
+// 1. Node version (package.json "engines" is >=22).
 const [major] = process.versions.node.split('.').map(Number);
-add(`Node.js ${process.versions.node} (requires >= 20)`, major >= 20, 'Install Node.js 20 or newer from https://nodejs.org');
+add(`Node.js ${process.versions.node} (requires >= 22)`, major >= 22, 'Install Node.js 22 or newer from https://nodejs.org');
 
 // 2. Dependencies declared in package.json are installed.
 const pkg = JSON.parse(readFileSync(resolve('package.json'), 'utf8')) as {

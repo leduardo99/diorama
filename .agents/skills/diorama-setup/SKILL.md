@@ -19,7 +19,7 @@ It checks the Node.js version, the installed dependencies, the headless Chromium
 
 ## 2. Install
 
-Requires Node.js 20 or newer.
+Requires Node.js 22 or newer.
 
 ```bash
 npm install
