@@ -38,3 +38,12 @@ jobs:
           npx tsc --noEmit -p viewer
       - name: Tests
         run: npm test
+
+  # Branch protection requires a check named "Types and tests": it passes only when every Node version above passes.
+  result:
+    name: Types and tests
+    if: always()
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - run: test "${{ needs.test.result }}" = success
