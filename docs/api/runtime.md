@@ -414,11 +414,11 @@ function canStart<A extends SheetRef>(actor: Actor<A>, clip: Clip<A>): boolean
 ### `createActor`
 
 An actor of a character, starting in `clip` (default its idle) at a floor point; or a sprite, from one clip. `row` (or
-`heading`, a world yaw) is its facing. Ids count up from 1 unless one is given, past every id seen so far, so a counted id
-never repeats one given before it (keeping the ids it gives apart is the host's part).
+`heading`, a world yaw) is its facing. `id` is the host's: the runtime keeps no count of its own, so two worlds (or two
+tests) in one process never share one.
 
 ```ts
-function createActor<A extends SheetRef>(of: Character<A> | Clip<A>, pos: Vec2, o?: { id?: number | undefined; clip?: Clip<A> | undefined; row?: number | undefined; heading?: number | undefined; radius?: number | undefined; }): Actor<...>
+function createActor<A extends SheetRef>(of: Character<A> | Clip<A>, pos: Vec2, o: { id: number; clip?: Clip<A> | undefined; row?: number | undefined; heading?: number | undefined; radius?: number | undefined; }): Actor<...>
 ```
 
 ---
@@ -1611,6 +1611,7 @@ One thing standing on the floor: a character, or a sprite (a single clip and no 
 
 ```ts
 interface Actor<A extends SheetRef = SheetRef> {
+  /** The host's own id for it (unique among the actors it plays together): the runtime only hands it back on events. */
   id: number;
   character: Character<A> | null;
   /** The looping clip shown when no action plays: idle, the gait being walked, or the stance. */

@@ -82,6 +82,10 @@ Every sheet's JSON repeats the whole character manifest, so reading any one shee
    - The effect's `height` says where its own floor marks are drawn (a projectile's pool of light is `height` below its origin), not where to place it: the origin goes on the socket. A kit cues effects with floor marks from a socket at about that height, or makes one effect per height.
    - Rows: a `fly` effect shows the row nearest its heading, and `stay` or `follow` effects the row nearest the actor's facing. `meta.directionFacings` gives each row's heading (a 16-facing sheet names its rows `D0`…`D15`, `D0` facing south).
    - Effects run on their own clock (their `fps`), not the clip's, and a `stay` effect plays to its end even after the clip moved on. Clips that hold their last frame (a death) still fire `end`.
+10. **Draw order:** a scene's ground goes first, then `ground` effects. Then standing things (walls, doors, props), characters and `air` effects are drawn by the screen y of their floor point, rounded to the nearest sixteenth of a pixel, lower on the screen in front.
+    - Things whose y rounds to the same sixteenth are level. On one level, standing things come first, in the scene's layout order, then characters, then `air` effects.
+    - `depthKey(screenY, kind, order)` in `@diorama/runtime` turns this into one number, which a renderer can use as its depth.
+    - The rounding is a grid, not a tolerance: two things 0.01 px apart can fall on two levels. The order differs from an exact comparison of y only below a sixteenth of a pixel, where the eye cannot tell.
 
 ## 6. Older or partial files
 

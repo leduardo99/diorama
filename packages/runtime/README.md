@@ -13,7 +13,7 @@ The atlas contract in pure TypeScript: it reads Diorama's exported sheets and pl
 import { buildLibrary, createActor, cues, play, projectionOf, readSheet, shownFrame, steer, stepFx, toScreen, type Fx } from '@diorama/runtime';
 const json: unknown = { meta: {}, frames: {} }; // what the host fetched: characters/guard/idle.json, and the sheets it depends on
 const library = buildLibrary([readSheet('characters/guard/idle', json)]);
-const actor = createActor(library.characters[0], { x: 0, y: 0 });
+const actor = createActor(library.characters[0], { x: 0, y: 0 }, { id: 1 });
 let effects: Fx[] = [];
 play(actor, 'slash');
 for (const event of steer(actor, { dx: 1, dy: 0, run: false }, 1 / 60)) effects.push(...cues(event, library.effects));
@@ -24,7 +24,7 @@ const { frame, pivot } = shownFrame(actor); // draw frame.x, .y, .w, .h of frame
 
 1. Fetch a sheet's JSON and read it with `readSheet(path, json)`. Paths start at the assets root and have no extension. A file that is not an atlas throws a `ContractError` naming it; cells listed in another shape than the contract's (another packer's array) are taken from the grid, with a warning in `sheet.warnings`. `dependenciesOf(sheet)` lists what to fetch next: a character's other clips and the effects it cues (`vfx/<id>`), an effect's `follows` (so the follow-up comes from the effect sheet's own list), and a scenery piece's state and clip sheets.
 2. `buildLibrary(sheets)` makes the characters (their clips grouped by manifest, with the bindings of its `controls`), the effects by id, the interface pieces by path, the icons by item, and sprites for everything else. Older atlases fall back on the rules of the contract's §6.
-3. `createActor(character, floorPoint)` puts a character on the floor, and each step returns the events its clips fired:
+3. `createActor(character, floorPoint, { id })` puts a character on the floor (the id is yours: the runtime keeps no count), and each step returns the events its clips fired:
    - `steer(actor, input, dt, floor?)` walks or runs at the gait's `groundSpeed`, so the feet stay planted;
    - `advance(actor, dt, floor?)` moves the clocks without input: the clips' events, an action's root motion (through the floor) and its end;
    - `play(actor, key)` starts an action if its priority and the `cancel` event allow it. Its `start` and first-frame events come with the next step, or from `takeEvents`;

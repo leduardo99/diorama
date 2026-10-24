@@ -103,7 +103,7 @@ assert.equal(pose.rects(4).length, 2, 'a row it does not list falls back to the 
 assert.deepEqual(pose.rects(4)[1], { x: 100, y: 400, width: 100, height: 100 });
 assert.deepEqual(framesOf(pose, 0)[1], { sheet: 'characters/mage/pose', x: 50, y: 5, w: 42, h: 61, ox: 29, oy: 19, cellW: 100, cellH: 100 }, 'a trimmed frame and its cell');
 assert.deepEqual(framesOf(pose, 2)[0], { sheet: 'characters/mage/pose', x: 3, y: 70, w: 38, h: 60, ox: 0, oy: 0, cellW: 38, cellH: 60 }, 'an untrimmed one is its whole cell');
-const posing = createActor(pose, { x: 0, y: 0 });
+const posing = createActor(pose, { x: 0, y: 0 }, { id: 1 });
 assert.deepEqual(shownFrame(posing).frame, framesOf(pose, 0)[0], 'the frame shown is the same frame');
 posing.time = 0.15;
 assert.deepEqual([shownFrame(posing).index, shownFrame(posing).frame.ox], [1, 29]);

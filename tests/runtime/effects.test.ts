@@ -73,7 +73,8 @@ assert.deepEqual(cuesOn(mage, 'slash', 'release'), [], 'a cue plays on its own c
 assert.deepEqual(cuesOn(null, 'cast', 'release'), []);
 
 // 3. Playing the cues of an event: the actor starts a clip and its events reach `cues`.
-const actor = (): Actor => createActor(mage, { x: 100, y: 200 });
+let nextId = 0;
+const actor = (): Actor => createActor(mage, { x: 100, y: 200 }, { id: ++nextId });
 const clip = (key: string) => mage.clips.find((c) => c.key === key)!;
 const playing = (who: Actor, out: Fx[]) => (events: ClipEvent[]) => {
   for (const event of events) out.push(...cues(event, sheets));
@@ -101,7 +102,7 @@ assert.equal(flying.row, 0, 'facing S, it shows the S row');
 assert.ok(near(flying.fly!.vx, 0) && near(flying.fly!.vy, bolt.travel!.speed), 'it flies at the sheet\'s speed on the floor (the screen shrinks its depth, not the runtime)');
 assert.ok(live.some((f) => f.sheet.id === 'impact' && f.motion === 'stay'), '`end` of the action');
 // The same cue facing east flies east: the action's facing is the one it started with.
-const east = createActor(mage, { x: 100, y: 200 }, { row: 6 });
+const east = createActor(mage, { x: 100, y: 200 }, { id: 100, row: 6 });
 const eastFx: Fx[] = [];
 play(east, clip('cast'));
 playing(east, eastFx)(takeEvents(east));
@@ -180,7 +181,7 @@ for (let t = 0; t < 1.2; t += 0.05) {
 assert.equal(kept.length, 0);
 // A loop cued on a base clip's event (`step:<leg>`, no action) lasts while the actor stays in that clip: the clip of the
 // event, even when the host cues it after the actor changed its base clip (a gait switch).
-const pacer = createActor({ ...mage, effects: { ...mage.effects, idle: [{ on: 'step:legL', effect: 'aura' }] } }, { x: 0, y: 0 });
+const pacer = createActor({ ...mage, effects: { ...mage.effects, idle: [{ on: 'step:legL', effect: 'aura' }] } }, { x: 0, y: 0 }, { id: 101 });
 const stepEvent: ClipEvent = { actor: pacer, clip: pacer.clip, row: 0, frame: 0, name: 'step:legL', siblings: ['step:legL'], act: null, pos: { x: 0, y: 0 } };
 pacer.clip = clip('guard');
 const paced = cues(stepEvent, sheets);
