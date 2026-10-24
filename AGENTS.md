@@ -39,6 +39,8 @@ Diorama makes 2.5D game assets as code: AI coding agents write TypeScript, and t
    1. On `main`, before your change, run `npm run example`, then `npm run compare-exports -- --save`.
    2. On your branch, run `npm run example`, then `npm run compare-exports`.
    3. It must say "The exports are unchanged." If your change alters images on purpose, say which and why in the pull request.
+
+   Use a full export for the proof (about 45 seconds), not `--changed`: an engine change makes no sheet look out of date. While you work, `npm run export -- <project> --changed` re-exports only what your edits touched.
 5. **Open a pull request** with the template:
    - what changed and why, with `Closes #<issue>`;
    - the checks you ran and their result;

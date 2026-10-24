@@ -25,6 +25,10 @@
         display: block;
         transform-origin: 0 0;
       }
+      /* Vite shows a module error of any page to every open page: one sheet failing must not cover another's render. */
+      vite-error-overlay {
+        display: none !important;
+      }
       .error-card {
         padding: 16px;
         background: #2b1114;
@@ -84,18 +88,8 @@
       window.__ASSET_ERROR__ = null;
       window.__ASSET_METADATA__ = null;
 
-      async function run() {
-        const root = document.getElementById('asset-root');
-        const params = new URLSearchParams(window.location.search);
-        const project = params.get('project');
-        // The project's folder from the repository root (examples/<name> or projects/<name>); sheets live in <dir>/sheets/.
-        const dir = (params.get('dir') || `projects/${project}`).replace(/^\/+|\/+$/g, '');
-        const file = params.get('file');
-
-        if (!project || !file) {
-          throw new Error('Missing "project" or "file" query parameter in URL');
-        }
-
+      /** The asset a sheet module exports. A module is fetched once per page and then comes from the module cache. */
+      async function importAsset(dir, file) {
         // Clean path to ensure leading slash
         const cleanFile = file.startsWith('/') ? file : '/' + file;
         const moduleUrl = `/${dir}/sheets${cleanFile}`;
@@ -117,22 +111,41 @@
         if (typeof asset.render !== 'function') {
           throw new Error(`Asset definition in "${moduleUrl}" is missing a "render(root, context)" function`);
         }
+        return asset;
+      }
 
+      /** What the asset declares: its cell, frames, directions and scale, and the size of the whole sheet. */
+      function declaredSize(asset) {
         const width = Number(asset.width) || 256;
         const height = Number(asset.height) || 256;
-        const format = asset.format || 'png';
-        const quality = typeof asset.quality === 'number' ? asset.quality : 90;
         const scale = Number(asset.scale) || 1;
-        const background = asset.background ?? (format === 'jpeg' ? '#ffffff' : 'transparent');
-
         const frameCount = Math.max(1, Number(asset.frames) || 1);
         // Directions are rows: row 0 faces the camera (S) and each next row turns clockwise on screen.
         const directionCount = Math.max(1, Math.floor(Number(asset.directions) || 1));
+        return { width, height, scale, frameCount, directionCount, totalWidth: width * frameCount, totalHeight: height * directionCount };
+      }
+
+      /**
+       * Renders one sheet into a fresh #asset-root and returns its metadata. The body is reset first, so a page
+       * renders many sheets one after another and each starts from the DOM of a page that was just loaded.
+       */
+      async function render({ project, dir, file, preview }) {
+        window.__ASSET_READY__ = false;
+        window.__ASSET_ERROR__ = null;
+        window.__ASSET_METADATA__ = null;
+        const root = document.createElement('div');
+        root.id = 'asset-root';
+        document.body.replaceChildren(root);
+
+        const asset = await importAsset(dir, file);
+        const { width, height, scale, frameCount, directionCount, totalWidth, totalHeight } = declaredSize(asset);
+        const format = asset.format || 'png';
+        const quality = typeof asset.quality === 'number' ? asset.quality : 90;
+        const background = asset.background ?? (format === 'jpeg' ? '#ffffff' : 'transparent');
+
         const DIRECTION_NAMES = { 1: ['S'], 4: ['S', 'W', 'N', 'E'], 8: ['S', 'SW', 'W', 'NW', 'N', 'NE', 'E', 'SE'] };
         const directionNames = Array.from({ length: directionCount }, (_, d) => DIRECTION_NAMES[directionCount]?.[d] ?? `D${d}`);
         const facingOf = (d) => Math.PI / 2 + (d * 2 * Math.PI) / directionCount;
-        const totalWidth = width * frameCount;
-        const totalHeight = height * directionCount;
 
         // Style the root container
         root.style.width = `${totalWidth}px`;
@@ -143,8 +156,6 @@
           root.style.flexDirection = 'row';
           root.style.flexWrap = 'wrap';
         }
-
-        const preview = params.get('preview') === 'true';
 
         if (frameCount > 1 || directionCount > 1) {
           for (let d = 0; d < directionCount; d++)
@@ -258,14 +269,50 @@
         };
         window.__ASSET_READY__ = true;
         console.log(`[AssetRunner] Asset ready: ${totalWidth}x${totalHeight} (${format}, ${frameCount} frames)`);
+        return window.__ASSET_METADATA__;
       }
 
-      run().catch((err) => {
+      function fail(err) {
         console.error('[AssetRunner Error]', err);
         window.__ASSET_ERROR__ = err.stack || err.message || String(err);
         const root = document.getElementById('asset-root');
-        root.innerHTML = `<div class="error-card"><strong>Render Error:</strong>\n${window.__ASSET_ERROR__}</div>`;
-      });
+        if (root) root.innerHTML = `<div class="error-card"><strong>Render Error:</strong>\n${window.__ASSET_ERROR__}</div>`;
+        return window.__ASSET_ERROR__;
+      }
+
+      // tools/export.ts keeps the page open and calls these for each sheet: `declare` imports the sheet and says
+      // what it declares (the exporter picks the device scale from it), `render` draws it and resolves with
+      // { metadata } or { error }.
+      window.__ASSET_RUNNER__ = {
+        declare: async ({ dir, file }) => {
+          try {
+            return { declared: declaredSize(await importAsset(dir, file)) };
+          } catch (err) {
+            return { error: err.stack || err.message || String(err) };
+          }
+        },
+        render: async (request) => {
+          try {
+            return { metadata: await render(request) };
+          } catch (err) {
+            return { error: fail(err) };
+          }
+        },
+      };
+
+      // Opened with ?project=&file= (by hand, to look at one sheet), the page renders that sheet at once.
+      const params = new URLSearchParams(window.location.search);
+      const project = params.get('project');
+      if (params.has('file') || project) {
+        const file = params.get('file');
+        // The project's folder from the repository root (examples/<name> or projects/<name>); sheets live in <dir>/sheets/.
+        const dir = (params.get('dir') || `projects/${project}`).replace(/^\/+|\/+$/g, '');
+        if (!project || !file) {
+          fail(new Error('Missing "project" or "file" query parameter in URL'));
+        } else {
+          render({ project, dir, file, preview: params.get('preview') === 'true' }).catch(fail);
+        }
+      }
     </script>
   </body>
 </html>

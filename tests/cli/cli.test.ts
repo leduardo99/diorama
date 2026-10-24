@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import { execFile, execSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { inflateSync } from 'node:zlib';
 
-console.log('🧪 Checking agent commands (new-project, new-asset, new-kit, check, layout, game, list, export, inspect, contact)...\n');
+console.log('🧪 Checking agent commands (new-project, new-asset, new-kit, check, layout, game, list, export incl. --changed and --jobs, inspect, contact)...\n');
 
 const project = `zz-cli-test-${Date.now()}`;
 const projectDir = resolve('projects', project);
@@ -225,8 +225,8 @@ export const VOLUMES: Record<string, VolumeStyle> = {};
   assert.ok(existsSync(resolve(projectDir, 'review', 'mockups', 'badge.png')), 'mockup must write to review/mockups/');
   assert.ok(readFileSync(officialPath).equals(before), 'mockup export must not change assets/badge.png');
 
-  // 5. Unknown export options are rejected before anything is rendered.
-  for (const flag of ['--preview', '--sheet', '-c']) {
+  // 5. Unknown export options, and values they cannot take, are rejected before anything is rendered.
+  for (const flag of ['--preview', '--sheet', '-c', '--jobs 0', '--jobs two', '--changed --grid']) {
     assert.notEqual(run(`npm run --silent export -- ${project} badge ${flag}`).code, 0, `${flag} must be rejected`);
   }
 
@@ -595,6 +595,55 @@ export default defineAsset({
   assert.deepEqual([kitSummary.typeCheck, kitSummary.successCount, kitSummary.failCount], ['clean', 5, 0], 'the export type checks first, then writes every sheet');
   const kitsStrict = run(`npm run --silent check -- ${kitsProject} --strict`);
   assert.equal(kitsStrict.code, 0, `a project with the four new kits passes check --strict after an export: ${kitsStrict.stdout}`);
+
+  // 11b. --changed exports the sheets whose image is missing or older than their code, and nothing else. The code is the
+  // sheet and the local files it imports, however deep: vfx/spark reaches src/vfx/bursts.ts through src/vfx/catalog.ts.
+  const kitSheets = ['gear/helm', 'icons/gem', 'scenery/crate', 'scenes/yard', 'vfx/spark'];
+  assert.deepEqual(kitSummary.outputs.map((o: { asset: string }) => o.asset), kitSheets, 'the summary lists the sheets by path, however the renders finish');
+  const stampAll = (dir: string, secondsAgo: number) => {
+    const at = Date.now() / 1000 - secondsAgo;
+    for (const rel of readdirSync(dir, { recursive: true }) as string[]) {
+      if (statSync(resolve(dir, rel)).isFile()) utimesSync(resolve(dir, rel), at, at);
+    }
+  };
+  // Times are set, not waited for: the code an hour old, the exports half an hour old (the second of slack does not matter).
+  stampAll(resolve(kitsDir, 'src'), 3600);
+  stampAll(resolve(kitsDir, 'sheets'), 3600);
+  stampAll(resolve(kitsDir, 'assets'), 1800);
+  const exportChanged = (paths = '') => {
+    const result = run(`npm run --silent export -- ${kitsProject} ${paths} --changed --json`);
+    assert.equal(result.code, 0, `export --changed failed: ${result.stderr}`);
+    return JSON.parse(result.stdout);
+  };
+  const nothing = exportChanged();
+  assert.deepEqual([nothing.outputs, nothing.upToDate, nothing.typeCheck], [[], 5, 'skipped'], 'with every image newer than its code --changed exports nothing, and needs no type check or browser');
+  const minuteAgo = Date.now() / 1000 - 60;
+  utimesSync(kitFile('vfx', 'bursts.ts'), minuteAgo, minuteAgo);
+  const helmPng = resolve(kitsDir, 'assets', 'gear', 'helm.png');
+  const helmTime = statSync(helmPng).mtimeMs;
+  const touched = exportChanged();
+  assert.deepEqual([touched.outputs.map((o: { asset: string }) => o.asset), touched.upToDate, touched.typeCheck], [['vfx/spark'], 4, 'clean'], 'a file two imports down makes its sheet out of date, and only that one; the type check runs before it is exported');
+  assert.equal(statSync(helmPng).mtimeMs, helmTime, 'an up-to-date sheet is not written again');
+  assert.deepEqual(exportChanged().outputs, [], 'once exported, the sheet is up to date');
+  rmSync(resolve(kitsDir, 'assets', 'icons', 'gem.png'));
+  assert.deepEqual(exportChanged('icons/ scenery/').outputs.map((o: { asset: string }) => o.asset), ['icons/gem'], 'a sheet without its image is exported; paths narrow --changed as they narrow any export');
+
+  // --jobs: the sheets render side by side in pages kept open, and any number of them writes the same files as one.
+  const assetBytes = () => {
+    const dir = resolve(kitsDir, 'assets');
+    return new Map((readdirSync(dir, { recursive: true }) as string[]).filter(rel => statSync(resolve(dir, rel)).isFile()).sort().map(rel => [rel, readFileSync(resolve(dir, rel))]));
+  };
+  const exportJobs = (jobs: number) => {
+    const result = run(`npm run --silent export -- ${kitsProject} --jobs ${jobs} --json`);
+    assert.equal(result.code, 0, `export --jobs ${jobs} failed: ${result.stderr}`);
+    return { summary: JSON.parse(result.stdout), files: assetBytes() };
+  };
+  const oneLane = exportJobs(1);
+  const threeLanes = exportJobs(3);
+  assert.deepEqual([...threeLanes.files.keys()], [...oneLane.files.keys()], '--jobs 3 writes the files --jobs 1 writes');
+  for (const [rel, bytes] of oneLane.files) assert.ok(threeLanes.files.get(rel)!.equals(bytes), `assets/${rel} is the same byte for byte with --jobs 3 and --jobs 1`);
+  assert.deepEqual(threeLanes.summary.outputs.map((o: { asset: string }) => o.asset), oneLane.summary.outputs.map((o: { asset: string }) => o.asset), 'and the summary is in the same order');
+  assert.deepEqual(oneLane.summary.outputs.map((o: { asset: string }) => o.asset), kitSheets);
   // Without a space profile the scenery catalog takes the theme's camera and a grid of its own.
   assert.equal(run(`npm run --silent new-project -- ${bareKitsProject}`).code, 0);
   for (const kit of ['scenery', 'vfx']) assert.equal(run(`npm run --silent new-kit -- ${bareKitsProject} ${kit}`).code, 0);
@@ -661,7 +710,7 @@ export default defineAsset({
   const sampleCheck = JSON.parse(run('npm run --silent check -- soulkeeper --json').stdout);
   assert.ok(sampleCheck.lint.ok && sampleCheck.lint.issues.length === 0 && sampleCheck.projectErrors.length === 0, `examples/soulkeeper passes the type check and the determinism lint: ${JSON.stringify(sampleCheck.projectErrors.slice(0, 3))} ${JSON.stringify(sampleCheck.lint.issues.slice(0, 3))}`);
 
-  console.log('✔ new-project, new-asset (volume and rig), new-kit, check (types, layout, determinism), layout (rule 8 included), game, list, export (incl. --mockup and the type check), inspect and contact behave as documented.\n');
+  console.log('✔ new-project, new-asset (volume and rig), new-kit, check (types, layout, determinism), layout (rule 8 included), game, list, export (incl. --mockup, the type check, --changed and --jobs), inspect and contact behave as documented.\n');
 } finally {
   rmSync(projectDir, { recursive: true, force: true });
   rmSync(layoutDir, { recursive: true, force: true });
