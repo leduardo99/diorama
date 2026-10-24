@@ -46,7 +46,7 @@ npx tsc --noEmit -p tsconfig.json
 npm run view
 ```
 
-Then open `http://localhost:5173`. On Windows, `dev.bat` starts the same server and opens the browser; on macOS and Linux, `sh dev.sh` does the same. Soulkeeper, the sample game (`examples/soulkeeper`), ships with Diorama. Exports are never versioned, so a fresh clone has none yet: run `npm run example` once (about 45 seconds on four performance cores; it exports all 163 sheets into `examples/soulkeeper/assets/`), then open the project's Playground tab to see characters move and its Scenery tab to see scenes. The `diorama-review` skill explains what to look at.
+Then open `http://localhost:5173`. On Windows, `dev.bat` starts the same server and opens the browser; on macOS and Linux, `sh dev.sh` does the same. Soulkeeper, the sample game (`examples/soulkeeper`), ships with Diorama, but the viewer shows only your projects, those of `projects/`: with none, it opens on a page that offers "New project" and "Try the sample". Run `npm run example` once (or press "Try the sample"): it copies the sample to `projects/soulkeeper` and exports its 163 sheets there (about 45 seconds on four performance cores; exports are never versioned, so a fresh clone has none). Then open the project soulkeeper, its Playground tab to see characters move and its Scenery tab to see scenes; the test bench of `@diorama/phaser`, `http://localhost:5173/packages/phaser/demo/?project=soulkeeper`, plays its characters in Phaser. The `diorama-review` skill explains what to look at.
 
 ## 5. First prop
 

@@ -36,7 +36,7 @@ export function readable(name: string): string {
 export interface BenchOptions {
   /** The character's folder in the exports: `characters/guard`. */
   folder: string;
-  /** Where the project's exports are served: `/examples/soulkeeper/assets/`. */
+  /** Where the project's exports are served: `/projects/soulkeeper/assets/`. */
   assets: string;
   /** Called instead of playing when the folder loaded no character with a manifest. */
   onUnknown: () => void;

@@ -28,7 +28,7 @@ export const PendingExportModal = NiceModal.create(({ project }: Props) => {
   const { t } = useT();
 
   const meta = projects.find((p) => p.name === project);
-  const dir = projectDir(meta?.root ?? 'projects', project);
+  const dir = projectDir(project);
   const pending = pendingExports(
     assets.filter((asset) => asset.project === project),
     meta,

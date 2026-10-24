@@ -58,7 +58,7 @@ export function PlaygroundView() {
   const [chosenScene, setChosenScene] = usePref<string>(`playground.scene.${project}`, '');
   const sceneName = scenes.includes(chosenScene) ? chosenScene : '';
   // The scene's ground is drawn once, at the export scale: a zoom only scales it, so it never blinks. The previous scene stays until the next is drawn.
-  const { data: world } = useQuery({ ...sceneWorldQuery(project, meta?.root ?? 'projects', sceneName, fixture), enabled: sceneName !== '', placeholderData: keepPreviousData });
+  const { data: world } = useQuery({ ...sceneWorldQuery(project, sceneName, fixture), enabled: sceneName !== '', placeholderData: keepPreviousData });
   const options: SceneOptions = { zoom, shadow, anchor, bounds, sockets, navigation, effects: library.effects, speed, world: sceneName ? (world ?? null) : null };
   const [hud, setHud] = useState<HudInfo | null>(null);
   const [armed, setArmed] = useState<Armed | null>(null);
@@ -130,7 +130,7 @@ export function PlaygroundView() {
           <p className="flex flex-wrap items-center gap-x-2 border-b px-4 py-1 text-muted-foreground">
             <span><Rich id="playground.gameHint" /></span>
             <Button variant="link" size="sm" asChild>
-              <a href={projectUrl(meta.root, project, 'game/')} target="_blank" rel="noopener">
+              <a href={projectUrl(project, 'game/')} target="_blank" rel="noopener">
                 <Gamepad2Icon data-icon="inline-start" />
                 {t('playground.playGame')}
               </a>

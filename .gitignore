@@ -9,8 +9,8 @@ dist/
 projects/*
 !projects/README.md
 
-# Generated in every project: exports (assets/, rebuilt with npm run export; npm run example for
-# the sample) and review renders (review/: contact sheets, scenery tests, mockups).
+# Generated in every project: exports (assets/, rebuilt with npm run export; npm run example copies the
+# sample into projects/ and exports it there) and review renders (review/: contact sheets, scenery tests, mockups).
 examples/**/assets/
 examples/**/review/
 projects/**/assets/

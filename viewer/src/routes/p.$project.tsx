@@ -94,7 +94,7 @@ function ProjectLayout() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="outline" size="sm" asChild>
-                  <a href={projectUrl(meta.root, project, 'game/')} target="_blank" rel="noopener">
+                  <a href={projectUrl(project, 'game/')} target="_blank" rel="noopener">
                     <Gamepad2Icon data-icon="inline-start" />
                     {t('project.playGame')}
                   </a>

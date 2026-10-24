@@ -30,7 +30,7 @@ export const atlasQuery = (asset: AssetFileMeta) =>
     enabled: asset.atlas !== null,
     staleTime: Infinity,
     queryFn: async (): Promise<Atlas> => {
-      const res = await fetch(`${projectUrl(asset.root, asset.project, `assets/${asset.atlas}`)}?t=${asset.mtime}`);
+      const res = await fetch(`${projectUrl(asset.project, `assets/${asset.atlas}`)}?t=${asset.mtime}`);
       if (!res.ok) throw new Error(currentTranslator().t('errors.readFile', { path: asset.atlas ?? '' }));
       return res.json();
     },

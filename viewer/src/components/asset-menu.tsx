@@ -49,7 +49,7 @@ interface AssetProps {
 function AssetItems({ asset, onPreview, parts: { Group, Item, Separator, Shortcut } }: AssetProps & { parts: MenuParts }) {
   const reexport = useReexport();
   const { t } = useT();
-  const sheetPath = asset.sheet ? projectFile(asset.root, asset.project, `sheets/${asset.sheet}`) : null;
+  const sheetPath = asset.sheet ? projectFile(asset.project, `sheets/${asset.sheet}`) : null;
   return (
     <>
       <Group>
@@ -71,11 +71,11 @@ function AssetItems({ asset, onPreview, parts: { Group, Item, Separator, Shortcu
           <CopyIcon />
           {t('assets.menu.copySheetPath')}
         </Item>
-        <Item onSelect={() => void copyText(projectFile(asset.root, asset.project, `assets/${asset.subpath}`), t('assets.menu.filePathLabel'))}>
+        <Item onSelect={() => void copyText(projectFile(asset.project, `assets/${asset.subpath}`), t('assets.menu.filePathLabel'))}>
           <CopyIcon />
           {t('assets.menu.copyFilePath')}
         </Item>
-        <Item disabled={!asset.atlas} onSelect={() => window.open(projectUrl(asset.root, asset.project, `assets/${asset.atlas}`), '_blank', 'noopener')}>
+        <Item disabled={!asset.atlas} onSelect={() => window.open(projectUrl(asset.project, `assets/${asset.atlas}`), '_blank', 'noopener')}>
           <FileJsonIcon />
           {t('assets.menu.openAtlas')}
         </Item>
@@ -155,7 +155,7 @@ function GroupItems({ group, onOpen, parts: { Group, Item, Separator, Shortcut }
       </Group>
       <Separator />
       <Group>
-        <Item onSelect={() => void copyText(projectFile(first.root, first.project, `assets/${group.folder}/`), t('assets.menu.group.folderPathLabel'))}>
+        <Item onSelect={() => void copyText(projectFile(first.project, `assets/${group.folder}/`), t('assets.menu.group.folderPathLabel'))}>
           <CopyIcon />
           {t('assets.menu.group.copyFolderPath')}
         </Item>

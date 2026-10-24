@@ -23,6 +23,7 @@ const WORDS = {
     viewer: '← Diorama viewer',
     noCatalog: 'The test bench reads the projects from the dev server\'s catalog: open it under npm run view.',
     noProject: (name: string) => `No project "${name}" has exported characters. Pick one of these:`,
+    noProjects: (name: string) => `No project "${name}" has exported characters, nor does any other project yet. npm run example copies Soulkeeper, the sample game, into projects/ and exports it.`,
     noCharacter: (id: string, project: string) => `No character "${id}" in the exports of ${project}. Play one of these:`,
   },
   'pt-BR': {
@@ -33,6 +34,7 @@ const WORDS = {
     viewer: '← Viewer do Diorama',
     noCatalog: 'A bancada lê os projetos do catálogo do servidor de desenvolvimento: abra-a com npm run view.',
     noProject: (name: string) => `Nenhum projeto "${name}" tem personagens exportados. Escolha um destes:`,
+    noProjects: (name: string) => `Nenhum projeto "${name}" tem personagens exportados, nem outro projeto ainda. npm run example copia o Soulkeeper, o jogo de exemplo, para projects/ e o exporta.`,
     noCharacter: (id: string, project: string) => `Nenhum personagem "${id}" nos exports de ${project}. Jogue um destes:`,
   },
 } satisfies Record<Lang, unknown>;
@@ -117,6 +119,10 @@ export function renderNothing(where: HTMLElement, lang: Lang, projects: BenchPro
   const message = document.createElement('p');
   if (nothing.kind === 'catalog') {
     message.textContent = words.noCatalog;
+    where.replaceChildren(message);
+  } else if (nothing.kind === 'project' && projects.length === 0) {
+    // The catalog lists the projects of projects/ only: on a fresh clone the sample is not one until npm run example.
+    message.textContent = words.noProjects(nothing.name);
     where.replaceChildren(message);
   } else if (nothing.kind === 'project') {
     message.textContent = words.noProject(nothing.name);

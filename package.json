@@ -9,7 +9,7 @@
     "view": "vite",
     "build": "vite build",
     "export": "tsx tools/export.ts",
-    "example": "tsx tools/export.ts examples/soulkeeper",
+    "example": "tsx tools/cli.ts example",
     "new-project": "tsx tools/cli.ts new-project",
     "new-asset": "tsx tools/cli.ts new-asset",
     "new-kit": "tsx tools/cli.ts new-kit",

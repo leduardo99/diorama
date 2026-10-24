@@ -1,18 +1,18 @@
 /**
  * Filesystem side of the viewer's delete / undo feature.
  *
- * A project is found by name in projects/ and then examples/ (tools/project.ts). Every path that reaches the disk
- * goes through safeProjectName / safeSubpath and a containment check, so a request can only touch files inside
- * <project>/assets or <project>/sheets. Deleting moves files to <repo>/.diorama-trash/assets/<project>/<id>/ together
- * with a manifest (the trash lives outside the project: a project root holds only src/, sheets/, assets/, review/);
- * restore moves them back. A whole project goes to <repo>/.diorama-trash/projects/<id>/<project>; the samples in
- * examples/ ship with Diorama and are never deleted as a whole.
+ * A project is found by name in projects/ only (tools/project.ts, VIEWER_ROOTS): the samples in examples/ ship with
+ * Diorama and the viewer never touches them. Every path that reaches the disk goes through safeProjectName /
+ * safeSubpath and a containment check, so a request can only touch files inside <project>/assets or <project>/sheets.
+ * Deleting moves files to <repo>/.diorama-trash/assets/<project>/<id>/ together with a manifest (the trash lives outside
+ * the project: a project root holds only src/, sheets/, assets/, review/); restore moves them back. A whole project goes
+ * to <repo>/.diorama-trash/projects/<id>/<project>, which `npm run example -- --force` uses too for the copy it replaces.
  */
 
 import { existsSync } from 'node:fs';
 import { lstat, mkdir, readFile, readdir, realpath, rename, rm, rmdir, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve, sep } from 'node:path';
-import { LAYOUT, findProject, type ProjectRef, type ProjectRoot } from '../../tools/project';
+import { LAYOUT, VIEWER_ROOTS, findProject, type ProjectRef, type ProjectRoot } from '../../tools/project';
 
 export class PathError extends Error {}
 
@@ -100,10 +100,15 @@ function trashRoot(repo: string): string {
   return resolve(repo, '.diorama-trash');
 }
 
+/** A project of the viewer: `projects/<name>`, never a sample of `examples/`. */
+function viewerProject(repo: string, name: string): ProjectRef | undefined {
+  return findProject(name, repo, VIEWER_ROOTS);
+}
+
 function projectPaths(repo: string, project: string) {
   const name = safeProjectName(project);
-  const ref = findProject(name, repo);
-  if (!ref) throw new PathError(`Project "${name}" does not exist in projects/ or examples/.`);
+  const ref = viewerProject(repo, name);
+  if (!ref) throw new PathError(`Project "${name}" does not exist in projects/.`);
   return {
     ref,
     assetsDir: join(ref.dir, LAYOUT.assets),
@@ -253,14 +258,11 @@ export interface ProjectTrashResult {
   project: string;
 }
 
-/** Moves a whole project folder to <repo>/.diorama-trash/projects/<id>/<project>. Only projects/ ones: samples are part of Diorama. */
+/** Moves a whole project folder of projects/ to <repo>/.diorama-trash/projects/<id>/<project>, where restoreProject finds it. */
 export async function deleteProject(repo: string, projectInput: string): Promise<ProjectTrashResult> {
   const project = safeProjectName(projectInput);
-  const ref = findProject(project, repo);
-  if (!ref) throw new PathError(`Project "${project}" does not exist.`);
-  if (ref.root !== 'projects') {
-    throw new PathError(`"${project}" is a sample in ${ref.root}/ that ships with Diorama: it cannot be deleted from the viewer.`);
-  }
+  const ref = viewerProject(repo, project);
+  if (!ref) throw new PathError(`Project "${project}" does not exist in projects/.`);
   const projectsDir = resolve(repo, 'projects');
   const info = await lstat(ref.dir).catch(() => null);
   if (!info?.isDirectory()) throw new PathError(`Project "${project}" does not exist.`);

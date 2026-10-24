@@ -1,14 +1,14 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { buildAssetCatalog, buildProjectCatalog } from '../../viewer/server/catalog';
 import { roleOf } from '../../viewer/src/lib/asset-role';
 import { exportTarget, isStale, pendingExports } from '../../viewer/src/lib/export-state';
 
-console.log('🧪 Checking the viewer catalog (projects and examples, export state, engines, kits, scenes and games)...\n');
+console.log('🧪 Checking the viewer catalog (projects/ only, export state, engines, kits, scenes and games)...\n');
 
-// A repository in miniature: projects live in <repo>/projects and <repo>/examples.
+// A repository in miniature: projects live in <repo>/projects, the samples in <repo>/examples.
 const root = mkdtempSync(join(tmpdir(), 'diorama-catalog-'));
 const project = 'demo';
 
@@ -56,7 +56,7 @@ try {
   assert.equal(byPath('orphan.png').sheet, null);
   assert.equal(byPath('orphan.png').sourceMtime, null);
   assert.equal(isStale(byPath('orphan.png')), false, 'an export without a sheet is never stale');
-  assert.deepEqual([byPath('a.png').root, byPath('a.png').url], ['projects', '/projects/demo/assets/a.png']);
+  assert.equal(byPath('a.png').url, '/projects/demo/assets/a.png');
 
   const helm = byPath('gear/helm.png').atlasInfo;
   assert.deepEqual([helm?.role, helm?.part, helm?.label, helm?.group], ['gear', 'helm', 'Elmo', 'head']);
@@ -73,7 +73,7 @@ try {
   const [meta] = await buildProjectCatalog(root);
   assert.deepEqual(meta.pendingSheets, ['b.ts', 'sub/e.ts']);
   assert.equal(meta.sheetCount, 6, 'only the .ts files of sheets/ count (a.ts, b.ts, d.ts, gear/helm.ts, sub/c.ts, sub/e.ts)');
-  assert.deepEqual([meta.root, meta.rel], ['projects', 'projects/demo']);
+  assert.equal(meta.name, 'demo');
   assert.deepEqual([meta.hasGearKit, meta.hasSceneryKit, meta.scenes], [false, false, []]);
 
   // 3. The banner and the modal read both lists from one place.
@@ -135,22 +135,33 @@ try {
   assert.deepEqual(engineSources.map(([name]) => engines.find((a) => a.subpath === `eng/${name}.png`)?.engine), engineSources.map(([, , engine]) => engine));
   assert.equal(engines.find((a) => a.subpath === 'orphan.png')?.engine, null, 'no sheet, no engine');
 
-  // 7. Projects come from projects/ and examples/; a name in projects/ wins; samples are marked as such.
+  // 7. The viewer lists projects/ only: the samples of examples/ ship with Diorama and are not the app's to browse or edit
+  // (saving into one would change the sample), so neither their projects nor their assets are in the catalog, whatever
+  // their name. `npm run example` copies a sample into projects/, and then it is listed like any project of the user's.
   put('assets', 'gear/helm.png', 1000, 'x', 'examples/sample');
   put('assets', 'gear/helm.json', 1000, '{}', 'examples/sample');
   put('sheets', 'gear/helm.ts', 900, "import { CATALOG } from '../../src/gear/catalog';\nimport { defineGearAsset } from '@core/rig';", 'examples/sample');
   put('src', 'gear/catalog.ts', 1200, 'export const CATALOG = {};', 'examples/sample');
   put('sheets', 'vfx/spark.ts', 900, '', 'examples/sample');
-  put('assets', 'a.png', 1000, 'x', 'examples/demo'); // hidden by projects/demo
+  put('assets', 'a.png', 1000, 'x', 'examples/demo'); // a sample with the name of a project of projects/
   const everything = await buildAssetCatalog(root);
-  const sampleHelm = everything.find((a) => a.project === 'sample' && a.subpath === 'gear/helm.png')!;
-  assert.deepEqual([sampleHelm.root, sampleHelm.url, sampleHelm.sheet, sampleHelm.engine], ['examples', '/examples/sample/assets/gear/helm.png', 'gear/helm.ts', 'rig']);
-  assert.equal(sampleHelm.sourceMtime, 1200 * 1000, 'the catalog the sheet imports counts for a sample too');
-  assert.ok(!everything.some((a) => a.project === 'demo' && a.root === 'examples'), 'a project in projects/ hides the example of the same name');
-  const metas = await buildProjectCatalog(root);
-  assert.deepEqual(metas.map((m) => [m.name, m.root]), [['demo', 'projects'], ['sample', 'examples']]);
-  const sampleMeta = metas.find((m) => m.name === 'sample')!;
-  assert.deepEqual([sampleMeta.rel, sampleMeta.hasGearKit, sampleMeta.assetCount, sampleMeta.pendingSheets], ['examples/sample', true, 1, ['vfx/spark.ts']]);
+  assert.ok(!everything.some((a) => a.project === 'sample'), 'a sample in examples/ is not in the asset catalog');
+  assert.ok(everything.every((a) => a.url.startsWith('/projects/demo/')), 'every asset is one of projects/');
+  assert.deepEqual((await buildProjectCatalog(root)).map((m) => m.name), ['demo'], 'only the folders of projects/ are projects of the viewer');
+  rmSync(join(root, 'projects', project), { recursive: true });
+  assert.deepEqual(await buildProjectCatalog(root), [], 'without projects/ the viewer has no project, even with samples in examples/');
+  assert.deepEqual(await buildAssetCatalog(root), []);
+  // The sample, copied into projects/ (what npm run example does), is a project like any other.
+  mkdirSync(join(root, 'projects'), { recursive: true });
+  cpSync(join(root, 'examples', 'sample'), join(root, 'projects', 'sample'), { recursive: true, preserveTimestamps: true });
+  const copied = await buildAssetCatalog(root);
+  const copiedHelm = copied.find((a) => a.project === 'sample' && a.subpath === 'gear/helm.png')!;
+  assert.deepEqual([copiedHelm.url, copiedHelm.sheet, copiedHelm.engine], ['/projects/sample/assets/gear/helm.png', 'gear/helm.ts', 'rig']);
+  assert.equal(copiedHelm.sourceMtime, 1200 * 1000, 'the copy keeps the times of the sample, so its export state is the same');
+  const [sampleMeta] = await buildProjectCatalog(root);
+  assert.deepEqual([sampleMeta.name, sampleMeta.hasGearKit, sampleMeta.assetCount, sampleMeta.pendingSheets], ['sample', true, 1, ['vfx/spark.ts']]);
+  rmSync(join(root, 'projects', 'sample'), { recursive: true });
+  put('assets', 'a.png', 1000);
 
   // 8. Nothing but the four places is read: review/ (scratch) and anything else at the project root stay out.
   writeFileSync(join(root, 'projects', project, 'stray.png'), 'x');

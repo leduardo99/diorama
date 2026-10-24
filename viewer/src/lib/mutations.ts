@@ -5,6 +5,7 @@ import { api } from './api';
 import { exportTarget, pendingExports } from './export-state';
 import { useT } from '../i18n';
 import { stripExtension } from './format';
+import { projectDir } from './project-paths';
 import { assetsQuery, projectsQuery } from './queries';
 import type { AssetFileMeta } from './types';
 
@@ -99,6 +100,33 @@ export function useCli() {
     // Awaited, so callers that navigate right after a create see the new project in the catalog.
     onSuccess: async (result) => {
       if (result.ok) await refresh();
+    },
+  });
+}
+
+/** The project `npm run example` brings in: Soulkeeper, the sample game, copied from examples/soulkeeper to projects/soulkeeper. */
+export const SAMPLE_PROJECT = 'soulkeeper';
+
+/** What a terminal runs for the same thing: the empty state shows it to copy. */
+export const SAMPLE_COMMAND = 'npm run example';
+
+/**
+ * Brings the sample in: `example` copies it into projects/ and exports it there (tools/cli.ts), then the project opens.
+ * The callbacks live on the hook: the empty state that starts it is gone once the project opens. A failed run leaves
+ * its output in `data` for the empty state to show.
+ */
+export function useTrySample() {
+  const refresh = useRefreshCatalog();
+  const navigate = useNavigate();
+  const { t } = useT();
+  return useMutation({
+    mutationFn: () => api.cli({ command: 'example' }),
+    onSuccess: async (result) => {
+      // A run that failed half way may still have copied the project: the catalog shows what is there either way.
+      await refresh();
+      if (!result.ok) return;
+      toast.success(t('projects.none.sampleReady'), { description: projectDir(SAMPLE_PROJECT) });
+      void navigate({ to: '/p/$project', params: { project: SAMPLE_PROJECT } });
     },
   });
 }

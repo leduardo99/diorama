@@ -1,12 +1,14 @@
 import assert from 'node:assert/strict';
-import { execFile, execSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs';
+import { execFile, execSync, spawnSync } from 'node:child_process';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { createServer } from 'node:http';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { inflateSync } from 'node:zlib';
+import { restoreProject } from '../../viewer/server/assets-fs';
 
-console.log('🧪 Checking agent commands (new-project, new-asset, new-kit, check, layout, game, list, export incl. --changed and --jobs, inspect, contact)...\n');
+console.log('🧪 Checking agent commands (new-project, new-asset, new-kit, check, layout, game, list, example, export incl. --changed and --jobs, inspect, contact)...\n');
 
 const project = `zz-cli-test-${Date.now()}`;
 const projectDir = resolve('projects', project);
@@ -21,6 +23,12 @@ interface Result {
   code: number;
   stdout: string;
   stderr: string;
+}
+
+/** Runs tools/cli.ts in `cwd` (the repository it works in), without colors. Never throws: callers check the exit code. */
+function cli(args: string[], cwd = resolve('.')): Result {
+  const result = spawnSync(process.execPath, [resolve('node_modules', 'tsx', 'dist', 'cli.mjs'), resolve('tools', 'cli.ts'), ...args], { cwd, encoding: 'utf8', env: { ...process.env, NO_COLOR: '1', FORCE_COLOR: undefined } });
+  return { code: result.status ?? 1, stdout: result.stdout, stderr: result.stderr };
 }
 
 // Runs an npm script. Never throws: callers check the exit code.
@@ -198,11 +206,84 @@ export const VOLUMES: Record<string, VolumeStyle> = {};
   const listed = JSON.parse(run(`npm run --silent list -- ${project} --json`).stdout);
   assert.deepEqual(listed.projects[0].sheets, ['characters/imp/idle', 'characters/knight/walk', 'characters/pup/bite', 'characters/pup/walk', 'marks/rune', 'props/barrel', 'props/crate']);
   assert.equal(listed.projects[0].dir, `projects/${project}`);
-  // Projects are found in projects/ first, then examples/; examples/<name> names the sample explicitly.
-  assert.equal(JSON.parse(run('npm run --silent list -- soulkeeper --json').stdout).projects[0].dir, 'examples/soulkeeper', 'the sample is found in examples/');
-  assert.equal(JSON.parse(run('npm run --silent list -- examples/soulkeeper --json').stdout).projects[0].project, 'soulkeeper');
+  // Projects are found in projects/ first, then examples/; examples/<name> names the sample explicitly. A bare name finds
+  // the sample while no project of that name is in projects/ (npm run example makes one: then the bare name is the copy).
+  const bareSample = existsSync(resolve('projects', 'soulkeeper')) ? 'projects/soulkeeper' : 'examples/soulkeeper';
+  assert.equal(JSON.parse(run('npm run --silent list -- soulkeeper --json').stdout).projects[0].dir, bareSample, 'a bare name is looked up in projects/, then examples/');
+  const sampleListed = JSON.parse(run('npm run --silent list -- examples/soulkeeper --json').stdout).projects[0];
+  assert.deepEqual([sampleListed.project, sampleListed.dir, sampleListed.sample], ['soulkeeper', 'examples/soulkeeper', true], 'examples/<name> is the sample, labelled as one');
+  assert.equal(listed.projects[0].sample, false, 'a project of projects/ is not a sample');
+  const everyProject = cli(['list']);
+  assert.ok(everyProject.stdout.includes('soulkeeper examples/soulkeeper sample (npm run example copies it into projects/)'), `list shows the samples, labelled: ${everyProject.stdout.split('\n').filter(line => line.includes('soulkeeper')).join(' | ')}`);
+  assert.ok(JSON.parse(run('npm run --silent list -- --json').stdout).projects.some((p: { dir: string; sample: boolean }) => p.dir === 'examples/soulkeeper' && p.sample), 'and --json marks them');
   const missingProject = run('npm run --silent list -- zz-no-such-project');
-  assert.ok(missingProject.code !== 0 && missingProject.stderr.includes('projects/ or examples/') && missingProject.stderr.includes('soulkeeper (examples)'), `an unknown project lists the ones there are: ${missingProject.stderr}`);
+  assert.ok(missingProject.code !== 0 && missingProject.stderr.includes('projects/ or examples/') && missingProject.stderr.includes('soulkeeper (examples)'), `an unknown project lists the ones there are, the samples too: ${missingProject.stderr}`);
+
+  // 3a. example copies a sample of examples/ into projects/ (everything but review/, every file with its times), refuses to
+  // copy over a copy that is there (it is the user's), and --force first moves that one to the viewer's trash. The command
+  // works in the repository it runs in: here a miniature one with a small sample, and --no-export (the export it runs is
+  // `export --changed` or a full export, both checked below on a real project).
+  const mini = mkdtempSync(join(tmpdir(), 'diorama-example-'));
+  const example = (...args: string[]) => cli(['example', ...args], mini);
+  try {
+    const shipped = join(mini, 'examples', 'sample');
+    const putSample = (rel: string, content: string, seconds: number) => {
+      const file = join(shipped, rel);
+      mkdirSync(join(file, '..'), { recursive: true });
+      writeFileSync(file, content);
+      utimesSync(file, seconds, seconds);
+    };
+    putSample('STYLE.md', '# Sample\n', 900);
+    putSample('src/theme.ts', 'export const THEME = 1;\n', 900);
+    putSample('sheets/props/crate.ts', "export { THEME as default } from '../../src/theme';\n", 900);
+    putSample('assets/props/crate.png', 'png', 1000);
+    putSample('assets/props/crate.json', '{}', 1000);
+    putSample('review/contact/crate-contact.png', 'scratch', 1000);
+    const copy = join(mini, 'projects', 'sample');
+
+    const first = example('sample', '--no-export');
+    assert.equal(first.code, 0, `example failed: ${first.stderr}`);
+    assert.ok(first.stdout.includes('Copied examples/sample to projects/sample/') && first.stdout.includes('its exports with their times'), `example says what it copied: ${first.stdout}`);
+    assert.ok(first.stdout.includes('npm run export -- projects/sample --changed'), `with the sample's exports, only what is out of date needs exporting: ${first.stdout}`);
+    assert.ok(first.stdout.includes('npm run view') && first.stdout.includes('/viewer/p/sample') && first.stdout.includes('/packages/phaser/demo/?project=sample'), `example says how to open it: ${first.stdout}`);
+    assert.deepEqual(readdirSync(copy).sort(), ['STYLE.md', 'assets', 'sheets', 'src'], 'everything but review/ is copied');
+    assert.equal(readFileSync(join(copy, 'sheets/props/crate.ts'), 'utf8'), readFileSync(join(shipped, 'sheets/props/crate.ts'), 'utf8'));
+    assert.deepEqual(['sheets/props/crate.ts', 'src/theme.ts', 'assets/props/crate.png'].map(rel => statSync(join(copy, rel)).mtimeMs), [900_000, 900_000, 1_000_000], 'every file keeps its time, so export --changed sees the same state as in the sample');
+    assert.ok(existsSync(join(shipped, 'review/contact/crate-contact.png')), 'the sample is left as it ships');
+
+    // A copy that is there is the user's: nothing is copied over it.
+    writeFileSync(join(copy, 'src', 'mine.ts'), 'export const MINE = 1;\n');
+    putSample('STYLE.md', '# Sample, newer\n', 2000);
+    const again = example('sample', '--no-export');
+    assert.equal(again.code, 0, `example on an existing copy failed: ${again.stderr}`);
+    assert.ok(again.stdout.includes('projects/sample/ already exists') && again.stdout.includes('--force'), `example says the copy is kept, and how to replace it: ${again.stdout}`);
+    assert.ok(existsSync(join(copy, 'src', 'mine.ts')) && readFileSync(join(copy, 'STYLE.md'), 'utf8') === '# Sample\n', 'the copy is left as it is');
+
+    // --force: the old copy goes to the viewer's trash (where its restore finds it), and a fresh one takes its place.
+    const forced = example('sample', '--force', '--no-export');
+    assert.equal(forced.code, 0, `example --force failed: ${forced.stderr}`);
+    const trashed = /\.diorama-trash\/projects\/([^/]+)\/sample\//.exec(forced.stdout);
+    assert.ok(trashed, `example --force says where the old copy went: ${forced.stdout}`);
+    assert.ok(existsSync(join(mini, '.diorama-trash', 'projects', trashed[1], 'sample', 'src', 'mine.ts')), 'the old copy is in the trash, whole');
+    assert.ok(!existsSync(join(copy, 'src', 'mine.ts')) && readFileSync(join(copy, 'STYLE.md'), 'utf8') === '# Sample, newer\n', 'and a fresh copy of the sample is in projects/');
+    rmSync(copy, { recursive: true });
+    await restoreProject(mini, 'sample', trashed[1]);
+    assert.ok(existsSync(join(copy, 'src', 'mine.ts')), "the viewer's restore brings the old copy back");
+
+    // A sample without exports is exported whole; a name that is not a sample, or no sample at all, is an error.
+    rmSync(join(shipped, 'assets'), { recursive: true });
+    rmSync(copy, { recursive: true });
+    const bare = example('sample', '--no-export');
+    assert.ok(bare.code === 0 && bare.stdout.includes('npm run export -- projects/sample\n') && !bare.stdout.includes('its exports'), `without exports the copy is exported whole: ${bare.stdout}`);
+    const unknown = example('nope', '--no-export');
+    assert.ok(unknown.code !== 0 && unknown.stderr.includes('no sample "nope" in examples/') && unknown.stderr.includes('Samples: sample'), `an unknown sample lists the ones there are: ${unknown.stderr}`);
+    const byDefault = example('--no-export');
+    assert.ok(byDefault.code !== 0 && byDefault.stderr.includes('no sample "soulkeeper"'), `without a name it is Soulkeeper: ${byDefault.stderr}`);
+  } finally {
+    rmSync(mini, { recursive: true, force: true });
+  }
+  const exampleHelp = run('npm run --silent example -- --help');
+  assert.ok(exampleHelp.code === 0 && exampleHelp.stdout.includes('projects/soulkeeper') && exampleHelp.stdout.includes('--force') && exampleHelp.stdout.includes('--no-export'), `example --help lists its options: ${exampleHelp.stdout}`);
 
   // 3b. A volume scaffold exports as a direction sheet: 8 rows, the pivot at scale 2, the role in meta.data.
   assert.equal(run(`npm run --silent export -- ${project} props/crate`).code, 0, 'the volume scaffold must export');
@@ -511,7 +592,7 @@ export default defineAsset({
   rmSync(resolve(layoutDir, 'scratch.md'));
   assert.equal(layoutOf().code, 0, 'and passes again once the file is gone');
   // The sample follows every rule.
-  const sample = JSON.parse(run('npm run --silent layout -- soulkeeper --json').stdout);
+  const sample = JSON.parse(run('npm run --silent layout -- examples/soulkeeper --json').stdout);
   assert.ok(sample.ok && sample.errors.length === 0, `examples/soulkeeper follows the layout: ${JSON.stringify(sample.errors.slice(0, 3))}`);
 
   // 10b. game serves a project's game/ and prints where: it says so of a project without one, and where the exports can be
@@ -707,10 +788,10 @@ export default defineAsset({
   rmSync(kitFile('scenery', 'noise.ts'));
   rmSync(resolve(kitsDir, 'sheets', 'swatch.ts'));
   // The sample is deterministic.
-  const sampleCheck = JSON.parse(run('npm run --silent check -- soulkeeper --json').stdout);
+  const sampleCheck = JSON.parse(run('npm run --silent check -- examples/soulkeeper --json').stdout);
   assert.ok(sampleCheck.lint.ok && sampleCheck.lint.issues.length === 0 && sampleCheck.projectErrors.length === 0, `examples/soulkeeper passes the type check and the determinism lint: ${JSON.stringify(sampleCheck.projectErrors.slice(0, 3))} ${JSON.stringify(sampleCheck.lint.issues.slice(0, 3))}`);
 
-  console.log('✔ new-project, new-asset (volume and rig), new-kit, check (types, layout, determinism), layout (rule 8 included), game, list, export (incl. --mockup, the type check, --changed and --jobs), inspect and contact behave as documented.\n');
+  console.log('✔ new-project, new-asset (volume and rig), new-kit, check (types, layout, determinism), layout (rule 8 included), game, list, example, export (incl. --mockup, the type check, --changed and --jobs), inspect and contact behave as documented.\n');
 } finally {
   rmSync(projectDir, { recursive: true, force: true });
   rmSync(layoutDir, { recursive: true, force: true });

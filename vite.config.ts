@@ -14,9 +14,11 @@ import { PathError, deleteAsset, deleteProject, planDelete, restoreAsset, restor
 
 // Maps a request from the viewer's "New" dialog to a tools/ script and its arguments (the layout of docs/ARCHITECTURE.md:
 // new-asset writes src/ + sheets/, new-scene src/scenes/ + sheets/scenes/, gear-items sheets/gear/, new-outfit-character
-// src/characters/<name>/ + sheets/characters/<name>/; export takes paths relative to sheets/). The scripts find the
-// project by name in projects/ and then examples/, and do all the validation; this only rejects values that would be
-// read as flags. `outfitFile` is where the handler saved the outfit (or scene) of a new-outfit-character / new-scene request.
+// src/characters/<name>/ + sheets/characters/<name>/; export takes paths relative to sheets/; example copies the sample
+// into projects/ and exports it there). The viewer's projects are those of projects/ alone, so a project is passed to the
+// scripts as projects/<name>: what the viewer saves never lands in a sample of examples/, even when no project of that name
+// is left. The scripts do all the validation; this only rejects values that would be read as flags or paths.
+// `outfitFile` is where the handler saved the outfit (or scene) of a new-outfit-character / new-scene request.
 function cliArgs(body: any, outfitFile?: string): string[] {
   const str = (v: unknown, field: string): string => {
     const s = String(v ?? '').trim();
@@ -26,6 +28,11 @@ function cliArgs(body: any, outfitFile?: string): string[] {
   };
   const optional = (v: unknown, field: string): string | undefined =>
     String(v ?? '').trim() ? str(v, field) : undefined;
+  const project = (v: unknown): string => {
+    const name = str(v, 'project');
+    if (name.includes('/') || name.includes('\\') || name.startsWith('.')) throw new Error('project must be the name of a project in projects/.');
+    return `projects/${name}`;
+  };
   switch (body?.command) {
     case 'new-project': {
       const args = ['tools/cli.ts', 'new-project', str(body.name, 'name')];
@@ -37,7 +44,7 @@ function cliArgs(body: any, outfitFile?: string): string[] {
       const engine = str(body.engine, 'engine');
       if (engine !== 'volume' && engine !== 'rig') throw new Error('engine must be volume or rig.');
       const args = [
-        'tools/cli.ts', 'new-asset', str(body.project, 'project'), str(body.subpath, 'subpath'),
+        'tools/cli.ts', 'new-asset', project(body.project), str(body.subpath, 'subpath'),
         `--engine=${engine}`,
         `--frames=${str(body.frames, 'frames')}`,
       ];
@@ -57,20 +64,20 @@ function cliArgs(body: any, outfitFile?: string): string[] {
     }
     case 'gear-items': {
       // One sheet (sheets/gear/<part>.ts) per part of the project's gear catalog (it keeps the ones already there).
-      const args = ['tools/cli.ts', 'gear-items', str(body.project, 'project')];
+      const args = ['tools/cli.ts', 'gear-items', project(body.project)];
       if (body.force) args.push('--force');
       return args;
     }
     case 'new-scene': {
       if (!outfitFile) throw new Error('scene is required.');
-      const args = ['tools/cli.ts', 'new-scene', str(body.project, 'project'), str(body.name, 'name'), '--scene', outfitFile];
+      const args = ['tools/cli.ts', 'new-scene', project(body.project), str(body.name, 'name'), '--scene', outfitFile];
       if (body.force) args.push('--force');
       return args;
     }
     case 'new-outfit-character': {
       if (!outfitFile) throw new Error('outfit is required.');
       const args = [
-        'tools/cli.ts', 'new-outfit-character', str(body.project, 'project'), str(body.name, 'name'),
+        'tools/cli.ts', 'new-outfit-character', project(body.project), str(body.name, 'name'),
         '--from', str(body.from, 'from'), '--outfit', outfitFile,
       ];
       if (body.force) args.push('--force');
@@ -78,7 +85,7 @@ function cliArgs(body: any, outfitFile?: string): string[] {
     }
     case 'export': {
       // The subpath is relative to sheets/. Empty exports the whole project; a trailing "/" exports a folder.
-      const args = ['tools/export.ts', str(body.project, 'project')];
+      const args = ['tools/export.ts', project(body.project)];
       const subpath = optional(body.subpath, 'subpath');
       if (subpath) args.push(subpath);
       if (body.sheet === 'grid' || body.sheet === 'compact') {
@@ -92,8 +99,12 @@ function cliArgs(body: any, outfitFile?: string): string[] {
       if (body.mockup) args.push('--mockup');
       return args;
     }
+    case 'example':
+      // Copies examples/soulkeeper to projects/soulkeeper and exports it there. Never --force from the viewer: an existing
+      // copy is the user's, and the command only exports what changed in it.
+      return ['tools/cli.ts', 'example'];
     default:
-      throw new Error('command must be new-project, new-asset, new-outfit-character, new-scene, gear-items or export.');
+      throw new Error('command must be new-project, new-asset, new-outfit-character, new-scene, gear-items, export or example.');
   }
 }
 
@@ -147,7 +158,8 @@ function dioramaApiPlugin(): Plugin {
   return {
     name: 'diorama-api',
     configureServer(server) {
-      // The repository root: projects live in projects/ and examples/ (a name in projects/ wins), found by tools/project.ts.
+      // The repository root: the viewer's projects live in projects/ (tools/project.ts, VIEWER_ROOTS); the samples in
+      // examples/ are not listed, and npm run example copies one in.
       const repo = server.config.root;
 
       // The viewer is a single-page app under /viewer/: deep links must reach its index.html,
@@ -229,7 +241,7 @@ function dioramaApiPlugin(): Plugin {
         sendJson(res, 200, { ok: true, ...(await restoreProject(repo, body.project, body.trashId)) });
       }));
 
-      // Runs new-project, new-asset, new-outfit-character, new-scene, gear-items and export from the viewer
+      // Runs new-project, new-asset, new-outfit-character, new-scene, gear-items, export and example from the viewer
       server.middlewares.use('/__api/cli', postOnly(async (req, res) => {
         let args: string[];
         // An outfit or a scene travels as a file: the script reads it from a temp folder that is removed when it ends.
@@ -269,7 +281,7 @@ function dioramaApiPlugin(): Plugin {
       let pending: ReturnType<typeof setTimeout> | undefined;
       const notify = (file: string) => {
         const normalized = file.replace(/\\/g, '/');
-        if (!/\/(projects|examples)\/[^/]+\/(assets|sheets|src)\//.test(normalized)) return;
+        if (!/\/projects\/[^/]+\/(assets|sheets|src)\//.test(normalized)) return;
         clearTimeout(pending);
         pending = setTimeout(() => server.ws.send({ type: 'custom', event: 'diorama:update', data: { file: normalized } }), 150);
       };
