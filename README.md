@@ -6,6 +6,8 @@
 
 2.5D game assets as code. You write props, scenery, effects, rigged characters with their gear, item icons and HUD pieces in TypeScript, and Diorama draws them in one shared camera and light and exports them as sprite sheets with an atlas JSON that a game can play. It is built to be driven by coding agents, with skills and guides that tell them how, and a viewer that lets a person look at the result.
 
+Diorama is for any kind of 2.5D game. Pick the kind of game when a project starts (`npm run new-project -- <name> --genre <preset>`: JRPG, action RPG, tactics, farm / life sim or dungeon crawler), and the grid, the characters' scale and the height of walls and doors follow it. More genres, side view and isometric among them, are on the [roadmap](https://github.com/users/leduardo99/projects/1). Soulkeeper, the sample game, is one example that proves the pipeline works in a real game, not the limit of what Diorama makes.
+
 Everything is deterministic: the same source exports the same pixels. Sheets are rasterized to PNG (or JPEG) through headless Chromium.
 
 ## What is in it
@@ -130,7 +132,7 @@ npm run view
 
 Your projects live in `projects/<project>/`, laid out as above. Create one with `npm run new-project -- <project>`; it starts with `src/theme.ts` (the palette, the camera and the materials, to make your own), an empty `sheets/` and a `.gitignore` for `review/`.
 
-Soulkeeper, the sample game (`examples/soulkeeper`), will be a small dark-fantasy JRPG set in a necropolis; for now it is its art, 165 sheets. It has five characters (a guard, a captain, the necromancer Malvek, a wolf and a spider) with a gear kit of 28 parts, a scenery kit with floors, walls, fences, doors, a chest, a lever and breakable urns, four scenes, ten effects, 31 item icons and 11 HUD pieces. Beside them, `characters/necromancer` is a flat 2D illustration of Malvek (a portrait and an idle loop drawn with `@core/draw` alone), not a rig character. It is the worked example the skills point to; read its `src/` and `sheets/`, and run `npm run example` to export it.
+Soulkeeper, the sample game (`examples/soulkeeper`), shows the tool at work in one genre: a small dark-fantasy JRPG set in a necropolis, whose playable slice (a crypt and its battle) comes with the game packages. For now it is its art, 165 sheets. It has five characters (a guard, a captain, the necromancer Malvek, a wolf and a spider) with a gear kit of 28 parts, a scenery kit with floors, walls, fences, doors, a chest, a lever and breakable urns, four scenes, ten effects, 31 item icons and 11 HUD pieces. Beside them, `characters/necromancer` is a flat 2D illustration of Malvek (a portrait and an idle loop drawn with `@core/draw` alone), not a rig character. It is the worked example the skills point to; read its `src/` and `sheets/`, and run `npm run example` to export it.
 
 ## Skills and documentation for agents
 
