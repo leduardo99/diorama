@@ -43,7 +43,7 @@ Every folder has one job, written down in [docs/ARCHITECTURE.md](docs/ARCHITECTU
 ```
 core/        the engine: @core, @core/draw, @core/volume, @core/rig
 packages/    @diorama/runtime: plays the exported files in a game (and in the viewer's Playground);
-             @diorama/phaser: the same files in Phaser 4
+             @diorama/phaser: the same files in Phaser 4 (its test bench in demo/)
 docs/        guides (docs/guides/), the generated API reference (docs/api/), ARCHITECTURE.md
 tools/       the command line and the exporter
 scripts/     the doctor and the API reference generator
@@ -128,6 +128,8 @@ npm run view
 - **Playground.** Characters and props play from their exported atlases: WASD moves, Shift runs, 1 to 9 trigger actions, H is a hit and K a death. Effects start at their sockets, and a chosen scene becomes the world, with walls, doors and props that react and sort against the characters.
 - **Customize.** Dress a character with the project's gear kit by slot, swap and remove pieces, and save the outfit as a new character.
 - **Scenery.** Paint scenes with the project's scenery kit: floors, walls, fences, doors, props and scale figures, with the navigation overlay, saved as scenes.
+
+A project with a game of its own (`game/index.html`, which plays the exports in Phaser through `@diorama/phaser`) has **Play game** in its bar and "Open game" in its ⋯ menu, which open the game in a new tab at `/<projects|examples>/<project>/game/`; the Playground plays the same exports with debug tools, and says so. Soulkeeper has no game yet. To see a project's characters in Phaser without one, the package's test bench is at `http://localhost:5173/packages/phaser/demo/?project=<name>` ([packages/phaser/README.md](packages/phaser/README.md#the-test-bench)).
 
 ## Projects
 

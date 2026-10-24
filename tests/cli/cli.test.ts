@@ -510,17 +510,19 @@ export default defineAsset({
   assert.ok(layoutJson.ok === false && layoutJson.errors.some((e: { rule: string; path: string }) => e.rule === 'root' && e.path === 'scratch.md'), 'layout --json lists the errors by rule and path');
   rmSync(resolve(layoutDir, 'scratch.md'));
   assert.equal(layoutOf().code, 0, 'and passes again once the file is gone');
-  // The sample follows every rule, its game included.
-  assert.ok(existsSync(resolve('examples', 'soulkeeper', 'game', 'index.html')), 'the sample has a game');
+  // The sample follows every rule.
   const sample = JSON.parse(run('npm run --silent layout -- soulkeeper --json').stdout);
   assert.ok(sample.ok && sample.errors.length === 0, `examples/soulkeeper follows the layout: ${JSON.stringify(sample.errors.slice(0, 3))}`);
 
-  // 10b. game serves a project's game/ and prints where: it refuses a project without one; when this repository's dev
-  // server already answers on the port (it says who it is at /__api/server) it only prints the URL, and any other program
-  // there, a page server or another checkout's dev server, is an error.
+  // 10b. game serves a project's game/ and prints where: it says so of a project without one, and where the exports can be
+  // tried in Phaser instead; when this repository's dev server already answers on the port (it says who it is at
+  // /__api/server) it only prints the URL, and any other program there, a page server or another checkout's dev server,
+  // is an error. The scratch project gets a game for it.
   const noGame = run(`npm run --silent game -- ${layoutProject}`);
-  assert.ok(noGame.code !== 0 && noGame.stderr.includes(`projects/${layoutProject}/game/index.html does not exist`), `game needs a game/index.html: ${noGame.stderr}`);
-  /** Runs `game soulkeeper` against a server on a free port that answers with `answer`; never throws. */
+  assert.ok(noGame.code !== 0 && noGame.stderr.includes(`${layoutProject} has no game: projects/${layoutProject}/game/index.html does not exist`) && noGame.stderr.includes(`/packages/phaser/demo/?project=${layoutProject}`), `game says a project has no game, and points at the test bench: ${noGame.stderr}`);
+  mkdirSync(gameDir, { recursive: true });
+  writeFileSync(resolve(gameDir, 'index.html'), '<!DOCTYPE html>\n<div id="game"></div>\n', 'utf8');
+  /** Runs `game <the scratch project>` against a server on a free port that answers with `answer`; never throws. */
   const gameAgainst = async (answer: (url: string) => { type: string; body: string }) => {
     const server = createServer((req, res) => {
       const { type, body } = answer(req.url ?? '');
@@ -530,7 +532,7 @@ export default defineAsset({
     await new Promise<void>((done) => server.listen(0, done));
     const port = (server.address() as { port: number }).port;
     try {
-      const out = await promisify(execFile)(process.execPath, ['--import', 'tsx', 'tools/cli.ts', 'game', 'soulkeeper', '--port', String(port)], { encoding: 'utf8', env: { ...process.env, NO_COLOR: '1' } });
+      const out = await promisify(execFile)(process.execPath, ['--import', 'tsx', 'tools/cli.ts', 'game', layoutProject, '--port', String(port)], { encoding: 'utf8', env: { ...process.env, NO_COLOR: '1' } });
       return { port, code: 0, stdout: out.stdout, stderr: out.stderr };
     } catch (err: any) {
       return { port, code: err.code ?? 1, stdout: String(err.stdout ?? ''), stderr: String(err.stderr ?? '') };
@@ -540,11 +542,12 @@ export default defineAsset({
   };
   const identity = (root: string) => (url: string) => (url.startsWith('/__api/server') ? { type: 'application/json', body: JSON.stringify({ app: 'diorama', root }) } : { type: 'text/html', body: '<!DOCTYPE html>' });
   const ours = await gameAgainst(identity(resolve('.')));
-  assert.ok(ours.code === 0 && ours.stdout.includes('already serves the game') && ours.stdout.trim().endsWith(`http://localhost:${ours.port}/examples/soulkeeper/game/`), `game prints the page's URL when this repository's dev server serves it: ${ours.stdout}${ours.stderr}`);
+  assert.ok(ours.code === 0 && ours.stdout.includes('already serves the game') && ours.stdout.trim().endsWith(`http://localhost:${ours.port}/projects/${layoutProject}/game/`), `game prints the page's URL when this repository's dev server serves it: ${ours.stdout}${ours.stderr}`);
   const page = await gameAgainst(() => ({ type: 'text/html', body: '<!DOCTYPE html>' }));
   assert.ok(page.code !== 0 && page.stderr.includes(`port ${page.port} is taken by another program: it answers, but it is not this repository's dev server`), `a server that only answers with a page is not the dev server: ${page.stdout}${page.stderr}`);
   const elsewhere = await gameAgainst(identity('/somewhere/else/diorama'));
   assert.ok(elsewhere.code !== 0 && elsewhere.stderr.includes('the dev server of another checkout of Diorama (/somewhere/else/diorama)'), `another checkout's dev server is not this one's: ${elsewhere.stdout}${elsewhere.stderr}`);
+  rmSync(gameDir, { recursive: true, force: true });
 
   // 11. new-kit: each kit's catalog.ts, index.ts and first piece, on a project with a space profile; the generator commands,
   // new-scene and the export work on them, and the project passes check --strict once exported.
@@ -656,7 +659,7 @@ export default defineAsset({
   rmSync(resolve(kitsDir, 'sheets', 'swatch.ts'));
   // The sample is deterministic.
   const sampleCheck = JSON.parse(run('npm run --silent check -- soulkeeper --json').stdout);
-  assert.ok(sampleCheck.lint.ok && sampleCheck.lint.issues.length === 0 && sampleCheck.projectErrors.length === 0, `examples/soulkeeper (its game included) passes the type check and the determinism lint: ${JSON.stringify(sampleCheck.projectErrors.slice(0, 3))} ${JSON.stringify(sampleCheck.lint.issues.slice(0, 3))}`);
+  assert.ok(sampleCheck.lint.ok && sampleCheck.lint.issues.length === 0 && sampleCheck.projectErrors.length === 0, `examples/soulkeeper passes the type check and the determinism lint: ${JSON.stringify(sampleCheck.projectErrors.slice(0, 3))} ${JSON.stringify(sampleCheck.lint.issues.slice(0, 3))}`);
 
   console.log('✔ new-project, new-asset (volume and rig), new-kit, check (types, layout, determinism), layout (rule 8 included), game, list, export (incl. --mockup and the type check), inspect and contact behave as documented.\n');
 } finally {

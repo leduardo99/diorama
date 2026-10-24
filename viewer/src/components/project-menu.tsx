@@ -1,6 +1,6 @@
 import NiceModal from '@ebay/nice-modal-react';
 import { useSuspenseQuery } from '@tanstack/react-query';
-import { CopyIcon, MoreHorizontalIcon, PlusIcon, Trash2Icon, UploadIcon } from 'lucide-react';
+import { CopyIcon, Gamepad2Icon, MoreHorizontalIcon, PlusIcon, Trash2Icon, UploadIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -8,14 +8,14 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useT } from '@/i18n';
 import { copyText } from '@/lib/clipboard';
-import { projectDir } from '@/lib/project-paths';
+import { projectDir, projectUrl } from '@/lib/project-paths';
 import { projectsQuery } from '@/lib/queries';
 import { DeleteProjectModal } from '@/modals/delete-project-modal';
 import { NovoModal } from '@/modals/novo-modal';
 
 /**
- * What can be done with the project in use: add an asset, export it, copy its path, delete it. The samples in
- * `examples/` ship with Diorama: they cannot be deleted from here.
+ * What can be done with the project in use: add an asset, export it, open its game (when it has `game/index.html`), copy
+ * its path, delete it. The samples in `examples/` ship with Diorama: they cannot be deleted from here.
  */
 export function ProjectMenu({ project }: { project: string }) {
   const { data: projects } = useSuspenseQuery(projectsQuery);
@@ -44,6 +44,15 @@ export function ProjectMenu({ project }: { project: string }) {
             <UploadIcon />
             {t('projects.menu.export')}
           </DropdownMenuItem>
+          {meta?.hasGame && (
+            // A page of its own, not a route of the viewer: a plain link, in a new tab.
+            <DropdownMenuItem asChild>
+              <a href={projectUrl(root, project, 'game/')} target="_blank" rel="noopener">
+                <Gamepad2Icon />
+                {t('projects.menu.openGame')}
+              </a>
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem onSelect={() => void copyText(projectDir(root, project), t('projects.menu.pathLabel'))}>
             <CopyIcon />
             {t('projects.menu.copyPath')}

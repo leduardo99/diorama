@@ -2,12 +2,14 @@ import { defineConfig, type Connect, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { tanstackRouter } from '@tanstack/router-plugin/vite';
+import { existsSync } from 'node:fs';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve, extname, join, relative, sep } from 'node:path';
 import { execFile } from 'node:child_process';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { buildAssetCatalog, buildProjectCatalog } from './viewer/server/catalog';
+import { LAYOUT, listProjects } from './tools/project';
 import { PathError, deleteAsset, deleteProject, planDelete, restoreAsset, restoreProject } from './viewer/server/assets-fs';
 
 // Maps a request from the viewer's "New" dialog to a tools/ script and its arguments (the layout of docs/ARCHITECTURE.md:
@@ -158,6 +160,23 @@ function dioramaApiPlugin(): Plugin {
         next();
       });
 
+      // A project's game (game/index.html) and the Phaser test bench (packages/phaser/demo/index.html) are folders' pages,
+      // served for the address with its slash (`/projects/my-game/game/`). Without the slash Vite finds no file and falls back
+      // to the repository's root page, which sends you to the viewer: send the address to the folder instead, with its query.
+      server.middlewares.use((req, res, next) => {
+        const url = req.url ?? '';
+        const at = url.indexOf('?');
+        const path = at < 0 ? url : url.slice(0, at);
+        const page = /^\/(?:(?:projects|examples)\/[\w-][\w.-]*\/game|packages\/phaser\/demo)$/.test(path);
+        if (page && existsSync(join(repo, path, 'index.html'))) {
+          res.statusCode = 302;
+          res.setHeader('Location', `${path}/${at < 0 ? '' : url.slice(at)}`);
+          res.end();
+          return;
+        }
+        next();
+      });
+
       // Who this server is: `npm run game` asks, to tell this repository's dev server from any other program on its port.
       server.middlewares.use('/__api/server', (_req, res) => sendJson(res, 200, { app: 'diorama', root: repo }));
 
@@ -262,6 +281,15 @@ function dioramaApiPlugin(): Plugin {
     // demand, and a reload would throw away its toasts (including the Undo that follows a delete).
     handleHotUpdate({ file, server }) {
       const rel = relative(server.config.root, file).split(sep).join('/');
+      // @diorama/phaser is in no page but its test bench (packages/phaser/demo/) and the projects' games (the viewer plays
+      // the exports with the runtime alone): reload those pages, and only them.
+      if (rel.startsWith('packages/phaser/')) {
+        const games = listProjects(server.config.root).filter(({ dir }) => existsSync(join(dir, LAYOUT.game, 'index.html')));
+        for (const path of ['/packages/phaser/demo/index.html', ...games.map(({ rel: project }) => `/${project}/${LAYOUT.game}/index.html`)]) {
+          server.ws.send({ type: 'full-reload', path });
+        }
+        return [];
+      }
       if (!/^(projects|examples|core|templates|tools)\//.test(rel)) return;
       // A project's game (game/, rule 8 of docs/ARCHITECTURE.md) is a page of its own: reload that page, and only that one.
       const game = /^((?:projects|examples)\/[^/]+\/game)\//.exec(rel);
@@ -296,8 +324,8 @@ export default defineConfig({
       '@diorama/phaser': resolve(__dirname, 'packages/phaser/src/index.ts'),
     },
   },
-  // Pre-bundled when the server starts: a game page (npm run game) imports Phaser, and finding it only then would make
-  // Vite reload every open page, the viewer's too.
+  // Pre-bundled when the server starts: a game page (npm run game) and the Phaser test bench import Phaser, and finding it
+  // only then would make Vite reload every open page, the viewer's too.
   optimizeDeps: { include: ['phaser'] },
   build: {
     rollupOptions: {

@@ -6,14 +6,14 @@ import { buildAssetCatalog, buildProjectCatalog } from '../../viewer/server/cata
 import { roleOf } from '../../viewer/src/lib/asset-role';
 import { exportTarget, isStale, pendingExports } from '../../viewer/src/lib/export-state';
 
-console.log('🧪 Checking the viewer catalog (projects and examples, export state, engines, kits and scenes)...\n');
+console.log('🧪 Checking the viewer catalog (projects and examples, export state, engines, kits, scenes and games)...\n');
 
 // A repository in miniature: projects live in <repo>/projects and <repo>/examples.
 const root = mkdtempSync(join(tmpdir(), 'diorama-catalog-'));
 const project = 'demo';
 
 /** Writes a file and stamps it with an mtime given in seconds (so the tests do not depend on the clock). */
-function put(area: 'assets' | 'sheets' | 'src', rel: string, seconds: number, content = 'x', where = `projects/${project}`) {
+function put(area: 'assets' | 'sheets' | 'src' | 'game', rel: string, seconds: number, content = 'x', where = `projects/${project}`) {
   const file = join(root, where, area, rel);
   mkdirSync(dirname(file), { recursive: true });
   writeFileSync(file, content);
@@ -101,6 +101,14 @@ try {
   assert.equal((await buildProjectCatalog(root))[0].hasGearKit, false, 'a kit is src/gear/catalog.ts: the old _catalog.ts is not one');
   rmSync(join(root, 'projects', project, 'src', 'gear', '_catalog.ts'));
   rmSync(join(root, 'projects', project, 'src', 'scenery', '_catalog.ts'));
+
+  // A project has a game when it has its page, game/index.html (rule 8): code alone in game/ is not one yet.
+  assert.equal(withKits.hasGame, false, 'no game/ folder, no game');
+  put('game', 'main.ts', 900, 'export {};');
+  assert.equal((await buildProjectCatalog(root))[0].hasGame, false, 'game/ without its index.html is not a game');
+  put('game', 'index.html', 900, '<!DOCTYPE html><script type="module" src="./main.ts"></script>');
+  assert.equal((await buildProjectCatalog(root))[0].hasGame, true, 'game/index.html is the game the viewer links to');
+  rmSync(join(root, 'projects', project, 'game'), { recursive: true });
 
   // 5. Exporting a sheet clears both states.
   put('assets', 'a.png', 2000);

@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { keepPreviousData, useQueries, useQuery, useSuspenseQuery } from '@tanstack/react-query';
-import { GamepadIcon } from 'lucide-react';
+import { Gamepad2Icon, GamepadIcon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
 import { assetsQuery, atlasQuery, projectsQuery } from '@/lib/queries';
 import { sceneWorldQuery } from '@/lib/scenery/background';
@@ -9,7 +10,8 @@ import { playgroundRoute } from '@/lib/routes';
 import { listEntries, pushRecent } from '@/lib/playground/catalog';
 import { buildLibrary, type Armed } from '@/lib/playground/library';
 import type { HudInfo } from '@/lib/playground/actor';
-import { useT } from '@/i18n';
+import { Rich, useT } from '@/i18n';
+import { projectUrl } from '@/lib/project-paths';
 import { isTyping, useWindowKeydown } from '@/lib/hotkeys';
 import { useSheetImages } from '@/lib/playground/use-sheet-images';
 import { usePref } from '@/lib/use-pref';
@@ -123,6 +125,18 @@ export function PlaygroundView() {
           armed={armed}
           onReset={() => setResetKey((n) => n + 1)}
         />
+        {meta?.hasGame && (
+          // Both play the same exports: say which is which, and lead to the game (a page of its own, in a new tab).
+          <p className="flex flex-wrap items-center gap-x-2 border-b px-4 py-1 text-muted-foreground">
+            <span><Rich id="playground.gameHint" /></span>
+            <Button variant="link" size="sm" asChild>
+              <a href={projectUrl(meta.root, project, 'game/')} target="_blank" rel="noopener">
+                <Gamepad2Icon data-icon="inline-start" />
+                {t('playground.playGame')}
+              </a>
+            </Button>
+          </p>
+        )}
         <div ref={sceneBoxRef} className="relative min-h-0 flex-1 overflow-hidden">
           <Scene
             handle={sceneRef}

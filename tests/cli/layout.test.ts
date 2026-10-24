@@ -137,7 +137,7 @@ try {
   write(dir, 'src/fine.ts', "import { createRng } from '@core';\nimport { depthKey } from '@diorama/runtime';\nexport const both = [createRng, depthKey];\n");
   assert.deepEqual(errorsOf(), [], 'src/ may import the engine and the packages');
 
-  // 6. The sample follows the rule, its game included.
+  // 6. The sample follows the rule.
   assert.deepEqual(checkLayout(resolve('examples/soulkeeper'), 'soulkeeper', ROOT).errors, [], 'examples/soulkeeper follows the layout');
 
   console.log('✔ Rule 8 refuses every way out of game/ (root paths, aliases, baseUrl, globs, dynamic and template imports, new URL, CSS, inline scripts and page attributes) and every way into a game from src/ and sheets/.\n');

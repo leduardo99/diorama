@@ -52,6 +52,7 @@ export const ptBR: Shape<typeof en> = {
     notFound: 'Página não encontrada',
     projectNotFound: 'Projeto não encontrado',
     backHome: 'Voltar ao início',
+    backToProject: 'Voltar para {project}',
   },
   header: {
     home: 'Diorama, início',
@@ -82,6 +83,7 @@ export const ptBR: Shape<typeof en> = {
       newAsset: 'Novo asset',
       export: 'Exportar projeto',
       copyPath: 'Copiar caminho',
+      openGame: 'Abrir jogo',
       delete: 'Apagar projeto…',
       pathLabel: 'Caminho do projeto',
     },
@@ -96,6 +98,8 @@ export const ptBR: Shape<typeof en> = {
   project: {
     export: 'Exportar',
     newAsset: 'Novo asset',
+    playGame: 'Jogar',
+    playGameHint: 'Abre o <code>game/</code> do projeto em nova aba',
   },
   roles: {
     filter: {
@@ -926,6 +930,8 @@ export const ptBR: Shape<typeof en> = {
       description: 'O playground usa os assets exportados deste projeto. Exporte alguns e volte.',
     },
     sceneLabel: 'Cena do playground',
+    gameHint: 'O Playground roda os exports com ferramentas de depuração. O seu <code>game/</code> roda os mesmos exports no Phaser.',
+    playGame: 'Jogar',
     palette: {
       character: 'Personagem',
       place: 'Colocar na cena',

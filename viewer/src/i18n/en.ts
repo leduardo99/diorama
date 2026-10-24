@@ -54,6 +54,7 @@ export const en = {
     notFound: 'Page not found',
     projectNotFound: 'Project not found',
     backHome: 'Back to start',
+    backToProject: 'Back to {project}',
   },
   header: {
     home: 'Diorama, home',
@@ -84,6 +85,7 @@ export const en = {
       newAsset: 'New asset',
       export: 'Export project',
       copyPath: 'Copy path',
+      openGame: 'Open game',
       delete: 'Delete project…',
       pathLabel: 'Project path',
     },
@@ -98,6 +100,8 @@ export const en = {
   project: {
     export: 'Export',
     newAsset: 'New asset',
+    playGame: 'Play game',
+    playGameHint: 'Opens the project\'s <code>game/</code> in a new tab',
   },
   roles: {
     filter: {
@@ -928,6 +932,8 @@ export const en = {
       description: 'The playground uses the exported assets of this project. Export some and come back.',
     },
     sceneLabel: 'Playground scene',
+    gameHint: 'The Playground plays the exports with debug tools. Your <code>game/</code> plays them in Phaser.',
+    playGame: 'Play game',
     palette: {
       character: 'Character',
       place: 'Place in the scene',

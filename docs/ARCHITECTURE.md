@@ -13,7 +13,8 @@ diorama/
 │   └── *.ts              asset contract, random, noise, colors, sheet packing, HUD pieces (ui.ts), index
 ├── packages/             what games and the viewer share to play the exports (README.md in each)
 │   ├── runtime/          @diorama/runtime: the atlas contract in pure TypeScript, no DOM, no dependencies
-│   └── phaser/           @diorama/phaser: the exports in Phaser 4 (loader, characters, effects, controls), on the runtime
+│   └── phaser/           @diorama/phaser: the exports in Phaser 4 (loader, characters, effects, controls), on the runtime;
+│                         demo/ is its test bench, which plays any project's characters (/packages/phaser/demo/)
 ├── docs/
 │   ├── ARCHITECTURE.md   this file
 │   ├── guides/           how-to guides, by module: volume/, rig/ (the draw guide is core/draw/README.md)
@@ -105,7 +106,7 @@ draw  <-  volume  <-  rig                 core/: the engine, the producer of the
 └── game/                       optional: a game that plays the exports (index.html and its code; rule 8)
 ```
 
-Soulkeeper, the sample game (`examples/soulkeeper`), has every part of this tree: five characters, a gear kit, a scenery kit with four scenes, effects, item icons and 11 HUD pieces, 163 sheets, and a game whose sandbox plays the guard and Malvek (`npm run game -- soulkeeper`).
+Soulkeeper, the sample game (`examples/soulkeeper`), has every part of this tree but `game/`: five characters, a gear kit, a scenery kit with four scenes, effects, item icons and 11 HUD pieces, 163 sheets. Its game comes later; until then the Playground and the Customize tab of the viewer are where its assets are tried, and the test bench of `@diorama/phaser` plays its characters in Phaser.
 
 ### The four places
 
@@ -118,7 +119,7 @@ Soulkeeper, the sample game (`examples/soulkeeper`), has every part of this tree
 
 A project root holds only these four, the optional `game/`, `STYLE.md`, an optional `README.md`, the optional `diorama.config.json` (export options) and a `.gitignore`.
 
-`game/` is a game that plays the project's exports: a page (`game/index.html`) and its code and data, written by you and your agent and versioned like `src/`. It loads its pictures from `assets/` through `@diorama/phaser` (on `@diorama/runtime`), never from files of its own, and nothing else in the project depends on it ([rule 8](#rules)). `npm run game -- <project>` serves it with the viewer's dev server, at `/<projects|examples>/<project>/game/`, which `npm run view` serves too.
+`game/` is a game that plays the project's exports: a page (`game/index.html`) and its code and data, written by you and your agent and versioned like `src/`. It loads its pictures from `assets/` through `@diorama/phaser` (on `@diorama/runtime`), never from files of its own, and nothing else in the project depends on it ([rule 8](#rules)). `npm run game -- <project>` serves it with the viewer's dev server, at `/<projects|examples>/<project>/game/`, which `npm run view` serves too, and the viewer's project bar opens it ("Play game"). It is for the project's real game: to try the exports in Phaser without one, the package's test bench (`packages/phaser/demo/`, at `/packages/phaser/demo/?project=<name>&character=<id>`) plays any project's characters, and is no project's game.
 
 ### Sheets
 
@@ -171,7 +172,7 @@ The first piece is a block-out that renders, so the kit's command, the export an
 | A scene | `npm run new-scene -- <project> <name> --scene <file.json>` (writes `src/scenes/<name>.ts` and its sheet) | export `scenes/` |
 | A HUD piece | its drawing in `src/ui/<piece>.ts`, a one-line sheet in `sheets/ui/<piece>.ts` | export `ui/` |
 | A color, a stroke, a material, the camera | `src/theme.ts` | `npm run check -- <project>` |
-| A game that plays the exports | `game/index.html` and its code in `game/` (`examples/soulkeeper/game/` is one to start from) | `npm run game -- <project>` |
+| A game that plays the exports | `game/index.html` and its code in `game/` ([packages/phaser/README.md](../packages/phaser/README.md) shows a scene) | `npm run game -- <project>` |
 | The size of a cell, a wall, a door | `src/space.ts` | `npm run check -- <project>` |
 
 ## Rules

@@ -82,6 +82,8 @@ export interface ProjectMeta {
   hasSceneryKit: boolean;
   /** Names of the scenes saved in `src/scenes/<name>.ts` (the files that export `SCENE`). */
   scenes: string[];
+  /** The project has a game that plays its exports, `game/index.html` (rule 8), served at `/<root>/<project>/game/`. */
+  hasGame: boolean;
   totalSize: number;
 }
 
@@ -313,6 +315,7 @@ export async function buildProjectCatalog(repo: string): Promise<ProjectMeta[]> 
       hasGearKit: existsSync(resolve(srcDir, 'gear', 'catalog.ts')),
       hasSceneryKit: existsSync(resolve(srcDir, 'scenery', 'catalog.ts')),
       scenes: await listScenes(resolve(srcDir, 'scenes')),
+      hasGame: existsSync(resolve(dir, LAYOUT.game, 'index.html')),
       totalSize: sizes.reduce((sum, n) => sum + n, 0),
     });
   }

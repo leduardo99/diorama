@@ -9,6 +9,7 @@
     ".": "./src/index.ts",
     "./sheets": "./src/sheets.ts"
   },
+  "files": ["src"],
   "sideEffects": false,
   "dependencies": {
     "@diorama/runtime": "0.1.0"

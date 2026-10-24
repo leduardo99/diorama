@@ -16,5 +16,5 @@
       "@diorama/runtime": ["../runtime/src/index.ts"]
     }
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "demo/**/*"]
 }

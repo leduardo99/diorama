@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Phaser test bench</title>
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        display: flex;
+        flex-direction: column;
+        background: #0d0b12;
+        color: #f5f3fa;
+        font: 14px/1.4 ui-monospace, Menlo, monospace;
+      }
+      /* What the footer leaves: the canvas fits in it (main.ts), centred, never larger than its own 1280 × 720. */
+      #game,
+      #nothing {
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+      }
+      #game canvas {
+        display: block;
+      }
+      #nothing {
+        padding: 48px 16px;
+        text-align: center;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      footer {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px 24px;
+        padding: 8px 16px;
+        border-top: 1px solid #2a2633;
+        font-size: 13px;
+      }
+      .links {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 4px 14px;
+      }
+      select {
+        font: inherit;
+        color: inherit;
+        background: #1d1a24;
+        border: 1px solid #3a3546;
+        border-radius: 4px;
+        padding: 1px 4px;
+      }
+      a {
+        color: #e6a15c;
+        text-decoration: none;
+      }
+      a:hover,
+      a:focus-visible {
+        text-decoration: underline;
+      }
+      a[aria-current='page'] {
+        color: #f5f3fa;
+        font-weight: bold;
+      }
+      .viewer {
+        margin-left: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game"></div>
+    <div id="nothing" hidden></div>
+    <footer id="footer"></footer>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
