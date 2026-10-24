@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or open-ended idea
+    url: https://github.com/leduardo99/diorama/discussions
+    about: Ask, or float an idea before it is a task. An idea the maintainer picks up becomes an issue on the roadmap board.

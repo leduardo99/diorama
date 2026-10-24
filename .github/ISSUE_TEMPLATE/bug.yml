@@ -1,0 +1,30 @@
+name: Bug
+description: Something does not work as the docs say.
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you ran or clicked, what you expected, and what you got. A screenshot or the sheet helps.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      value: |
+        1. 
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      description: OS, Node version (node -v) and the commit or release.
+  - type: textarea
+    id: output
+    attributes:
+      label: Output
+      description: The command's output or the browser console, if any.
+      render: shell

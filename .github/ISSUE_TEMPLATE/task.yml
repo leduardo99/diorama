@@ -1,0 +1,33 @@
+name: Task or feature
+description: A change to Diorama with a clear "done when".
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What should be possible after this, and for whom. Diorama is for any kind of 2.5D game, so describe a capability, not one genre's feature.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: What changes, and where (core/, packages/, tools/, viewer/, the sample, docs). What is out of scope.
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: Checkable items. Include the tests and docs that move with the code, and the export proof if it can touch generated images.
+      value: |
+        - [ ] 
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      multiple: true
+      options: [engine, packages, tools, viewer, kit (the sample's assets), docs]

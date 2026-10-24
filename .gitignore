@@ -19,6 +19,9 @@ projects/**/review/
 # What the viewer deletes, kept so it can be undone
 .diorama-trash/
 
+# Exports saved by npm run compare-exports -- --save, to prove a change left them as they were
+.diorama-baseline/
+
 # System & OS files
 .DS_Store
 Thumbs.db

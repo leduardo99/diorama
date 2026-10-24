@@ -1,0 +1,16 @@
+name: Idea
+description: A direction worth discussing, not yet a task.
+labels: ["type: idea"]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+      description: What it would let people make, and why it matters for 2.5D games.
+    validations:
+      required: true
+  - type: textarea
+    id: open
+    attributes:
+      label: Open questions
+      description: What needs deciding before it can become a task.

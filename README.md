@@ -153,7 +153,7 @@ The guides explain when to use each module, and are indexed in [`docs/guides/`](
 
 ## Contributing
 
-Ideas, bugs and pull requests are welcome. The [roadmap board](https://github.com/users/leduardo99/projects/1) shows what is next, [Discussions](https://github.com/leduardo99/diorama/discussions) is the place for ideas and questions, and [CONTRIBUTING.md](CONTRIBUTING.md) explains how to set up and what every change has to keep.
+Ideas, bugs and pull requests are welcome. The [roadmap board](https://github.com/users/leduardo99/projects/1) shows what is next, [Discussions](https://github.com/leduardo99/diorama/discussions) is the place for ideas and questions, and [CONTRIBUTING.md](CONTRIBUTING.md) explains how to set up and what every change has to keep. If a coding agent does the work, point it at [AGENTS.md](AGENTS.md): the workflow from issue to pull request, with the checks for each kind of change.
 
 ## License
 
