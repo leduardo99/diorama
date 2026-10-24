@@ -1,8 +1,8 @@
 /**
  * Diorama - runs the test suites.
  *
- *   npm test                  every suite: engine, docs, runtime, viewer, cli
- *   npm run test:engine       one suite (engine | docs | runtime | viewer | cli)
+ *   npm test                  every suite: engine, docs, runtime, viewer, phaser, cli
+ *   npm run test:engine       one suite (engine | docs | runtime | viewer | phaser | cli)
  *   npx tsx tests/run.ts engine docs
  *
  * A suite is a folder of tests/ and its tests are the `*.test.ts` files inside it (any depth), run one
@@ -18,8 +18,8 @@ import { join, relative, resolve, sep } from 'node:path';
 
 const ROOT = resolve('.');
 const TESTS = resolve('tests');
-/** Run order: the cheap, pure suites first, the ones that start Chromium and write projects last. */
-const SUITES = ['engine', 'docs', 'runtime', 'viewer', 'cli'] as const;
+/** Run order: the cheap, pure suites first, the ones that start Chromium (phaser) and write projects (cli) last. */
+const SUITES = ['engine', 'docs', 'runtime', 'viewer', 'phaser', 'cli'] as const;
 
 function testFiles(dir: string): string[] {
   const out: string[] = [];

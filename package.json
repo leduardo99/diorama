@@ -16,6 +16,7 @@
     "list": "tsx tools/cli.ts list",
     "check": "tsx tools/cli.ts check",
     "layout": "tsx tools/cli.ts layout",
+    "game": "tsx tools/cli.ts game",
     "inspect": "tsx tools/cli.ts inspect",
     "contact": "tsx tools/cli.ts contact",
     "new-outfit-character": "tsx tools/cli.ts new-outfit-character",
@@ -31,6 +32,7 @@
     "test:engine": "tsx tests/run.ts engine",
     "test:docs": "tsx tests/run.ts docs",
     "test:runtime": "tsx tests/run.ts runtime",
+    "test:phaser": "tsx tests/run.ts phaser",
     "test:cli": "tsx tests/run.ts cli",
     "test:viewer": "tsx tests/run.ts viewer"
   },
@@ -67,6 +69,7 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^5.2.0",
+    "phaser": "4.2.1",
     "tsx": "^4.19.3",
     "typescript": "^5.7.3",
     "vite": "^6.4.5"

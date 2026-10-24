@@ -7,7 +7,8 @@
  *
  * Inside a project: `src/` is hand-written code (never exported by itself), `sheets/` holds one thin
  * file per exported sheet (every `.ts` under it is a sheet), `assets/` the exported PNG + atlas JSON
- * mirroring `sheets/`, and `review/` scratch renders (contact sheets, scenery tests, mockups).
+ * mirroring `sheets/`, and `review/` scratch renders (contact sheets, scenery tests, mockups). An
+ * optional `game/` is a game that plays the exports: code and data, its pictures from `assets/`.
  */
 
 import { existsSync, readdirSync, statSync } from 'node:fs';
@@ -17,8 +18,8 @@ import { join, relative, resolve, sep } from 'node:path';
 export const PROJECT_ROOTS = ['projects', 'examples'] as const;
 export type ProjectRoot = (typeof PROJECT_ROOTS)[number];
 
-/** The four places of a project. */
-export const LAYOUT = { src: 'src', sheets: 'sheets', assets: 'assets', review: 'review' } as const;
+/** The four places of a project, and the optional game that plays its exports (rule 8). */
+export const LAYOUT = { src: 'src', sheets: 'sheets', assets: 'assets', review: 'review', game: 'game' } as const;
 
 /** Allowed keys in `diorama.config.json`. */
 export const ALLOWED_CONFIG_KEYS = ['outDir', 'scale', 'format', 'cols', 'gap'] as const;

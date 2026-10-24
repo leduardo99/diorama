@@ -9,6 +9,8 @@
  *
  * Each file is parsed with TypeScript, so comments (and color codes written in them) never count, and a color is
  * only a color inside a string or template literal.
+ *
+ * A project's `game/` is not linted: it exports nothing, and a game reads the clock and rolls dice by design (rule 8).
  */
 
 import { readFileSync } from 'node:fs';
@@ -78,7 +80,7 @@ export function lintSource(path: string, source: string): LintIssue[] {
   return issues;
 }
 
-/** The issues of every code file in a project's `src/` and `sheets/`, by path and line. */
+/** The issues of every code file in a project's `src/` and `sheets/` (never `game/`), by path and line. */
 export function lintProject(projectDir: string): LintIssue[] {
   const issues: LintIssue[] = [];
   for (const place of [LAYOUT.src, LAYOUT.sheets]) {

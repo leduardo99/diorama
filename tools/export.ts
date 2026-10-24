@@ -829,7 +829,7 @@ async function main() {
   if (args.force) {
     console.log(pc.yellow('  Type check skipped (--force).'));
   } else {
-    const types = typeCheckProject(ref, rootDir);
+    const types = typeCheckProject(ref, rootDir, { game: false });
     report.typeErrors = types.projectErrors;
     report.typeCheck = types.projectErrors.length ? 'failed' : 'clean';
     if (types.projectErrors.length) {

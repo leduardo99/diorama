@@ -260,6 +260,9 @@ function dioramaApiPlugin(): Plugin {
     handleHotUpdate({ file, server }) {
       const rel = relative(server.config.root, file).split(sep).join('/');
       if (!/^(projects|examples|core|templates|tools)\//.test(rel)) return;
+      // A project's game (game/, rule 8 of docs/ARCHITECTURE.md) is a page of its own: reload that page, and only that one.
+      const game = /^((?:projects|examples)\/[^/]+\/game)\//.exec(rel);
+      if (game) server.ws.send({ type: 'full-reload', path: `/${game[1]}/index.html` });
       return [];
     },
   };
@@ -286,8 +289,13 @@ export default defineConfig({
       '@core/rig': resolve(__dirname, 'core/rig/index.ts'),
       '@core': resolve(__dirname, 'core/index.ts'),
       '@diorama/runtime': resolve(__dirname, 'packages/runtime/src/index.ts'),
+      '@diorama/phaser/sheets': resolve(__dirname, 'packages/phaser/src/sheets.ts'),
+      '@diorama/phaser': resolve(__dirname, 'packages/phaser/src/index.ts'),
     },
   },
+  // Pre-bundled when the server starts: a game page (npm run game) imports Phaser, and finding it only then would make
+  // Vite reload every open page, the viewer's too.
+  optimizeDeps: { include: ['phaser'] },
   build: {
     rollupOptions: {
       input: {

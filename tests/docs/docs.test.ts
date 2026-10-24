@@ -24,6 +24,7 @@ const docFiles = [
   ...guideDir('docs/guides/rig'),
   resolve('core/draw/README.md'),
   resolve('packages/runtime/README.md'),
+  resolve('packages/phaser/README.md'),
   resolve('projects/README.md'),
   resolve('templates/optional/STYLE.md'),
   resolve('.agents/skills/diorama/SKILL.md'),

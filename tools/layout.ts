@@ -15,7 +15,7 @@ import { ALLOWED_CONFIG_KEYS, GENERATED_SHEETS, LAYOUT, OS_METADATA, isSheetFile
 export { ALLOWED_CONFIG_KEYS };
 
 export interface LayoutIssue {
-  /** Short rule id: root, config, underscore, name, sheet-file, thin, generated, direction, kit, assets, missing, orphan. */
+  /** Short rule id: root, config, underscore, name, sheet-file, thin, generated, direction, kit, assets, game, missing, orphan. */
   rule: string;
   /** Project-relative path the issue is about. */
   path: string;
@@ -27,8 +27,8 @@ export interface LayoutReport {
   warnings: LayoutIssue[];
 }
 
-/** What may stand at a project root (OS metadata aside). */
-export const ROOT_DIRS = ['src', 'sheets', 'assets', 'review'] as const;
+/** What may stand at a project root (OS metadata aside): the four places, and a game. */
+export const ROOT_DIRS = ['src', 'sheets', 'assets', 'review', 'game'] as const;
 export const ROOT_FILES = ['STYLE.md', 'README.md', 'diorama.config.json', '.gitignore'] as const;
 
 /** A sheet longer than this many lines of code (comments and blank lines aside) is not thin. */
@@ -39,6 +39,11 @@ const KEBAB = /^[a-z0-9]+(?:--?[a-z0-9]+)*$/;
 /** Exported images (PNG, or JPEG for an export with `format: 'jpeg'`) and atlas JSON. */
 const IMAGE_EXT = ['.png', '.jpg'];
 const ASSET_EXT = [...IMAGE_EXT, '.json'];
+/** What a game is made of (rule 8): code, data, its page and its notes. Its pictures are the exports in assets/. */
+const GAME_CODE_EXT = ['.ts', '.tsx', '.js', '.mjs'];
+const GAME_EXT = [...GAME_CODE_EXT, '.json', '.html', '.css', '.md'];
+/** Pictures: a game has none of its own, it shows the project's exports. */
+const PICTURE_EXT = /\.(png|jpe?g|gif|webp|avif|bmp|svg|ico|psd|aseprite)$/i;
 
 const isDir = (path: string) => existsSync(path) && statSync(path).isDirectory();
 
@@ -76,6 +81,18 @@ function relativeImports(code: string): string[] {
   return specs;
 }
 
+/** Every module specifier a file imports or re-exports, relative or not (`@core`, `../src/y`, `phaser`). */
+function moduleSpecifiers(code: string): string[] {
+  const re = /(?:\bfrom\s*|\bimport\s*\(\s*|^\s*import\s+|\brequire\s*\(\s*)(['"])([^'"\n]+)\1/gm;
+  return [...code.matchAll(re)].map(m => m[2]);
+}
+
+/** The relative `src` and `href` of a page's tags (`<script src="./main.ts">`), what it loads from the project. */
+function pageReferences(html: string): string[] {
+  const re = /\b(?:src|href)\s*=\s*(['"])(\.{1,2}\/[^'"]*|\.{1,2})\1/gi;
+  return [...html.replace(/<!--[\s\S]*?-->/g, '').matchAll(re)].map(m => m[2]);
+}
+
 /** Where a relative import of `fromRel` lands, project-relative (`src/gear/index`), or undefined outside the project. */
 function importTarget(fromRel: string, spec: string): string | undefined {
   const target = posix.normalize(posix.join(posix.dirname(fromRel), spec));
@@ -103,7 +120,7 @@ export function checkLayout(projectDir: string, name: string): LayoutReport {
   const error = (rule: string, path: string, message: string) => errors.push({ rule, path, message });
   const warn = (rule: string, path: string, message: string) => warnings.push({ rule, path, message });
 
-  // Rule 1: four places, STYLE.md, an optional README.md, the export config and a .gitignore.
+  // Rule 1: four places (and a game, rule 8), STYLE.md, an optional README.md, the export config and a .gitignore.
   for (const entry of readdirSync(projectDir, { withFileTypes: true })) {
     if (OS_METADATA.has(entry.name)) continue;
     const allowed = entry.isDirectory() ? (ROOT_DIRS as readonly string[]).includes(entry.name) : (ROOT_FILES as readonly string[]).includes(entry.name);
@@ -116,7 +133,7 @@ export function checkLayout(projectDir: string, name: string): LayoutReport {
         : /\.(png|jpe?g|json)$/i.test(entry.name)
           ? `exports belong in assets/ (written by npm run export), anything else in review/`
           : `notes go in README.md or STYLE.md, scratch in review/`;
-    error('root', what, `${what} is not allowed at the project root, which holds only src/, sheets/, assets/, review/, STYLE.md, README.md, diorama.config.json and .gitignore: ${where}.`);
+    error('root', what, `${what} is not allowed at the project root, which holds only src/, sheets/, assets/, review/, game/, STYLE.md, README.md, diorama.config.json and .gitignore: ${where}.`);
   }
 
   const configPath = join(projectDir, 'diorama.config.json');
@@ -218,6 +235,8 @@ export function checkLayout(projectDir: string, name: string): LayoutReport {
         error('direction', path, place === 'sheets'
           ? `${path} imports "${spec}", a sheet (rule 4: src/ never imports sheets/). Move the definition from ${target}.ts into src/ and let the sheet re-export it.`
           : `${path} imports "${spec}" from ${place}/: src/ is code, ${place}/ is output (rule 7).`);
+      } else if (target === LAYOUT.game || target?.startsWith(`${LAYOUT.game}/`)) {
+        error('game', path, `${path} imports "${spec}" from game/ (rule 8: src/ never imports the game): src/ draws the assets and the game plays their exports, so what the game needs stays in game/.`);
       }
     }
   }
@@ -227,6 +246,47 @@ export function checkLayout(projectDir: string, name: string): LayoutReport {
       const rel = posix.join('src', dir.slice(srcDir.length).split('\\').join('/').replace(/^\//, ''));
       if (existsSync(join(dir, 'catalog.ts')) && !existsSync(join(dir, 'index.ts'))) {
         error('kit', `${rel}/`, `${rel}/ has a catalog.ts but no index.ts (rule 6): a kit has both, catalog.ts for editors and index.ts for code. Add ${rel}/index.ts that re-exports the kit's pieces.`);
+      }
+    }
+  }
+
+  // game/: code and data only, playing the exports through the packages; never the engine or the project's other places (rule 8).
+  const gameDir = join(projectDir, LAYOUT.game);
+  const through = 'a game plays the exports in assets/ through @diorama/phaser and @diorama/runtime';
+  const inGame = (target: string | undefined) => target !== undefined && (target === LAYOUT.game || target.startsWith(`${LAYOUT.game}/`));
+  for (const rel of walkFiles(gameDir)) {
+    const path = `game/${rel}`;
+    const ext = posix.extname(rel).toLowerCase();
+    if (!GAME_EXT.includes(ext)) {
+      error('game', path, PICTURE_EXT.test(rel)
+        ? `${path}: game/ holds code and data only (rule 8): images come from assets/, through the packages (this.diorama.load of @diorama/phaser fetches a sheet's picture with its atlas). Draw it in src/ and export it from a sheet, or move it to review/ if it is a reference.`
+        : `${path}: game/ holds code and data only (rule 8: ${GAME_EXT.join(', ')}). Move it to review/ if it is scratch.`);
+      continue;
+    }
+    const source = readFileSync(join(gameDir, rel), 'utf8');
+    const outside = (spec: string, target: string | undefined) => {
+      const place = target?.split('/')[0];
+      const hint = target === undefined
+        ? 'Reach a package by its name (@diorama/phaser, @diorama/runtime, phaser), not by a path.'
+        : place === LAYOUT.src || place === LAYOUT.sheets ? `src/ and sheets/ draw the assets; ${through}.`
+          : place === LAYOUT.assets ? 'Images come from assets/, through the packages: this.diorama.load fetches a sheet\'s picture with its atlas.'
+            : `${place}/ is not the game's.`;
+      error('game', path, `${path} imports "${spec}" (${target ?? 'outside the project'}): game/ imports only its own files and packages (rule 8). ${hint}`);
+    };
+    if (ext === '.html') {
+      for (const spec of pageReferences(source)) {
+        const target = importTarget(path, spec);
+        if (!inGame(target)) outside(spec, target);
+      }
+      continue;
+    }
+    if (!GAME_CODE_EXT.includes(ext)) continue;
+    for (const spec of moduleSpecifiers(stripComments(source))) {
+      if (spec === '@core' || spec.startsWith('@core/')) {
+        error('game', path, `${path} imports "${spec}": a game never imports the engine (rule 8), ${through}.`);
+      } else if (spec.startsWith('.')) {
+        const target = importTarget(path, spec);
+        if (!inGame(target)) outside(spec, target);
       }
     }
   }

@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
-import { execSync } from 'node:child_process';
+import { execFile, execSync } from 'node:child_process';
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { createServer } from 'node:http';
 import { resolve } from 'node:path';
+import { promisify } from 'node:util';
 import { inflateSync } from 'node:zlib';
 
-console.log('🧪 Checking agent commands (new-project, new-asset, new-kit, check, layout, list, export, inspect, contact)...\n');
+console.log('🧪 Checking agent commands (new-project, new-asset, new-kit, check, layout, game, list, export, inspect, contact)...\n');
 
 const project = `zz-cli-test-${Date.now()}`;
 const projectDir = resolve('projects', project);
@@ -467,6 +469,33 @@ export default defineAsset({
   breaks('src/kit/catalog.ts', 'export const KIT = {};\n', ['src/kit/ has a catalog.ts but no index.ts'], 'a kit without its index');
   rmSync(resolve(layoutDir, 'src', 'kit'), { recursive: true, force: true });
   breaks('assets/notes.txt', 'x\n', ['assets/notes.txt: assets/ holds only exported images (PNG) and atlas JSON'], 'a stray file in assets/');
+  // Rule 8: a game/ is code and data that plays the exports through the packages. Its own clock, dice and colours are fine.
+  const gameDir = resolve(layoutDir, 'game');
+  mkdirSync(gameDir, { recursive: true });
+  writeFileSync(resolve(gameDir, 'index.html'), '<!DOCTYPE html>\n<div id="game"></div>\n<script type="module" src="./main.ts"></script>\n', 'utf8');
+  writeFileSync(resolve(gameDir, 'main.ts'), [
+    "import Phaser from 'phaser';",
+    "import { withDiorama } from '@diorama/phaser';",
+    "import { LEVEL } from './level';",
+    '',
+    "export const config = withDiorama({ type: Phaser.CANVAS, parent: 'game', backgroundColor: '#102030', scene: [] });",
+    'export const seed = Math.random() + Date.now() + LEVEL.length;',
+    '',
+  ].join('\n'), 'utf8');
+  writeFileSync(resolve(gameDir, 'level.ts'), 'export const LEVEL = [1, 2, 3];\n', 'utf8');
+  writeFileSync(resolve(gameDir, 'waves.json'), '{ "waves": 3 }\n', 'utf8');
+  assert.equal(layoutOf().code, 0, `a game of code and data follows the layout: ${layoutOf().stdout}`);
+  breaks('game/hero.png', 'x', ['game/hero.png: game/ holds code and data only (rule 8)', 'images come from assets/, through the packages'], 'an image in game/');
+  breaks('game/engine.ts', "import { createRng } from '@core';\n\nexport const rng = createRng(1);\n", ['game/engine.ts imports "@core": a game never imports the engine (rule 8)'], 'a game importing the engine');
+  breaks('game/drawing.ts', "export { crate } from '../src/props/crate';\n", ['game/drawing.ts imports "../src/props/crate" (src/props/crate): game/ imports only its own files and packages (rule 8)', 'src/ and sheets/ draw the assets'], 'a game importing src/');
+  breaks('src/uses-game.ts', "import { LEVEL } from '../game/level';\n\nexport const levels = LEVEL;\n", ['src/uses-game.ts imports "../game/level" from game/ (rule 8: src/ never imports the game)'], 'src/ importing the game');
+  // check type checks game/ (with the packages' types) and does not lint it.
+  const gameChecked = JSON.parse(run(`npm run --silent check -- ${layoutProject} --json`).stdout);
+  assert.ok(gameChecked.projectErrors.length === 0 && gameChecked.lint.ok && gameChecked.layout.ok, `check passes a game that reads the clock, rolls dice and names its colours: ${JSON.stringify(gameChecked.projectErrors)} ${JSON.stringify(gameChecked.lint.issues)}`);
+  writeFileSync(resolve(gameDir, 'broken.ts'), "export const lives: number = 'three';\n", 'utf8');
+  const gameBroken = JSON.parse(run(`npm run --silent check -- ${layoutProject} --json`).stdout);
+  assert.ok(gameBroken.ok === false && gameBroken.projectErrors.some((e: string) => e.includes('game/broken.ts(1,14): error TS2322')), `check type checks game/: ${JSON.stringify(gameBroken.projectErrors)}`);
+  rmSync(gameDir, { recursive: true, force: true });
   // An asset without its sheet is an orphan: a warning, an error with --strict.
   mkdirSync(resolve(layoutDir, 'assets'), { recursive: true });
   writeFileSync(resolve(layoutDir, 'assets', 'ghost.png'), readFileSync(resolve(projectDir, 'assets', 'badge.png')));
@@ -481,9 +510,27 @@ export default defineAsset({
   assert.ok(layoutJson.ok === false && layoutJson.errors.some((e: { rule: string; path: string }) => e.rule === 'root' && e.path === 'scratch.md'), 'layout --json lists the errors by rule and path');
   rmSync(resolve(layoutDir, 'scratch.md'));
   assert.equal(layoutOf().code, 0, 'and passes again once the file is gone');
-  // The sample follows every rule.
+  // The sample follows every rule, its game included.
+  assert.ok(existsSync(resolve('examples', 'soulkeeper', 'game', 'index.html')), 'the sample has a game');
   const sample = JSON.parse(run('npm run --silent layout -- soulkeeper --json').stdout);
   assert.ok(sample.ok && sample.errors.length === 0, `examples/soulkeeper follows the layout: ${JSON.stringify(sample.errors.slice(0, 3))}`);
+
+  // 10b. game serves a project's game/ and prints where: it refuses a project without one, and when a dev server already
+  // answers on the port it only prints the URL.
+  const noGame = run(`npm run --silent game -- ${layoutProject}`);
+  assert.ok(noGame.code !== 0 && noGame.stderr.includes(`projects/${layoutProject}/game/index.html does not exist`), `game needs a game/index.html: ${noGame.stderr}`);
+  const devServer = createServer((_req, res) => {
+    res.setHeader('Content-Type', 'text/html');
+    res.end('<!DOCTYPE html>');
+  });
+  await new Promise<void>((done) => devServer.listen(0, done));
+  const port = (devServer.address() as { port: number }).port;
+  try {
+    const served = await promisify(execFile)(process.execPath, ['--import', 'tsx', 'tools/cli.ts', 'game', 'soulkeeper', '--port', String(port)], { encoding: 'utf8', env: { ...process.env, NO_COLOR: '1' } });
+    assert.ok(served.stdout.includes('already serves the game') && served.stdout.trim().endsWith(`http://localhost:${port}/examples/soulkeeper/game/`), `game prints the page's URL: ${served.stdout}`);
+  } finally {
+    devServer.close();
+  }
 
   // 11. new-kit: each kit's catalog.ts, index.ts and first piece, on a project with a space profile; the generator commands,
   // new-scene and the export work on them, and the project passes check --strict once exported.
@@ -595,9 +642,9 @@ export default defineAsset({
   rmSync(resolve(kitsDir, 'sheets', 'swatch.ts'));
   // The sample is deterministic.
   const sampleCheck = JSON.parse(run('npm run --silent check -- soulkeeper --json').stdout);
-  assert.ok(sampleCheck.lint.ok && sampleCheck.lint.issues.length === 0 && sampleCheck.projectErrors.length === 0, `examples/soulkeeper passes the type check and the determinism lint: ${JSON.stringify(sampleCheck.lint.issues.slice(0, 3))}`);
+  assert.ok(sampleCheck.lint.ok && sampleCheck.lint.issues.length === 0 && sampleCheck.projectErrors.length === 0, `examples/soulkeeper (its game included) passes the type check and the determinism lint: ${JSON.stringify(sampleCheck.projectErrors.slice(0, 3))} ${JSON.stringify(sampleCheck.lint.issues.slice(0, 3))}`);
 
-  console.log('✔ new-project, new-asset (volume and rig), new-kit, check (types, layout, determinism), layout, list, export (incl. --mockup and the type check), inspect and contact behave as documented.\n');
+  console.log('✔ new-project, new-asset (volume and rig), new-kit, check (types, layout, determinism), layout (rule 8 included), game, list, export (incl. --mockup and the type check), inspect and contact behave as documented.\n');
 } finally {
   rmSync(projectDir, { recursive: true, force: true });
   rmSync(layoutDir, { recursive: true, force: true });
