@@ -1830,7 +1830,7 @@ function overview(): string {
   return [
     'Diorama commands (npm run <command> -- --help for the options of one):',
     ...Object.values(USAGE).map(text => `  ${text.split('\n')[0]}`),
-    '  npm run export -- <project> [subpath...] [--grid|--compact] [--mockup] [--force] [--json]   (type checks first; npm run export -- --help)',
+    '  npm run export -- <project> [subpath...] [--grid|--compact] [--mockup] [--changed] [--jobs <n>] [--force] [--json]   (type checks first; npm run export -- --help)',
     '  npm run example   (exports Soulkeeper, the sample game: examples/soulkeeper)',
   ].join('\n');
 }

@@ -38,7 +38,7 @@ The rules the layout check enforces (the eight of [docs/ARCHITECTURE.md](../../.
 - **Mirrors.** Every sheet has its export in `assets/` at the same path, and every asset has its sheet.
 - **A game is apart.** Everything `game/` imports or loads is a relative path inside `game/` or one of `@diorama/runtime`, `@diorama/phaser`, `@diorama/phaser/sheets` and `phaser` (never `@core`, `../src` or a root path); `src/` and `sheets/` never import a game, and it holds no images: it reads `assets/` through the packages.
 
-`npm run check -- <project>` runs the type check, then these rules, then the determinism lint (`Math.random`, the clock and raw colors outside `src/theme.ts`, see Rejection rules), and every message says what to move where or what to use instead. After an export run `npm run layout -- <project> --strict`, which also fails on a sheet that was never exported and on an asset that has no sheet. To see a finished project in this layout, `npm run example` exports Soulkeeper, the sample game (`examples/soulkeeper`; about five minutes; `assets/` is not versioned, so a fresh clone has none), and the skills point to its `src/` for technique.
+`npm run check -- <project>` runs the type check, then these rules, then the determinism lint (`Math.random`, the clock and raw colors outside `src/theme.ts`, see Rejection rules), and every message says what to move where or what to use instead. After an export run `npm run layout -- <project> --strict`, which also fails on a sheet that was never exported and on an asset that has no sheet. To see a finished project in this layout, `npm run example` exports Soulkeeper, the sample game (`examples/soulkeeper`; about 45 seconds on four performance cores; `assets/` is not versioned, so a fresh clone has none), and the skills point to its `src/` for technique.
 
 ## Authority
 
@@ -144,7 +144,8 @@ Run commands from the repository root. Use `npm run --silent` whenever you need 
 | Check one project | `npm run check -- <project> [--strict] [--json]` (the type check, then the layout rules, then the determinism lint; `--strict` also fails on sheets without an export and assets without a sheet, the gate after an export; `--json` is for parsing) |
 | Check the layout alone | `npm run layout -- <project> [--strict] [--json]` (`--strict` also fails on sheets without an export and assets without a sheet: run it after exporting) |
 | Export official assets | `npm run export -- <project> [subpath] [options]` (`subpath` is a sheet under `sheets/`, without `.ts`, or a folder of them, `characters/hero/`; the project's type check runs first and a type error stops the export, `--force` skips it for experiments) |
-| Export Soulkeeper, the sample game | `npm run example` (`examples/soulkeeper`, about five minutes) |
+| Export only what changed | `npm run export -- <project> [subpath] --changed` (the sheets whose image is missing or older than the sheet or a local file it imports, however deep: the ones the viewer marks as stale; the engine, `core/`, does not count) |
+| Export Soulkeeper, the sample game | `npm run example` (`examples/soulkeeper`, about 45 seconds on four performance cores) |
 | Export with a JSON summary | `npm run --silent export -- <project> [subpath] [options] --json` |
 | Export a mockup (never overwrites official files) | `npm run export -- <project> <subpath> --mockup` |
 | List projects and assets | `npm run list -- [project] [--json]` |
@@ -160,7 +161,7 @@ Run commands from the repository root. Use `npm run --silent` whenever you need 
 | Open the viewer | `npm run view` |
 | Regenerate the API reference | `npm run docs:api` (into `docs/api/`, after changing exported symbols in `core/`) |
 
-Export options: `--grid` or `--compact` for a sheet, `--gap <px>`, `--cols <n>`, `--sheet-name <name>`, `--both`, `--no-json`, `--scale <n>`, `--format png|jpeg`, `--out-dir <path>`, `--force` (export despite type errors). Values can be written as `--gap 8` or `--gap=8`. The full list is `npm run export -- --help`.
+Export options: `--grid` or `--compact` for a sheet, `--gap <px>`, `--cols <n>`, `--sheet-name <name>`, `--both`, `--no-json`, `--scale <n>`, `--format png|jpeg`, `--out-dir <path>`, `--force` (export despite type errors), `--changed` (only what is out of date), `--jobs <n>` (sheets rendered at once; the default is one per performance core, less one, and the files are the same with any number). Values can be written as `--gap 8` or `--gap=8`. The full list is `npm run export -- --help`.
 
 Mirroring: `--out-dir` or `outDir` in `<project>/diorama.config.json` copies official outputs to another folder. Mockups are never mirrored. The config file accepts only `outDir`, `scale`, `format`, `cols` and `gap`; `npm run check` and `npm run layout` report any other key as an error.
 

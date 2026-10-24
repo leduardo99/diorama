@@ -1,10 +1,11 @@
+import { isOutOfDate } from '../../../tools/freshness';
 import type { AssetFileMeta, ProjectMeta } from './types';
 
-/** Checkouts and copies touch many files at once; a second of slack keeps them from all looking out of date. */
-const TOLERANCE_MS = 1000;
-
-/** The sheet, or a file of `src/` it imports, changed after this asset was exported. */
-export const isStale = (asset: AssetFileMeta) => asset.sourceMtime !== null && asset.sourceMtime > asset.mtime + TOLERANCE_MS;
+/**
+ * The sheet, or a file of `src/` it imports, changed after this asset was exported (with a second of slack). The rule
+ * is tools/freshness.ts, the one `npm run export -- <project> --changed` uses to pick what it exports.
+ */
+export const isStale = (asset: AssetFileMeta) => isOutOfDate(asset.sourceMtime, asset.mtime);
 
 export interface PendingExports {
   /** Exported, but the sheet or the code it imports is newer than the image. */
