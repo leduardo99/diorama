@@ -32,6 +32,11 @@ npm test
 
 - One topic per pull request, with a short description of what changed and how you checked it.
 - Reference the issue (`Closes #12`).
+- `main` is protected: every change lands through a pull request, and a pull request merges only when CI passes.
+  - CI (`.github/workflows/ci.yml`) runs both type checks and `npm test` on every pull request.
+  - Run `npm test` before you push.
+  - The sample's export is not part of CI. If your change can touch generated images, run `npm run example` and compare before and after.
+- Pull requests are squash-merged, with a subject in the repository's style.
 - Contributions written with AI coding agents are welcome: Diorama is built that way. Review what the agent wrote, run the checks, and say so in the description (a `Co-Authored-By` line is a good way).
 
 By contributing you agree that your work is released under the [MIT license](LICENSE).

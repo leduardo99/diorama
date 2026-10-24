@@ -1,0 +1,36 @@
+# Runs on every pull request and on main: the type checks and every test suite (npm test).
+# main is protected: a pull request merges only when this job passes.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Types and tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # The exporter renders in headless Chromium, and the cli suite exports.
+      - run: npx playwright install --with-deps chromium
+      - name: Type check
+        run: |
+          npx tsc --noEmit -p .
+          npx tsc --noEmit -p viewer
+      - name: Tests
+        run: npm test

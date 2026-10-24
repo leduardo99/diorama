@@ -202,11 +202,13 @@ They are errors. `src/theme.ts` holds the palette, so its color literals are the
 | No export from code with type errors | `npm run export` (`tools/typecheck.ts`, shared with `check`); `tests/cli/cli.test.ts` checks the refusal and `--force` |
 | A new kit works with its commands | `tests/cli/cli.test.ts` runs `new-kit` for each kit, its generator, `new-scene`, the export and `check --strict` |
 | The dependency direction, the public entrypoints, nothing imports `tests/` | `tests/engine/boundary.test.ts` (scans every import of `core/`, `packages/`, `tools/`, `scripts/`, `viewer/`, `templates/`, `examples/` and `projects/`, and those of `tests/` for paths into `packages/`) |
-| The runtime compiles alone (lib ES2022, no DOM, no dependencies) and core's producer types fit its contract types | `tests/runtime/standalone.test.ts`; `tests/runtime/contract.test.ts` (part of `npx tsc --noEmit -p .`) |
+| The runtime compiles alone (lib ES2022, no DOM, no dependencies) and core's producer types fit its contract types | `tests/runtime/standalone.test.ts`; `tests/runtime/contract.test.ts` (it compiles itself, and is part of `npx tsc --noEmit -p .`) |
 | Snippets in the guides and skills compile; every markdown link, heading link and backticked repository path exists | `tests/docs/docs.test.ts` |
 | The engine, the runtime, the commands and the viewer's logic | `tests/engine/`, `tests/runtime/` (with conformance traces of the sample's characters, `tests/runtime/conformance/`), `tests/cli/`, `tests/viewer/` |
 
 `npm test` runs all five suites through `tests/run.ts` (every `*.test.ts` under `tests/engine/`, `tests/docs/`, `tests/runtime/`, `tests/viewer/` and `tests/cli/`, in that order, then a summary of which passed); `npm run test:engine`, `test:docs`, `test:runtime`, `test:viewer` and `test:cli` run one. A test file outside those folders fails the run, so a new test cannot be left out.
+
+CI (`.github/workflows/ci.yml`) runs both type checks and `npm test` on every pull request and on `main`. `main` is protected: changes land through pull requests, which merge only when CI passes.
 
 ## What reads what
 
