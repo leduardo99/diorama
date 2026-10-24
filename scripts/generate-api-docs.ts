@@ -2,13 +2,14 @@
  * Diorama - public API reference generator.
  *
  * Inspects the four engine entrypoints (`@core`, `@core/draw`, `@core/volume`, `@core/rig`) and the
- * runtime package (`@diorama/runtime`) with the TypeScript Compiler API, extracts exported symbols,
- * JSDoc, signatures and types, and writes the single API reference into `docs/api/`:
+ * packages (`@diorama/runtime`, `@diorama/phaser`) with the TypeScript Compiler API, extracts exported
+ * symbols, JSDoc, signatures and types, and writes the single API reference into `docs/api/`:
  * - `core.md`                  `@core`
  * - `draw-geometry.md`, `draw-paths.md`, `draw-styles.md`, `draw-textures.md`  `@core/draw`
  * - `volume.md`                `@core/volume`
  * - `rig.md`                   `@core/rig`
  * - `runtime.md`               `@diorama/runtime`
+ * - `phaser.md`                `@diorama/phaser` (its `sheets` entry is part of the main one)
  *
  * Every exported symbol must land in exactly one file. The generator fails otherwise. Generated pages
  * that no target writes any more (a module that was removed or renamed) are deleted.
@@ -112,6 +113,16 @@ const TARGETS: Target[] = [
       filename: 'runtime.md',
       title: '@diorama/runtime - Playing the Atlas Contract',
       description: 'Pure TypeScript with no DOM and no dependencies, shared by games and the viewer: reads exported sheets (`readSheet`, `dependenciesOf`, `buildLibrary`), plays characters in floor world units (`createActor`, `play`, `steer`, `advance`, `stance`, `socketAt`), the effects they cue (`cues`, `stepFx`), movement on a scene\'s navigation (`moveIn`, `findPath`, `flightStop`), one depth order (`depthKey`), floor-to-screen projections and the geometry of interface pieces.',
+      select: ALL,
+    }],
+  },
+  {
+    spec: '@diorama/phaser',
+    entry: resolve('packages/phaser/src/index.ts'),
+    groups: [{
+      filename: 'phaser.md',
+      title: '@diorama/phaser - Exports in Phaser 4',
+      description: 'A Phaser 4 scene plugin (`this.diorama`, `withDiorama`) that loads sheets by the atlas contract with what they need, as textures whose frames keep their atlas names and pivots (cut into bands of whole cells past the texture limit); `DioramaCharacter`, a Sprite played by `@diorama/runtime`\'s clip player; the effects its clips cue; keyboard controls from its manifest; `depthKey` as depth; nine-slices from the runtime\'s geometry; and a clock a test steps by hand. What needs no Phaser is also `@diorama/phaser/sheets`.',
       select: ALL,
     }],
   },

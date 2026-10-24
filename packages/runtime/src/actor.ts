@@ -33,6 +33,7 @@ export const BODY_RADIUS = 9;
 
 /** One thing standing on the floor: a character, or a sprite (a single clip and no character). */
 export interface Actor<A extends SheetRef = SheetRef> {
+  /** The host's own id for it (unique among the actors it plays together): the runtime only hands it back on events. */
   readonly id: number;
   character: Character<A> | null;
   /** The looping clip shown when no action plays: idle, the gait being walked, or the stance. */
@@ -89,21 +90,16 @@ export interface Floor {
 /** A floor with nothing on it: every move goes all the way. */
 export const FREE_FLOOR: Floor = { move: (from, delta) => ({ x: from.x + delta.x, y: from.y + delta.y }) };
 
-let lastId = 0;
-
 /**
  * An actor of a character, starting in `clip` (default its idle) at a floor point; or a sprite, from one clip. `row` (or
- * `heading`, a world yaw) is its facing. Ids count up from 1 unless one is given, past every id seen so far, so a counted id
- * never repeats one given before it (keeping the ids it gives apart is the host's part).
+ * `heading`, a world yaw) is its facing. `id` is the host's: the runtime keeps no count of its own, so two worlds (or two
+ * tests) in one process never share one.
  */
-export function createActor<A extends SheetRef>(of: Character<A> | Clip<A>, pos: Vec2, o: { id?: number; clip?: Clip<A>; row?: number; heading?: number; radius?: number } = {}): Actor<A> {
+export function createActor<A extends SheetRef>(of: Character<A> | Clip<A>, pos: Vec2, o: { id: number; clip?: Clip<A>; row?: number; heading?: number; radius?: number }): Actor<A> {
   const character = 'clips' in of ? of : null;
   const clip = o.clip ?? (character ? (character.idle ?? character.locomotion[0] ?? character.actions[0] ?? character.clips[0]) : (of as Clip<A>));
   const row = o.row ?? (o.heading !== undefined ? rowFor(clip.atlas, o.heading) : 0);
-  const id = o.id ?? ++lastId;
-  // An id that is not a number to count from (NaN, Infinity) is the host's own: the count goes on past the others.
-  if (Number.isFinite(id)) lastId = Math.max(lastId, Math.floor(id));
-  return { id, character, clip, pos: { x: pos.x, y: pos.y }, row, time: 0, act: null, held: null, stance: null, radius: o.radius ?? BODY_RADIUS, lastEvent: null, baseClip: null, baseFired: -1, pending: [] };
+  return { id: o.id, character, clip, pos: { x: pos.x, y: pos.y }, row, time: 0, act: null, held: null, stance: null, radius: o.radius ?? BODY_RADIUS, lastEvent: null, baseClip: null, baseFired: -1, pending: [] };
 }
 
 /** death beats hit beats every other action; locomotion and idle are not actions at all. */

@@ -45,6 +45,7 @@ Direct dependencies used to build, type check and run the project (`devDependenc
 | @types/react | 19.3.0 | MIT |
 | @types/react-dom | 19.3.0 | MIT |
 | @vitejs/plugin-react | 5.2.0 | MIT |
+| phaser | 4.2.1 | MIT |
 | tsx | 4.23.13 | MIT |
 | typescript | 5.9.3 | Apache-2.0 |
 | vite | 6.4.5 | MIT |

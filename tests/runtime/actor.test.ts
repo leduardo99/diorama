@@ -31,9 +31,9 @@ const collect = (out: ClipEvent[]) => out.forEach((e) => events.push(`${e.clip.k
 const tick = (actor: Actor, seconds: number, floor?: Floor) => {
   for (let t = 0; t < seconds; t += 0.01) collect(advance(actor, 0.01, floor));
 };
-const spawn = () => createActor(mage, { x: 50, y: 100 });
+const spawn = () => createActor(mage, { x: 50, y: 100 }, { id: 1 });
 
-// 0. An actor stands on a floor point, in its idle; ids count up, or are given.
+// 0. An actor stands on a floor point, in its idle; its id is the host's.
 {
   const a = spawn();
   const b = createActor(mage, { x: 0, y: 0 }, { id: 42, heading: 0 });
@@ -41,13 +41,9 @@ const spawn = () => createActor(mage, { x: 50, y: 100 });
   assert.deepEqual(a.pos, { x: 50, y: 100 });
   assert.equal(b.id, 42);
   assert.equal(b.row, 6, 'a heading of 0 faces east');
-  assert.ok(createActor(mage, { x: 0, y: 0 }).id > a.id);
-  assert.ok(createActor(mage, { x: 0, y: 0 }).id > 42, 'a counted id never repeats one given before it');
-  const odd = createActor(mage, { x: 0, y: 0 }, { id: Number.NaN });
-  const after = createActor(mage, { x: 0, y: 0 });
-  assert.ok(Number.isNaN(odd.id) && Number.isInteger(after.id) && after.id > 42, 'an id that is not a number does not stop the count');
+  assert.equal(createActor(mage, { x: 0, y: 0 }, { id: 42 }).id, 42, 'the runtime keeps no count: the same id again is the host\'s choice');
   assert.equal(a.radius, BODY_RADIUS);
-  const sprite = createActor(slash, { x: 3, y: 4 });
+  const sprite = createActor(slash, { x: 3, y: 4 }, { id: 2 });
   assert.equal(sprite.character, null, 'a single clip is a sprite');
   assert.equal(sprite.clip, slash);
   face(a, -Math.PI / 2);
@@ -129,12 +125,12 @@ assert.equal(a.lastEvent?.name, 'spawn:mouth', 'the last event fired (`end` is n
 
 // The looping base clip fires its own events (`step:<leg>`) in order, lap after lap.
 const steps: string[] = [];
-const walker = createActor(mage, { x: 0, y: 0 }, { clip: clip('walk') });
+const walker = createActor(mage, { x: 0, y: 0 }, { id: 3, clip: clip('walk') });
 for (let t = 0; t < 1.55; t += 0.01) steps.push(...advance(walker, 0.01).map((e) => `${e.name}@${e.frame}${e.act ? '!' : ''}`));
 assert.deepEqual(steps, ['step:legL@0', 'step:legR@4', 'step:legL@0', 'step:legR@4'], 'two laps of an 8-frame clip at 10 fps, no action');
 assert.equal(walker.lastEvent?.name, 'step:legR');
 // After a long pause it does not replay more than one lap.
-const paused = createActor(mage, { x: 0, y: 0 }, { clip: clip('walk') });
+const paused = createActor(mage, { x: 0, y: 0 }, { id: 4, clip: clip('walk') });
 assert.equal(advance(paused, 0.01).length, 1);
 assert.deepEqual(advance(paused, 10).map((e) => e.name), ['step:legL', 'step:legR'], 'one lap at most');
 
@@ -183,7 +179,7 @@ assert.equal(a.clip.key, 'idle');
 {
   const { character: still } = characterOf('characters/statue', specs.filter((spec) => spec.clipKind !== 'locomotion'), { ...manifest, name: 'statue', controls: { ...manifest.controls, move: [] } });
   assert.deepEqual(still.locomotion, []);
-  const statue = createActor(still, { x: 50, y: 100 });
+  const statue = createActor(still, { x: 50, y: 100 }, { id: 5 });
   steer(statue, { dx: 1, dy: 1, run: true }, 0.5);
   assert.deepEqual([statue.pos, statue.clip.key, statue.row], [{ x: 50, y: 100 }, 'idle', 0], 'without locomotion the input moves nothing and turns nothing');
 }

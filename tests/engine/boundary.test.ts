@@ -80,6 +80,8 @@ const ALIASES: Record<string, string> = {
 /** The packages games and the viewer share (packages/), by the name they are imported with. */
 const PACKAGES: Record<string, string> = {
   '@diorama/runtime': 'packages/runtime/src/index',
+  '@diorama/phaser': 'packages/phaser/src/index',
+  '@diorama/phaser/sheets': 'packages/phaser/src/sheets',
 };
 
 /** The repository path (no extension) a specifier lands on, or undefined for a package. */
@@ -185,9 +187,11 @@ for (const file of scanFiles('core')) {
 
 // ---------------------------------------------------------------------------------------------
 // 3. The packages: @diorama/runtime imports nothing (not core/, not a package, not Node; the DOM is
-//    left out by its own tsconfig, which tests/runtime/standalone.test.ts compiles it with), core
-//    never imports a package (the producer and the players share the files, not code), and
-//    everything else reaches a package through its alias, never by a path into packages/.
+//    left out by its own tsconfig, which tests/runtime/standalone.test.ts compiles it with);
+//    @diorama/phaser imports only the runtime and phaser (tests/phaser/standalone.test.ts compiles
+//    it alone), and its `sheets` entry not even phaser, so it runs without a browser; core never
+//    imports a package (the producer and the players share the files, not code); and everything
+//    else reaches a package through its alias, never by a path into packages/.
 // ---------------------------------------------------------------------------------------------
 
 const RUNTIME = 'packages/runtime';
@@ -199,6 +203,22 @@ for (const file of runtimeFiles) {
       report(`${rel(file)} imports "${spec}"${landed ? ` (${landed})` : ''}: @diorama/runtime imports nothing outside packages/runtime (no core/, no packages, no node: modules).`);
     }
   }
+}
+const PHASER = 'packages/phaser';
+const PHASER_IMPORTS = ['phaser', '@diorama/runtime'];
+const phaserFiles = scanFiles(PHASER);
+for (const file of phaserFiles) {
+  for (const spec of specifiersOf(file)) {
+    const landed = target(file, spec);
+    const own = spec.startsWith('.') && landed !== undefined && inside(landed, PHASER);
+    if (!own && !PHASER_IMPORTS.includes(spec)) {
+      report(`${rel(file)} imports "${spec}"${landed ? ` (${landed})` : ''}: @diorama/phaser imports only its own files, ${PHASER_IMPORTS.join(' and ')} (no core/, no other package, no node: modules).`);
+    }
+  }
+}
+const SHEETS_ENTRY = `${PHASER}/src/sheets.ts`;
+for (const spec of specifiersOf(resolve(SHEETS_ENTRY))) {
+  if (spec !== '@diorama/runtime') report(`${SHEETS_ENTRY} imports "${spec}": @diorama/phaser/sheets runs without Phaser (in node, in the tests), so it imports only @diorama/runtime.`);
 }
 for (const file of scanFiles('core')) {
   for (const spec of specifiersOf(file)) {
@@ -258,6 +278,10 @@ assert.ok(specifiersOf(resolve('core/index.ts')).includes('./asset.js'), 'the sc
 assert.ok(scanFiles('core').length > 20 && scanFiles('viewer').length > 20, 'the scanner finds the engine and the viewer');
 assert.ok(runtimeFiles.length > 10 && runtimeFiles.some(f => rel(f) === `${RUNTIME}/src/index.ts`), 'the scanner finds the runtime');
 assert.equal(target(resolve('viewer/src/a.ts'), '@diorama/runtime'), 'packages/runtime/src/index', 'a package resolves to its entry file');
+assert.equal(target(resolve('examples/x/game/main.ts'), '@diorama/phaser/sheets'), 'packages/phaser/src/sheets', 'a package entry by its subpath too');
+assert.ok(phaserFiles.length > 5 && phaserFiles.some(f => rel(f) === `${PHASER}/src/index.ts`), 'the scanner finds @diorama/phaser');
+assert.ok(specifiersOf(resolve(`${PHASER}/src/plugin.ts`)).includes('phaser'), 'and reads its imports of phaser');
+assert.deepEqual(specifiersOf(resolve(SHEETS_ENTRY)), ['@diorama/runtime'], 'the scanner reads the sheets entry');
 assert.equal(target(resolve(`${RUNTIME}/src/actor.ts`), './frames.js'), `${RUNTIME}/src/frames`);
 assert.ok(specifiersOf(resolve(`${RUNTIME}/src/index.ts`)).every(spec => spec.startsWith('./')), 'the runtime\'s entry re-exports its own modules');
 assert.ok(pathIntoPackage(resolve('viewer/src/probe-path.ts'), '../../packages/runtime/src/actor.js'), 'a path into packages/ from the viewer is refused');

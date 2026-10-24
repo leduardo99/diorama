@@ -16,6 +16,8 @@
       "@core/volume": ["core/volume/index.ts"],
       "@core/rig": ["core/rig/index.ts"],
       "@diorama/runtime": ["packages/runtime/src/index.ts"],
+      "@diorama/phaser": ["packages/phaser/src/index.ts"],
+      "@diorama/phaser/sheets": ["packages/phaser/src/sheets.ts"],
       "@/*": ["viewer/src/*"]
     }
   },
@@ -28,6 +30,7 @@
     "projects/**/*",
     "examples/**/*",
     "tests/engine/clip-keys.test.ts",
-    "tests/runtime/contract.test.ts"
+    "tests/runtime/contract.test.ts",
+    "tests/phaser/page/**/*"
   ]
 }

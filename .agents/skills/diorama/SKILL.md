@@ -26,8 +26,9 @@ A project is one folder: `projects/<project>/` (yours; Diorama does not version 
 | `sheets/` | One thin file per exported sheet. It imports the asset from `src/` and exports it: `export { crate as default } from '../../src/props/crate';`. | Hand-written ones, yes. `gear/`, `scenery/`, `vfx/` and `icons/` are generated. |
 | `assets/` | The exported PNG and atlas JSON, at the same path as their sheet. | Never: `npm run export` writes it. |
 | `review/` | Contact sheets (`contact/`), scenery tests (`scenery-tests/`), mockups (`mockups/`) and scratch. | Never versioned; delete it any time. |
+| `game/` | Optional: a game that plays the exports with `@diorama/runtime` and `@diorama/phaser` (code and data only; its images come from `assets/`). | Yes, when the project is a game (`npm run game -- <project>` serves it). |
 
-The rules the layout check enforces (the seven of [docs/ARCHITECTURE.md](../../../docs/ARCHITECTURE.md)):
+The rules the layout check enforces (the eight of [docs/ARCHITECTURE.md](../../../docs/ARCHITECTURE.md)):
 
 - **No underscores.** Everything in `src/` is a module and everything in `sheets/` is a sheet. A helper, a catalog or data is a plain file in `src/` (`src/scenery/catalog.ts`, `src/scenery/util.ts`).
 - **Kebab-case names**, one concept per file (markdown notes in `src/`, like `README.md`, may use capitals). A kit folder with a `catalog.ts` also has an `index.ts`: `catalog.ts` is what editors read, `index.ts` is what other code imports.
@@ -35,6 +36,7 @@ The rules the layout check enforces (the seven of [docs/ARCHITECTURE.md](../../.
 - **Generated sheets** are written by their command from a kit's catalog and are never edited: `sheets/gear/` (`gear-items`), `sheets/scenery/` (`scenery-items`), `sheets/vfx/` (`vfx-items`) and `sheets/icons/` (`item-icons`). To change one, change `src/<kit>/catalog.ts` and run the command with `--force`.
 - **One direction.** `src/` never imports `sheets/`, and a sheet never imports another sheet.
 - **Mirrors.** Every sheet has its export in `assets/` at the same path, and every asset has its sheet.
+- **A game is apart.** Everything `game/` imports or loads is a relative path inside `game/` or one of `@diorama/runtime`, `@diorama/phaser`, `@diorama/phaser/sheets` and `phaser` (never `@core`, `../src` or a root path); `src/` and `sheets/` never import a game, and it holds no images: it reads `assets/` through the packages.
 
 `npm run check -- <project>` runs the type check, then these rules, then the determinism lint (`Math.random`, the clock and raw colors outside `src/theme.ts`, see Rejection rules), and every message says what to move where or what to use instead. After an export run `npm run layout -- <project> --strict`, which also fails on a sheet that was never exported and on an asset that has no sheet. To see a finished project in this layout, `npm run example` exports Soulkeeper, the sample game (`examples/soulkeeper`; about five minutes; `assets/` is not versioned, so a fresh clone has none), and the skills point to its `src/` for technique.
 
@@ -68,7 +70,7 @@ Read the guide for a module before using it (the [guides index](../../../docs/gu
 | Characters and creatures: skeletons, gaits, clips, skins (`@core/rig`) | [rig 01](../../../docs/guides/rig/01-skeletons-and-creatures.md), [02](../../../docs/guides/rig/02-gaits-and-clips.md), [03](../../../docs/guides/rig/03-skins-and-character-assets.md) and the `diorama-rig` skill | [rig](../../../docs/api/rig.md) |
 | Playing exported characters: manifest, controls, events, sockets (for games and the viewer's Playground) | [rig 04](../../../docs/guides/rig/04-atlas-contract.md) | — |
 | Armor, weapons and garments as parts; outfits and variants | [rig 05](../../../docs/guides/rig/05-gear-and-outfits.md) | [rig](../../../docs/api/rig.md) |
-| Flat 2D shapes under every volume, effect and HUD piece: geometry, paths, styles, textures (`@core/draw`) | [draw README](../../../core/draw/README.md) | [draw-geometry](../../../docs/api/draw-geometry.md), [draw-paths](../../../docs/api/draw-paths.md), [draw-styles](../../../docs/api/draw-styles.md), [draw-textures](../../../docs/api/draw-textures.md) |
+| The drawing layer under every volume, effect and HUD piece: geometry, paths, styles, textures (`@core/draw`) | [draw README](../../../core/draw/README.md) | [draw-geometry](../../../docs/api/draw-geometry.md), [draw-paths](../../../docs/api/draw-paths.md), [draw-styles](../../../docs/api/draw-styles.md), [draw-textures](../../../docs/api/draw-textures.md) |
 | Asset contract, PRNG, noise, colors, sheet packing, interface assets (`@core`) | — | [core](../../../docs/api/core.md) |
 
 ## Engine selection
