@@ -248,6 +248,7 @@ export const ptBR: Shape<typeof en> = {
     exporting: 'Exportando…',
     exportingProgress: 'Exportando {current} de {total}',
     exportFailed: 'Falha ao exportar',
+    fixTypeErrors: 'Corrija estes erros de tipo para exportar',
     exportedAgain: 'Exportado de novo',
     assetsExported: { one: '{count} asset exportado', other: '{count} assets exportados' },
     exportStopped: 'Parou depois de {done} de {total}',

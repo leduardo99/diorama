@@ -15,6 +15,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Rich, useT } from '@/i18n';
 import type { TFn } from '@/i18n';
+import { exportFailureText, exportTypeErrors } from '@/lib/export-errors';
 import { projectsQuery } from '@/lib/queries';
 import { useCli } from '@/lib/mutations';
 import { useModalDialog } from '@/lib/use-modal-dialog';
@@ -139,7 +140,7 @@ export const NewModal = NiceModal.create(({ tab: initialTab = 'new-asset', proje
       if (values.exportNow) {
         const exported = await cli.mutateAsync({ command: 'export', project: values.project, subpath: values.subpath });
         if (!exported.ok) {
-          toast.error(t('modals.new.assetExportFailed'), { description: exported.output.split('\n').slice(-4).join('\n') });
+          toast.error(t('modals.new.assetExportFailed'), { description: exportFailureText(exported.output, t('toasts.fixTypeErrors')) });
         }
       }
       toast.success(t('modals.new.assetCreated'), { description: `${values.project}/${values.subpath}` });
@@ -166,6 +167,8 @@ export const NewModal = NiceModal.create(({ tab: initialTab = 'new-asset', proje
 
   const pending = cli.isPending;
   const verb = tab === 'export' ? t('common.export') : t('common.create');
+  // The viewer cannot pass --force: on a type refusal, its own hint in the output is misleading.
+  const typeErrors = cli.data && !cli.data.ok && tab === 'export' ? exportTypeErrors(cli.data.output) : null;
 
   return (
     <Dialog {...rootProps}>
@@ -348,7 +351,11 @@ export const NewModal = NiceModal.create(({ tab: initialTab = 'new-asset', proje
             <Alert variant={cli.data?.ok ? 'default' : 'destructive'}>
               <AlertDescription>
                 <pre className="max-h-48 overflow-auto font-mono text-xs whitespace-pre-wrap">
-                  {cli.data ? cli.data.output || (cli.data.ok ? t('modals.new.done') : t('modals.new.failed')) : cli.error?.message}
+                  {cli.data
+                    ? typeErrors
+                      ? `${t('toasts.fixTypeErrors')}\n${typeErrors.join('\n')}`
+                      : cli.data.output || (cli.data.ok ? t('modals.new.done') : t('modals.new.failed'))
+                    : cli.error?.message}
                 </pre>
               </AlertDescription>
             </Alert>

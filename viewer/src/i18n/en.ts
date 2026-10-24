@@ -250,6 +250,7 @@ export const en = {
     exporting: 'Exporting…',
     exportingProgress: 'Exporting {current} of {total}',
     exportFailed: 'Export failed',
+    fixTypeErrors: 'Fix these type errors to export',
     exportedAgain: 'Exported again',
     assetsExported: { one: '{count} asset exported', other: '{count} assets exported' },
     exportStopped: 'Stopped after {done} of {total}',
