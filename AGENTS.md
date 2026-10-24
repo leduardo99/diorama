@@ -16,7 +16,13 @@ Diorama makes 2.5D game assets as code: AI coding agents write TypeScript, and t
 ## The workflow
 
 1. **Start from an issue.** Pick one from the [roadmap board](https://github.com/users/leduardo99/projects/1) (the Next column, or the [good first issue](https://github.com/leduardo99/diorama/labels/good%20first%20issue) label) and say in a comment that you are taking it. If there is no issue, open one with the task template, so the change has a "Done when" before code exists.
-2. **Branch from `main`.** Name it `<type>/<topic>`, where type is `feat`, `fix`, `docs`, `perf`, `refactor`, `test` or `chore` (for example `fix/inspector-data-values`). Never commit to `main`: it is protected.
+2. **Work in your own worktree, on a branch from `main`.** Several agents and people often share one clone, so never switch branches or leave changes in the main checkout: someone else is working there.
+   - Name the branch `<type>/<topic>`, where type is `feat`, `fix`, `docs`, `perf`, `refactor`, `test` or `chore` (for example `fix/inspector-data-values`).
+   - Create a worktree beside the clone: `git fetch origin && git worktree add ../diorama-<topic> -b <type>/<topic> origin/main`, then work and run every command inside it.
+   - Give the worktree its own dependencies with `npm ci`. A symlink to the clone's `node_modules` shares Vite's cache (`node_modules/.vite`), and two dev servers then rewrite each other's cache.
+   - Use your own port for any dev server (`npx vite --port <free port> --strictPort`), never 5173, which the user's viewer uses.
+   - When the pull request is merged, remove the worktree with `git worktree remove ../diorama-<topic>`.
+   - Never commit to `main`: it is protected.
 3. **Change one thing.**
    - Keep the change to the issue.
    - Tests and docs move with the code, and snippets in guides must compile.
@@ -46,7 +52,7 @@ Diorama makes 2.5D game assets as code: AI coding agents write TypeScript, and t
    - the checks you ran and their result;
    - screenshots for interface changes;
    - whether an agent wrote it. A `Co-Authored-By:` line naming the agent is the usual way.
-6. **CI** (`.github/workflows/ci.yml`) runs both type checks and every test suite. A pull request merges only when CI passes and its branch is up to date with `main`. The maintainer reviews it, sometimes with a review agent, and squash-merges it with a subject in the repository's style.
+6. **CI** (`.github/workflows/ci.yml`) runs both type checks and every test suite. Branch protection requires the check named `Types and tests`: if you change the workflow (a matrix, a new job), keep a job with exactly that name that passes only when everything passes, or the pull request can never merge. A pull request merges only when CI passes and its branch is up to date with `main`. The maintainer reviews it, sometimes with a review agent, and squash-merges it with a subject in the repository's style.
 
 ## Rules that do not bend
 
