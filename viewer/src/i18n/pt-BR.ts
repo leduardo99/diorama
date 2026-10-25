@@ -345,7 +345,7 @@ export const ptBR: Shape<typeof en> = {
       playground: {
         move: 'Mover',
         run: 'Segure enquanto anda para correr',
-        actions: 'Fazer as ações em ordem (Espaço é o 1), também correndo',
+        actions: 'Fazer as ações em ordem (Espaço é o 1), mesmo correndo',
         hit: 'Levar um golpe',
         death: 'Morrer',
         reset: 'Reiniciar: voltar a ficar parado (depois de morrer ou de uma pose travada)',
@@ -910,7 +910,7 @@ export const ptBR: Shape<typeof en> = {
         fit: 'Ajustar a cena à tela',
         pan: 'Segure e arraste para mover a vista (ou arraste com o botão do meio)',
         shift: 'Com o pincel: linha reta desde o último ponto',
-        alt: 'Com qualquer ferramenta: conta-gotas (⌘ também)',
+        alt: 'Com qualquer ferramenta: conta-gotas (também com ⌘)',
       },
     },
     menu: {

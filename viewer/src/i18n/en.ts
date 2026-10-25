@@ -347,7 +347,7 @@ export const en = {
       playground: {
         move: 'Move',
         run: 'Hold while moving to run',
-        actions: 'Play the actions in order (Space is 1), running too',
+        actions: 'Play the actions in order (Space is 1), even while running',
         hit: 'Take a hit',
         death: 'Die',
         reset: 'Restart: back to idle (after dying or a held pose)',

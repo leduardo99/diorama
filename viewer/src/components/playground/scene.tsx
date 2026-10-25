@@ -5,7 +5,7 @@ import { spawnFromEvent, stepEffects, type Effect } from '@/lib/playground/effec
 import { floorY, hasCues, playCues, stepFx, type Fx } from '@/lib/playground/vfx';
 import type { Armed, Character } from '@/lib/playground/library';
 import { isModalOpen, isTyping } from '@/lib/hotkeys';
-import { actionIndexOf, isKey, keyOf, PLAYGROUND_KEYS } from '@/lib/playground/keys';
+import { actionIndexOf, inputOf, isKey, keyOf, PLAYGROUND_KEYS } from '@/lib/playground/keys';
 import type { World } from '@/lib/scenery/background';
 import { useT } from '@/i18n';
 import { useLabel } from '@/lib/scenery/labels';
@@ -357,11 +357,7 @@ export function Scene({ player, images, options, armed, resetKey, onPlaced, onSe
         // The controlled character cannot walk through walls or shut doors: a step goes as far as the scene's navigation lets it.
         ...(run && map ? { constrain: (from: { x: number; y: number }, to: { x: number; y: number }) => run.world.living.constrain(run.live, run.world.catalog.grid, map, from, to) } : {}),
       };
-      const input: Input = {
-        dx: (held.current.has('d') || held.current.has('ArrowRight') ? 1 : 0) - (held.current.has('a') || held.current.has('ArrowLeft') ? 1 : 0),
-        dy: (held.current.has('s') || held.current.has('ArrowDown') ? 1 : 0) - (held.current.has('w') || held.current.has('ArrowUp') ? 1 : 0),
-        run: held.current.has('Shift'),
-      };
+      const input: Input = inputOf(held.current);
       for (const actor of actors.current) {
         // A dragged player stays where the pointer holds it.
         if (actor === playerActor.current && drag.current?.actor !== actor) stepPlayer(actor, input, dt, bounds, emit);

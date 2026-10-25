@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createTranslator, stringsOf } from '../../viewer/src/i18n/core';
 import { APP_KEYS, historyCommand } from '../../viewer/src/lib/hotkeys';
-import { actionIndexOf, keyOf, PLAYGROUND_KEYS, SEARCH_KEYS } from '../../viewer/src/lib/playground/keys';
+import { actionIndexOf, inputOf, keyOf, PLAYGROUND_KEYS, SEARCH_KEYS } from '../../viewer/src/lib/playground/keys';
 import { NUDGE_KEYS, PAINTER_COMMAND_KEYS, PAINTER_KEYS, TOOL_OF_KEY } from '../../viewer/src/lib/scenery/keys';
 import { TOOLS, TOOL_KEYS } from '../../viewer/src/lib/scenery/labels';
 import { SECTION_PATHS, sectionOf } from '../../viewer/src/lib/sections';
@@ -81,6 +81,15 @@ assert.equal(actionIndexOf({ key: '0', code: 'Digit0' }), null, '0 plays nothing
 assert.equal(actionIndexOf({ key: 'h', code: 'KeyH' }), null);
 assert.equal(keyOf({ key: 'H' }), 'h', 'a letter whatever Shift does to it');
 assert.equal(keyOf({ key: 'ArrowUp' }), 'ArrowUp');
+// Every move key takes the character its own way (inputOf, what the scene steps it with); a letter and its arrow do not add up.
+for (const key of PLAYGROUND_KEYS.move) {
+  const { dx, dy } = inputOf(new Set([key]));
+  assert.equal(Math.abs(dx) + Math.abs(dy), 1, `${key} moves the character one way`);
+}
+assert.deepEqual(inputOf(new Set(['d', 'ArrowRight', 'Shift'])), { dx: 1, dy: 0, run: true }, 'D and → together, running');
+assert.deepEqual(inputOf(new Set(['a', 'w'])), { dx: -1, dy: -1, run: false });
+assert.deepEqual(inputOf(new Set(['a', 'ArrowRight'])), { dx: 0, dy: 0, run: false }, 'opposite ways cancel');
+assert.deepEqual(inputOf(new Set(['h'])), { dx: 0, dy: 0, run: false });
 
 // 4. The painter: the tools in order, built from TOOLS, so a new tool or a key bound again cannot be missing.
 const [tools] = SHORTCUTS.scenery;
