@@ -5,6 +5,7 @@ import { createServer } from 'node:http';
 import { resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { inflateSync } from 'node:zlib';
+import { exportTypeErrors } from '../../viewer/src/lib/export-errors';
 
 console.log('🧪 Checking agent commands (new-project, new-asset, new-kit, check, layout, game, list, export incl. --changed and --jobs, inspect, contact)...\n');
 
@@ -659,6 +660,8 @@ export default defineAsset({
   const refusedExport = run(`npm run --silent export -- ${kitsProject} scenery/`);
   assert.notEqual(refusedExport.code, 0, 'an export with a type error must fail');
   assert.ok(refusedExport.stderr.includes('1 type error(s), so nothing was exported') && refusedExport.stderr.includes(`src/scenery/props.ts(${brokenLine},14): error TS2322`) && refusedExport.stderr.includes('--force'), `it prints the errors and the way out: ${refusedExport.stderr}`);
+  const readByViewer = exportTypeErrors(refusedExport.stderr)?.map((line) => line.replace(/\\/g, '/'));
+  assert.ok(readByViewer?.length === 1 && readByViewer[0].endsWith(`src/scenery/props.ts(${brokenLine},14): error TS2322: Type 'string' is not assignable to type 'number'.`), `the viewer reads this refusal (viewer/src/lib/export-errors.ts): keep the two in step: ${JSON.stringify(readByViewer)}`);
   assert.ok(!existsSync(cratePng), 'a refused export writes nothing');
   const refusedJson = JSON.parse(run(`npm run --silent export -- ${kitsProject} scenery/ --json`).stdout);
   assert.ok(refusedJson.typeCheck === 'failed' && refusedJson.typeErrors.length === 1 && refusedJson.outputs.length === 0, 'export --json carries the type errors');

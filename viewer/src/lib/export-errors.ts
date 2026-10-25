@@ -10,7 +10,9 @@
 
 /** The type errors a refused export printed, in tsc's file(line,col) format; null when it failed some other way. */
 export function exportTypeErrors(output: string): string[] | null {
-  const block = /has \d+ type error\(s\), so nothing was exported:\n([\s\S]+?)\nFix them \(/.exec(output);
+  // Colours (when FORCE_COLOR is set) and Windows line ends must not hide the refusal.
+  const plain = output.replace(/\x1b\[[0-9;]*m/g, '').replace(/\r\n/g, '\n');
+  const block = /has \d+ type error\(s\), so nothing was exported:\n([\s\S]+?)\nFix them \(/.exec(plain);
   if (!block) return null;
   const errors = block[1].split('\n').map(line => line.trim()).filter(Boolean);
   return errors.length ? errors : null;
