@@ -47,7 +47,7 @@ export function DirectionStrip({ character, skin, clipKey, frame, playing, direc
   }, [character, skin, clipKey, playing, repaint]);
 
   return (
-    <div role="radiogroup" aria-label={t('preview.inspector.direction')} className="flex gap-1 overflow-x-auto pb-1">
+    <div role="radiogroup" aria-label={t('details.inspector.direction')} className="flex gap-1 overflow-x-auto pb-1">
       {Array.from({ length: DIRECTION_COUNT }, (_, index) => (
         <button
           key={index}

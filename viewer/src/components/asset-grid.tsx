@@ -56,7 +56,7 @@ function AssetCard({ asset, active, position, onOpen }: CardProps & { asset: Ass
   const [hovered, setHovered] = useState(false);
   const { t, bytes } = useT();
   return (
-    <AssetContextMenu asset={asset} onPreview={onOpen}>
+    <AssetContextMenu asset={asset} onDetails={onOpen}>
       <EntryCard
         id={assetDomId(asset.subpath)}
         active={active}
@@ -67,7 +67,7 @@ function AssetCard({ asset, active, position, onOpen }: CardProps & { asset: Ass
         flag={isStale(asset) ? <StaleBadge /> : null}
         title={assetTitle(asset)}
         description={dirname(asset.subpath) || '—'}
-        menu={<AssetMenuButton asset={asset} onPreview={onOpen} />}
+        menu={<AssetMenuButton asset={asset} onDetails={onOpen} />}
       >
         {roleOf(asset) === 'gear' && <Badge variant="secondary">{roleDetail(asset, t) ?? t('assets.card.item')}</Badge>}
         {(roleOf(asset) === 'vfx' || roleOf(asset) === 'ui') && asset.atlasInfo?.kind && <Badge variant="secondary">{asset.atlasInfo.kind}</Badge>}

@@ -84,7 +84,7 @@ function Slot({ asset, selected, box, zoom, frame, onSelect }: SlotProps) {
     <button
       type="button"
       disabled={!asset}
-      aria-label={asset ? (info?.label ?? asset.subpath) : t('preview.icon.emptySlot')}
+      aria-label={asset ? (info?.label ?? asset.subpath) : t('details.icon.emptySlot')}
       aria-pressed={selected}
       onClick={() => asset && onSelect(asset)}
       className={cn('group relative block focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none enabled:cursor-pointer', !frame && 'rounded-xs bg-black/40 ring-1 ring-foreground/10 enabled:hover:bg-black/20', !frame && selected && 'ring-2 ring-primary')}
@@ -118,10 +118,10 @@ function Slot({ asset, selected, box, zoom, frame, onSelect }: SlotProps) {
  * carries the rarity in its frame, so the ring in the grid is the slot's, not the icon's. When the project has a slot sheet
  * the slots are drawn with it (its states: empty, hover, selected) and each icon sits in the box its `content` margins leave.
  */
-export function IconPreview({ asset, projectAssets, onSelect }: { asset: AssetFileMeta; projectAssets: AssetFileMeta[]; onSelect: (asset: AssetFileMeta) => void }) {
+export function IconDetails({ asset, projectAssets, onSelect }: { asset: AssetFileMeta; projectAssets: AssetFileMeta[]; onSelect: (asset: AssetFileMeta) => void }) {
   const { atlas, atlasError, image, failed } = useSheet(asset);
   const { t, plural } = useT();
-  const [zoom, setZoom] = usePref<number>('preview.icon.zoom', 1);
+  const [zoom, setZoom] = usePref<number>('details.icon.zoom', 1);
   const item = atlas?.meta.data?.item;
   const icons = useMemo(() => projectAssets.filter((a) => roleOf(a) === 'icon'), [projectAssets]);
   // The inventory starts at the chosen icon and goes on through the project's others; what is left over is empty slots.
@@ -153,23 +153,23 @@ export function IconPreview({ asset, projectAssets, onSelect }: { asset: AssetFi
               <AlertDescription>{failed ? t('errors.loadFile', { url: asset.url }) : atlasError?.message}</AlertDescription>
             </Alert>
           )}
-          <div role="group" aria-label={t('preview.icon.inventory')} className="mx-auto grid w-fit gap-1.5 rounded-md bg-card/60 p-3 ring-1 ring-foreground/10" style={{ gridTemplateColumns: `repeat(${COLUMNS}, ${box.width}px)` }}>
+          <div role="group" aria-label={t('details.icon.inventory')} className="mx-auto grid w-fit gap-1.5 rounded-md bg-card/60 p-3 ring-1 ring-foreground/10" style={{ gridTemplateColumns: `repeat(${COLUMNS}, ${box.width}px)` }}>
             {slots.map((slot, i) => <Slot key={slot?.subpath ?? `empty-${i}`} asset={slot} selected={slot?.subpath === asset.subpath} box={box} zoom={zoom} frame={frame && emptyRect ? frame : null} onSelect={onSelect} />)}
           </div>
         </div>
         <div className="flex items-center gap-3 border-t px-4 py-2.5">
           <Field orientation="horizontal" className="w-auto">
-            <FieldTitle id="preview-icon-zoom">{t('preview.icon.zoom')}</FieldTitle>
-            <ToggleGroup type="single" variant="outline" size="sm" spacing={0} aria-labelledby="preview-icon-zoom" value={String(zoom)} onValueChange={(value) => value && setZoom(Number(value))}>
+            <FieldTitle id="details-icon-zoom">{t('details.icon.zoom')}</FieldTitle>
+            <ToggleGroup type="single" variant="outline" size="sm" spacing={0} aria-labelledby="details-icon-zoom" value={String(zoom)} onValueChange={(value) => value && setZoom(Number(value))}>
               {ZOOMS.map((z) => <ToggleGroupItem key={z} value={String(z)}>{t('units.times', { value: z })}</ToggleGroupItem>)}
             </ToggleGroup>
           </Field>
-          <span className="ml-auto text-muted-foreground tabular-nums">{frame && slotAsset ? `${t('preview.icon.slotsOf', { name: slotAsset.atlasInfo?.label ?? slotAsset.subpath })} · ` : ''}{plural('preview.icon.count', icons.length)}</span>
+          <span className="ml-auto text-muted-foreground tabular-nums">{frame && slotAsset ? `${t('details.icon.slotsOf', { name: slotAsset.atlasInfo?.label ?? slotAsset.subpath })} · ` : ''}{plural('details.icon.count', icons.length)}</span>
         </div>
       </section>
 
       <div className="h-full min-h-0 overflow-y-auto border-l bg-card/40">
-        <Section title={t('preview.icon.item')}>
+        <Section title={t('details.icon.item')}>
           {item ? (
             <>
               <div className="flex items-start gap-3">
@@ -188,11 +188,11 @@ export function IconPreview({ asset, projectAssets, onSelect }: { asset: AssetFi
               {item.description && <FieldDescription>{item.description}</FieldDescription>}
               <dl className="flex flex-col gap-1.5">
                 {[
-                  [t('preview.icon.id'), item.id],
-                  [t('preview.icon.stack'), item.stack !== undefined ? t('preview.icon.perSlot', { count: item.stack }) : undefined],
-                  [t('preview.icon.rarityColor'), item.rarityColor],
-                  [t('preview.icon.gearPart'), item.gear],
-                  [t('preview.icon.icon'), atlas?.meta.frameWidth ? t('units.px', { value: `${atlas.meta.frameWidth}×${atlas.meta.frameHeight}` }) : undefined],
+                  [t('details.icon.id'), item.id],
+                  [t('details.icon.stack'), item.stack !== undefined ? t('details.icon.perSlot', { count: item.stack }) : undefined],
+                  [t('details.icon.rarityColor'), item.rarityColor],
+                  [t('details.icon.gearPart'), item.gear],
+                  [t('details.icon.icon'), atlas?.meta.frameWidth ? t('units.px', { value: `${atlas.meta.frameWidth}×${atlas.meta.frameHeight}` }) : undefined],
                 ].filter((row): row is [string, string] => row[1] !== undefined).map(([key, value]) => (
                   <div key={key} className="flex justify-between gap-3">
                     <dt className="text-muted-foreground">{key}</dt>
@@ -202,11 +202,11 @@ export function IconPreview({ asset, projectAssets, onSelect }: { asset: AssetFi
               </dl>
             </>
           ) : (
-            <FieldDescription>{t('preview.icon.noDescription')}</FieldDescription>
+            <FieldDescription>{t('details.icon.noDescription')}</FieldDescription>
           )}
         </Section>
         {rarities.length > 0 && (
-          <Section title={t('preview.icon.rarities')}>
+          <Section title={t('details.icon.rarities')}>
             <ul className="flex flex-col gap-1.5">
               {rarities.map((rarity) => (
                 <li key={rarity.id} className="flex items-center gap-2">

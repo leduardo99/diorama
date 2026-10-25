@@ -223,7 +223,7 @@ export const en = {
       exportPending: 'Export pending',
     },
     menu: {
-      preview: 'Preview',
+      details: 'Details',
       exportAgain: 'Export again',
       copySheetPath: 'Copy .ts path',
       copyFilePath: 'Copy path of the exported file',
@@ -234,7 +234,7 @@ export const en = {
       sheetPathLabel: 'Path of the .ts',
       filePathLabel: 'Path of the file',
       group: {
-        open: 'Open',
+        details: 'Details',
         exportAll: 'Export all animations',
         copyFolderPath: 'Copy folder path',
         deleteAll: { one: 'Delete {count} animation…', other: 'Delete {count} animations…' },
@@ -313,10 +313,10 @@ export const en = {
     shortcuts: {
       title: 'Keyboard shortcuts',
       list: 'List',
-      preview: 'Preview',
+      details: 'Details',
       search: 'Search',
       moveSelection: 'Move the selection',
-      openPreview: 'Open preview',
+      openDetails: 'Open details',
       delete: 'Delete',
       clear: 'Clear selection or search',
       newThing: 'New project, asset or export',
@@ -427,7 +427,7 @@ export const en = {
       assetExportFailed: 'Asset created, but the export failed',
     },
   },
-  preview: {
+  details: {
     clips: 'Animations',
     iconHint: 'click a slot to open the item',
     footer: {

@@ -59,7 +59,7 @@ draw  <-  volume  <-  rig                 core/: the engine, the producer of the
     ^          ^
     |     @diorama/phaser        imports the runtime and phaser, nothing else
     |          ^
-  viewer     games (a project's game/)          the players of the files: the Playground and the previews; a game
+  viewer     games (a project's game/)          the players of the files: the Playground and the Details window; a game
 ```
 
 - Core and the runtime share no code: they share the exported JSON (the atlas contract). Core writes it and the runtime reads it; `tests/runtime/contract.test.ts` checks that core's producer types fit the runtime's.

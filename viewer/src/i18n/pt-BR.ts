@@ -221,7 +221,7 @@ export const ptBR: Shape<typeof en> = {
       exportPending: 'Exportar pendentes',
     },
     menu: {
-      preview: 'Preview',
+      details: 'Detalhes',
       exportAgain: 'Exportar de novo',
       copySheetPath: 'Copiar caminho do .ts',
       copyFilePath: 'Copiar caminho do arquivo exportado',
@@ -232,7 +232,7 @@ export const ptBR: Shape<typeof en> = {
       sheetPathLabel: 'Caminho do .ts',
       filePathLabel: 'Caminho do arquivo',
       group: {
-        open: 'Abrir',
+        details: 'Detalhes',
         exportAll: 'Exportar todas as animações',
         copyFolderPath: 'Copiar caminho da pasta',
         deleteAll: { one: 'Excluir {count} animação…', other: 'Excluir {count} animações…' },
@@ -311,10 +311,10 @@ export const ptBR: Shape<typeof en> = {
     shortcuts: {
       title: 'Atalhos de teclado',
       list: 'Lista',
-      preview: 'Preview',
+      details: 'Detalhes',
       search: 'Buscar',
       moveSelection: 'Mover a seleção',
-      openPreview: 'Abrir preview',
+      openDetails: 'Abrir detalhes',
       delete: 'Excluir',
       clear: 'Limpar seleção ou busca',
       newThing: 'Novo projeto, asset ou export',
@@ -425,7 +425,7 @@ export const ptBR: Shape<typeof en> = {
       assetExportFailed: 'Asset criado, mas o export falhou',
     },
   },
-  preview: {
+  details: {
     clips: 'Animações',
     iconHint: 'clique num espaço para abrir o item',
     footer: {
