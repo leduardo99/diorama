@@ -11,7 +11,7 @@ import { createRng } from '@core';
 import { Polygon } from '@core/draw';
 import { partFrame, type Part, type PartContext } from '@core/rig';
 import { Frame3, Round, Solid, Tube, UP, add3, cross3, dot3, lerp3, norm3, scale3, sub3, vec3, type Placed, type Vec3 } from '@core/volume';
-import { legOf, plate, role, tornPanel, type NoOptions } from './util';
+import { legOf, plate, role, tornPanel } from './util';
 
 /** Options of `tunic`. */
 export interface TunicOptions {
@@ -115,7 +115,7 @@ export const baldric: Part<BaldricOptions> = ({ object: o, pose, body, at, mater
 };
 
 /** The trunk's length against the 23 units between the pelvis and the chest of the 80-unit `humanoid()`. */
-function trunkScale(ctx: Pick<PartContext, 'kit'>): number {
+export function trunkScale(ctx: Pick<PartContext, 'kit'>): number {
   const t = ctx.kit.skeleton.trunk;
   const pelvis = t.find(j => j.name === 'pelvis') ?? t[0];
   const chest = t.find(j => j.name === 'chest') ?? t[t.length - 2];
@@ -146,21 +146,30 @@ export function coatRing(h: number): [number, number] {
   return [r[r.length - 1][1], r[r.length - 1][2]];
 }
 
+/** Options of `coatTorso`. */
+export interface CoatTorsoOptions {
+  /** Room added round the body the coat encloses, on every side. Default 0: the cut the bones were fitted for. */
+  ease?: number;
+}
+
 /**
  * The body of a coat: one loft from the waist to the neck, narrow at the waist, a little fuller
  * over the ribs and wide across the shoulders, closing round the neck. It follows the trunk
  * (`ctx.body`), so a hit recoils it and a death lays it down. Returns the coat, so a sash and a
  * breastplate can rest on it.
+ * Worn over a fuller body it rests `on` it (`on: '<torso id>'`), so the coat encloses it instead
+ * of sorting under it, and `ease` adds the room that body needs — the way the hood rests on the
+ * head.
  * Slot: `chest`. Roles: `cloth`.
  */
-export const coatTorso: Part<NoOptions> = ctx => {
-  const { object: o, body, at, materials } = ctx;
+export const coatTorso: Part<CoatTorsoOptions> = (ctx, { ease = 0 }) => {
+  const { object: o, body, at, materials, host } = ctx;
   const { up, right: across, forward: chestFwd } = body;
   const s = trunkScale(ctx);
   const c = at.frame.origin;
-  const rings = COAT_RINGS.map(([h, rx, ry]) => ({ center: add3(c, scale3(up, h * s)), rx, ry, axes: [across, chestFwd] as [Vec3, Vec3] }));
+  const rings = COAT_RINGS.map(([h, rx, ry]) => ({ center: add3(c, scale3(up, h * s)), rx: rx + ease, ry: ry + ease, axes: [across, chestFwd] as [Vec3, Vec3] }));
   const coat = Round.loft(rings);
-  o.add(coat, role(materials, 'cloth'));
+  o.add(coat, role(materials, 'cloth'), host ? { on: host } : {});
   return coat;
 };
 

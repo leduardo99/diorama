@@ -30,6 +30,11 @@ export const PALETTES = {
   fleshLit: '#d9d4e6',
   flesh: '#a49fbc',
   fleshDark: '#655f80',
+  // Living skin: a warm, muted rose-tan, desaturated to sit in the dusk palette; `flesh` above is
+  // paler and cold on purpose — it serves smoke wisps and glyph highlights, not people.
+  skinLit: '#e3bfa3',
+  skin: '#b08d79',
+  skinDark: '#5e443c',
   woodLit: '#715749',
   wood: '#47362e',
   woodDark: '#2a1f1b',
@@ -121,6 +126,7 @@ export const RAMPS = {
   sash: { lit: PALETTES.sashLit, base: PALETTES.sash, dark: PALETTES.sashDark },
   bone: { lit: PALETTES.boneLit, base: PALETTES.bone, dark: PALETTES.boneDark },
   flesh: { lit: PALETTES.fleshLit, base: PALETTES.flesh, dark: PALETTES.fleshDark },
+  skin: { lit: PALETTES.skinLit, base: PALETTES.skin, dark: PALETTES.skinDark },
   wood: { lit: PALETTES.woodLit, base: PALETTES.wood, dark: PALETTES.woodDark },
   iron: { lit: PALETTES.ironLit, base: PALETTES.iron, dark: PALETTES.ironDark },
   soul: { lit: PALETTES.soulLit, base: PALETTES.soul, dark: PALETTES.soulDark },
@@ -263,9 +269,15 @@ export const VOLUMES = {
   boneLimb: { ramp: RAMPS.bone, stroke: inner(RAMPS.bone, 0.8), edge },
   // Gaps carved into bone: one flat shadow tone, no outline.
   boneGroove: { ramp: { lit: PALETTES.boneDark, base: PALETTES.boneDark, dark: PALETTES.boneDark } },
+  // Pale grey-violet, matte like cloth: smoke wisps and glyph highlights, not skin.
+  flesh: { ramp: RAMPS.flesh, stroke: inner(RAMPS.flesh), edge, form: { highlight: { ratio: 0.14, min: 0.5, max: 1.4 } } },
+  // Skin for living people: the same matte treatment as the flesh volume, on the warm skin ramp.
+  skin: { ramp: RAMPS.skin, stroke: inner(RAMPS.skin), edge, form: { highlight: { ratio: 0.14, min: 0.5, max: 1.4 } } },
   // Matte cloth: no highlight, a wider core shadow.
   robe: { ramp: RAMPS.robe, stroke: inner(RAMPS.robe, 1), edge, form: { highlight: false, core: { ratio: 0.36, min: 1.2, max: 4 } } },
   sash: { ramp: RAMPS.sash, stroke: inner(RAMPS.sash), edge: inner(RAMPS.sash, 0.6), form: { highlight: false } },
+  // A lighter sash for trims that must read at 1x (hood rims, cowl edges): sashLit up a step.
+  sashLit: { ramp: { lit: PALETTES.accentLit, base: PALETTES.sashLit, dark: PALETTES.sash }, stroke: inner(RAMPS.sash), edge: inner(RAMPS.sash, 0.6), form: { highlight: false } },
   leather: { ramp: RAMPS.leather, stroke: inner(RAMPS.leather, 0.8), edge: inner(RAMPS.leather, 0.6) },
   hollow: { ramp: RAMPS.hollow, form: { highlight: false } },
   fur: { ramp: RAMPS.fur, stroke: inner(RAMPS.fur, 1), edge, form: { highlight: { ratio: 0.1, min: 0.5, max: 1.2 } } },

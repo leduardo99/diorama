@@ -10,6 +10,11 @@
  * Parts by family, with the slot each is made for:
  * - `bodies.ts`: `boneLeg` (thigh), `boneSpine` and `ribCage` (chest), `boneArm` (shoulder), `boneHand`
  *   (hand, open palm), and `boneLegs`, the base body of both legs (it receives the outfit's materials);
+ * - `flesh.ts`: `fleshHead` (head, with a face that reads `extra.brow`, `extra.mouth` and
+ *   `extra.eyes`), `fleshTorso` (chest), `fleshArm` (shoulder), `fleshHand` (hand), `fleshLeg`
+ *   (thigh), `hairCrop` and `hairTail` (head), and `fleshLegs`, the base body of a living figure;
+ * - `clothes.ts`: `hood` (head), `cloak` (back), `apron` (pelvis), `shawl` (chest), `boot` (foot)
+ *   and `glove` (hand), the soft garments a living body wears;
  * - `heads.ts`: `boneSkull`, `skullSutures`, `hornedHelm` and `fireCrown` (head), `headFrame`;
  * - `crests.ts`: `helmCrest` (head, resting on a helm);
  * - `shoulders.ts`: `lamedPauldron` and `skullPauldron` (shoulder);
@@ -34,6 +39,7 @@
  * - `wood`: shield disc; `woodSeam` (optional): its plank seams, `woodDark` of the theme when not set;
  * - `bone`: skull, jaw, teeth, horns; `boneLimb`: limb bones, spine, ribs (falls back to `bone`);
  * - `boneGroove` (optional): the flat grooves carved into bone (cranial sutures), `hollow` when not set;
+ * - `skin`: the living body (flesh parts); `hair`: brows and hair parts;
  * - `hollow`: inside of the rib cage, mouth and sockets;
  * - `glow`: soul fire, for eyes, runes and the fire effects;
  * - the long coat also reads `cloth` (coat, collar, sleeves), `clothAccent` (sash tail, grimoire cover),
@@ -44,6 +50,8 @@
  */
 
 export * from './bodies';
+export * from './clothes';
+export * from './flesh';
 export * from './heads';
 export * from './crests';
 export * from './shoulders';
