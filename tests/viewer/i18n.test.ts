@@ -27,7 +27,8 @@ for (const [key, text] of en) {
   assert.deepEqual([...new Set(placeholdersOf(other))].sort(), [...new Set(placeholdersOf(text))].sort(), `${key}: the same {placeholders} in both languages`);
   assert.deepEqual(tagsOf(other), tagsOf(text), `${key}: the same markup in both languages`);
   for (const tag of tagsOf(text)) assert.ok(KNOWN_TAGS.has(tag), `${key}: <${tag}> is a markup the screen knows`);
-  for (const s of [text, other]) assert.doesNotMatch(s, /(^|[\s(])--[a-z]/, `${key}: no command-line flag in the interface`);
+  // A flag is "--" and a letter after anything but a letter or a dash: a space, "(", or markup such as <code>--force</code>.
+  for (const s of [text, other]) assert.doesNotMatch(s, /(^|[^\w-])--[a-z]/, `${key}: no command-line flag in the interface`);
 }
 
 // 3. A plural (a key with a .one) has both forms.
