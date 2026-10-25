@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Rich, useT } from '@/i18n';
-import { isTyping, useWindowKeydown } from '@/lib/hotkeys';
+import { historyCommand, isTyping, useWindowKeydown } from '@/lib/hotkeys';
 import { useRefreshGearItems } from '@/lib/mutations';
 import { kitQuery, type GearKit } from '@/lib/outfit/catalog';
 import { projectsQuery } from '@/lib/queries';
@@ -80,15 +80,11 @@ function Customizer({ project, kit, character }: { project: string; kit: GearKit
 
   useWindowKeydown((e) => {
     if (isTyping(e.target) || document.querySelector('[role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"]')) return;
-    const key = e.key.toLowerCase();
-    if ((e.metaKey || e.ctrlKey) && key === 'z') {
-      e.preventDefault();
-      if (e.shiftKey) redo();
-      else undo();
-    } else if (e.ctrlKey && key === 'y') {
-      e.preventDefault();
-      redo();
-    }
+    const step = historyCommand(e);
+    if (!step) return;
+    e.preventDefault();
+    if (step === 'redo') redo();
+    else undo();
   });
 
   return (

@@ -8,12 +8,13 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
 import { Rich, useT } from '@/i18n';
-import { isTyping, useWindowKeydown } from '@/lib/hotkeys';
+import { historyCommand, isTyping, useWindowKeydown } from '@/lib/hotkeys';
 import { projectsQuery } from '@/lib/queries';
 import { sceneryRoute } from '@/lib/routes';
 import { savedScenesQuery, sceneryQuery } from '@/lib/scenery/catalog';
 import { canFlip, countCells, duplicateProp, emptyScene, nudgeSelected, pieceOf, removeSelected, rotateProp, validSelection, type EraseLayer, type Layer, type Picked, type Selection } from '@/lib/scenery/edit';
-import { TOOL_KEYS, brushOf, type PieceGroup, type Tool } from '@/lib/scenery/labels';
+import { NUDGE_KEYS, PAINTER_COMMAND_KEYS, TOOL_OF_KEY, isPainterKey } from '@/lib/scenery/keys';
+import { brushOf, type PieceGroup, type Tool } from '@/lib/scenery/labels';
 import { fitZoom, geometryOf, stepZoom, ZOOMS, type Zoom } from '@/lib/scenery/render';
 import { createCanvasStatus } from '@/lib/scenery/status';
 import { useHistory } from '@/lib/scenery/use-history';
@@ -36,10 +37,6 @@ const drafts = new Map<string, SceneData>();
 
 /** Open menus and dialogs own the keyboard; the popovers do not (the selection's stays open while the painter is used). */
 const OPEN_LAYER = '[role="dialog"]:not([data-slot="popover-content"]), [role="alertdialog"], [role="menu"], [role="listbox"]';
-
-const ARROWS: Record<string, [number, number]> = { arrowleft: [-1, 0], arrowright: [1, 0], arrowup: [0, -1], arrowdown: [0, 1] };
-
-const toolOfKey = Object.fromEntries(Object.entries(TOOL_KEYS).map(([tool, key]) => [key.toLowerCase(), tool])) as Record<string, Tool>;
 
 /** Paint a scene of the project's scenery kit and see it drawn by the engine; save it as a scene of the project. */
 export function SceneryView() {
@@ -193,46 +190,42 @@ function Painter({ project, catalog, fixture, sceneNames }: { project: string; c
     if (isTyping(e.target) || document.querySelector(OPEN_LAYER)) return;
     const key = e.key.toLowerCase();
     // Tab hides the piece panel as in the painting programs, but only from the page itself: on a control it keeps moving the focus.
-    if (key === 'tab' && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey && (e.target === document.body || e.target instanceof HTMLCanvasElement)) {
+    if (isPainterKey('panel', key) && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey && (e.target === document.body || e.target instanceof HTMLCanvasElement)) {
       e.preventDefault();
       setPanelOpen(!panelOpen);
       return;
     }
-    if ((e.metaKey || e.ctrlKey) && key === 'z') {
+    const step = historyCommand(e);
+    if (step) {
       e.preventDefault();
-      if (e.shiftKey) history.redo();
+      if (step === 'redo') history.redo();
       else history.undo();
       return;
     }
-    if (e.ctrlKey && key === 'y') {
-      e.preventDefault();
-      history.redo();
-      return;
-    }
-    if ((e.metaKey || e.ctrlKey) && key === 'd' && selectedProp !== null) {
+    if ((e.metaKey || e.ctrlKey) && key === PAINTER_COMMAND_KEYS.duplicate && selectedProp !== null) {
       e.preventDefault();
       duplicate();
       return;
     }
     if (e.metaKey || e.ctrlKey || e.altKey) return;
-    if (toolOfKey[key]) {
-      setTool(toolOfKey[key]);
-    } else if (key === 'r') {
+    if (TOOL_OF_KEY[key]) {
+      setTool(TOOL_OF_KEY[key]);
+    } else if (isPainterKey('rotate', key)) {
       rotate(e.shiftKey ? -1 : 1);
-    } else if ((key === 'delete' || key === 'backspace') && selected) {
+    } else if (isPainterKey('remove', key) && selected) {
       remove();
-    } else if (key === 'escape') {
+    } else if (isPainterKey('escape', key)) {
       setSelection(null);
-    } else if (key === 'g') {
+    } else if (isPainterKey('grid', key)) {
       setGrid(!grid);
-    } else if (key === '=' || key === '+' || key === '-') {
+    } else if (isPainterKey('zoomIn', key) || isPainterKey('zoomOut', key)) {
       // As the disabled buttons and the wheel: a step past either end changes nothing, so it does not leave Fit either.
-      const next = stepZoom(zoom, key === '-' ? -1 : 1);
+      const next = stepZoom(zoom, isPainterKey('zoomOut', key) ? -1 : 1);
       if (next !== zoom) setZoom(next);
-    } else if (key === '0') {
+    } else if (isPainterKey('fit', key)) {
       setZoom('fit');
-    } else if (ARROWS[key] && (selected?.kind === 'prop' || selected?.kind === 'figure' || selected?.kind === 'wall')) {
-      const [dc, dr] = ARROWS[key];
+    } else if (NUDGE_KEYS[key] && (selected?.kind === 'prop' || selected?.kind === 'figure' || selected?.kind === 'wall')) {
+      const [dc, dr] = NUDGE_KEYS[key];
       const key2 = selected.kind === 'wall' ? `${selected.at.col},${selected.at.row}` : selected.index;
       history.set((s) => nudgeSelected(s, catalog, selected, { col: dc, row: dr }), `nudge:${selected.kind}:${key2}`);
       // A wall's selection is its place: it follows the wall.

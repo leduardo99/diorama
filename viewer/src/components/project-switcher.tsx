@@ -8,7 +8,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Kbd } from '@/components/ui/kbd';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useT } from '@/i18n';
-import { useWindowKeydown } from '@/lib/hotkeys';
+import { APP_KEYS, useWindowKeydown } from '@/lib/hotkeys';
 import { projectsQuery } from '@/lib/queries';
 import { SECTION_PATHS, type Section } from '@/lib/sections';
 import { NewModal } from '@/modals/new-modal';
@@ -30,7 +30,7 @@ export function ProjectSwitcher({ project, section }: { project: string | undefi
   const { t } = useT();
 
   useWindowKeydown((e) => {
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === APP_KEYS.switchProject) {
       e.preventDefault();
       setOpen((now) => !now);
     }
