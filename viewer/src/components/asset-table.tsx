@@ -100,7 +100,7 @@ export function AssetTable({ table, activeKey, scrollRef, onOpen }: Props) {
           {items.map((item) => {
             const row = rows[item.index];
             return (
-              <AssetContextMenu key={row.id} asset={row.original} onPreview={onOpen}>
+              <AssetContextMenu key={row.id} asset={row.original} onDetails={onOpen}>
                 <TableRow
                   id={assetDomId(row.original.subpath)}
                   ref={virtualizer.measureElement}

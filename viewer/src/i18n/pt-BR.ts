@@ -206,6 +206,12 @@ export const ptBR: Shape<typeof en> = {
       animations: { one: '{count} animação', other: '{count} animações' },
       frameCount: '{count}f',
       directionCount: '{count}d',
+      framesPerDirection: { one: '{count} frame por direção', other: '{count} frames por direção' },
+      directionsHint: 'Desenhado em {count} direções',
+    },
+    engineHint: {
+      rig: 'Desenhado pela engine rig: um esqueleto que muda de pose a cada frame',
+      volume: 'Desenhado pela engine volume: formas sólidas vistas por uma câmera',
     },
     stale: {
       label: 'Desatualizado',
@@ -222,7 +228,7 @@ export const ptBR: Shape<typeof en> = {
       exportPending: 'Exportar pendentes',
     },
     menu: {
-      preview: 'Preview',
+      details: 'Detalhes',
       exportAgain: 'Exportar de novo',
       copySheetPath: 'Copiar caminho do .ts',
       copyFilePath: 'Copiar caminho do arquivo exportado',
@@ -233,7 +239,7 @@ export const ptBR: Shape<typeof en> = {
       sheetPathLabel: 'Caminho do .ts',
       filePathLabel: 'Caminho do arquivo',
       group: {
-        open: 'Abrir',
+        details: 'Detalhes',
         exportAll: 'Exportar todas as animações',
         copyFolderPath: 'Copiar caminho da pasta',
         deleteAll: { one: 'Excluir {count} animação…', other: 'Excluir {count} animações…' },
@@ -312,10 +318,10 @@ export const ptBR: Shape<typeof en> = {
     shortcuts: {
       title: 'Atalhos de teclado',
       list: 'Lista',
-      preview: 'Preview',
+      details: 'Detalhes',
       search: 'Buscar',
       moveSelection: 'Mover a seleção',
-      openPreview: 'Abrir preview',
+      openDetails: 'Abrir detalhes',
       delete: 'Excluir',
       clear: 'Limpar seleção ou busca',
       newThing: 'Novo projeto, asset ou export',
@@ -427,7 +433,7 @@ export const ptBR: Shape<typeof en> = {
       assetExportFailed: 'Asset criado, mas o export falhou',
     },
   },
-  preview: {
+  details: {
     clips: 'Animações',
     iconHint: 'clique num slot para abrir o item',
     footer: {

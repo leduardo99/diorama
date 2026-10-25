@@ -17,6 +17,15 @@ assert.deepEqual([...en.keys()].filter((key) => !pt.has(key)), [], 'every Englis
 assert.deepEqual([...pt.keys()].filter((key) => !en.has(key)), [], 'no Portuguese key is left over');
 assert.ok(en.size > 600, `the dictionaries are not empty (${en.size} strings)`);
 
+// 1b. The window an asset opens in is "Details", in its keys and in its words. "Preview" is left only to the Customize tab's
+//     live drawing (customize.*), which is a different thing.
+assert.deepEqual([...en.keys()].filter((key) => key.startsWith('preview.')), [], 'the namespace of the Details window is details.*');
+assert.ok([...en.keys()].some((key) => key.startsWith('details.')));
+for (const lang of LANGS) {
+  const named = [...stringsOf(lang)].filter(([key, text]) => /preview/i.test(text) && !key.startsWith('customize.')).map(([key]) => key);
+  assert.deepEqual(named, [], `${lang}: only the Customize tab says "preview"`);
+}
+
 // 2. A string and its translation carry the same {placeholders} and the same markup, and no string is empty. No string
 //    asks the reader to know the command line: none names a --flag (the New dialog's CLI line is built in code, not here).
 const tagsOf = (text: string) => [...text.matchAll(/<(\w+)>[^<]*<\/\1>/g)].map((m) => m[1]).sort();

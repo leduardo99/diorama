@@ -21,7 +21,7 @@ import { AssetGrid } from './asset-grid';
 import { AssetTable } from './asset-table';
 import { AssetToolbar, gridSizes, type GridSize } from './asset-toolbar';
 import { ExportBanner } from './export-banner';
-import { PreviewDialog } from './preview/preview-dialog';
+import { DetailsDialog } from './details/details-dialog';
 
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 
@@ -64,7 +64,7 @@ export function AssetsView() {
 
   const setSearch = (patch: Partial<typeof search>, replace = true) =>
     void navigate({ search: (prev) => ({ ...prev, ...patch }), replace });
-  const openPreview = (asset: AssetFileMeta) => setSearch({ asset: asset.subpath }, false);
+  const openDetails = (asset: AssetFileMeta) => setSearch({ asset: asset.subpath }, false);
   const clearFilters = () => setSearch({ q: '', engine: undefined, folder: undefined, role: undefined });
 
   const entryByKey = (key: string) => entries.find((entry) => entryKey(entry) === key);
@@ -76,7 +76,7 @@ export function AssetsView() {
     onOpen: (key) => {
       const entry = entryByKey(key);
       const asset = entry ? entryCover(entry) : visible.find((a) => a.subpath === key);
-      if (asset) openPreview(asset);
+      if (asset) openDetails(asset);
     },
     onDelete: (key) => {
       const entry = entryByKey(key);
@@ -86,10 +86,10 @@ export function AssetsView() {
   });
   const open = (asset: AssetFileMeta) => {
     setActiveKey(asGrid ? (entries.map(entryKey).find((k) => k === asset.subpath || k === `group:${dirname(asset.subpath)}`) ?? asset.subpath) : asset.subpath);
-    openPreview(asset);
+    openDetails(asset);
   };
 
-  const previewing = search.asset ? assets.find((a) => a.subpath === search.asset) : undefined;
+  const detailsAsset = search.asset ? assets.find((a) => a.subpath === search.asset) : undefined;
   const filtered = search.q.trim() !== '' || search.engine !== undefined || search.folder !== undefined || search.role !== undefined;
   const projectMeta = projects.find((p) => p.name === project);
   const sheetCount = projectMeta?.sheetCount ?? 0;
@@ -159,9 +159,9 @@ export function AssetsView() {
         )}
       </div>
 
-      {previewing && (
-        <PreviewDialog
-          asset={previewing}
+      {detailsAsset && (
+        <DetailsDialog
+          asset={detailsAsset}
           projectAssets={assets}
           visibleAssets={visible}
           onClose={() => setSearch({ asset: undefined }, false)}

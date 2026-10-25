@@ -6,7 +6,7 @@ import { Field, FieldDescription, FieldLabel } from '@/components/ui/field';
 import { Switch } from '@/components/ui/switch';
 import { useT } from '@/i18n';
 import type { EffectMeta } from '@/lib/atlas';
-import { roleOf } from '@/lib/asset-role';
+import { effectKind, roleOf } from '@/lib/asset-role';
 import { basename, stripExtension } from '@/lib/format';
 import type { AssetFileMeta } from '@/lib/types';
 import { usePref } from '@/lib/use-pref';
@@ -25,11 +25,11 @@ export interface Flight {
 /** The camera tilt assumed for an effect sheet, which does not carry one. */
 const TILT = 48;
 
-/** What the preview of an effect adds to the player: its reach as a ring, and for a projectile its flight. */
+/** What the Details window of an effect adds to the player: its reach as a ring, and for a projectile its flight. */
 export function useVfx(player: Player, directionIndex: number) {
   const { atlas } = player;
   const effect: EffectMeta | null = atlas?.meta.data?.role === 'vfx' ? (atlas.meta.data.effect ?? null) : null;
-  const [ring, setRing] = usePref<boolean>('preview.vfx.ring', true);
+  const [ring, setRing] = usePref<boolean>('details.vfx.ring', true);
   const [flying, setFlying] = useState(false);
   const scale = atlas?.meta.scale ?? 1;
   const speed = effect?.travel?.speed;
@@ -42,27 +42,24 @@ export function useVfx(player: Player, directionIndex: number) {
 
 export type Vfx = ReturnType<typeof useVfx>;
 
-const KINDS = ['projectile', 'impact', 'cast', 'aura', 'area', 'burst', 'trail'] as const;
-const isKind = (kind: string): kind is (typeof KINDS)[number] => (KINDS as readonly string[]).includes(kind);
-
-/** What an effect sheet says about the effect: kind, layer, reach, speed, what follows it; and the toggles of the preview. */
+/** What an effect sheet says about the effect: kind, layer, reach, speed, what follows it; and the toggles of the Details window. */
 export function VfxSection({ vfx, projectAssets, onSelect }: { vfx: Vfx; projectAssets: AssetFileMeta[]; onSelect: (asset: AssetFileMeta) => void }) {
   const { effect } = vfx;
   const { t, number } = useT();
   if (!effect) return null;
   const followed = effect.follows ? projectAssets.find((a) => roleOf(a) === 'vfx' && basename(stripExtension(a.subpath)) === effect.follows) : undefined;
   const rows: Array<[string, string | undefined]> = [
-    [t('preview.vfx.layer'), effect.layer === 'ground' ? t('preview.vfx.layerGround') : t('preview.vfx.layerAir')],
-    [t('preview.vfx.floor'), t('units.world', { value: number(effect.height) })],
-    [t('preview.vfx.reach'), t('units.world', { value: number(effect.size) })],
-    [t('preview.data.loop'), effect.loop ? t('common.yes') : t('common.no')],
-    [t('preview.vfx.speed'), effect.travel ? t('units.worldPerSecond', { value: number(effect.travel.speed) }) : undefined],
-    [t('preview.vfx.maxDistance'), effect.travel ? (effect.travel.range !== undefined ? t('units.world', { value: number(effect.travel.range) }) : undefined) : undefined],
+    [t('details.vfx.layer'), effect.layer === 'ground' ? t('details.vfx.layerGround') : t('details.vfx.layerAir')],
+    [t('details.vfx.floor'), t('units.world', { value: number(effect.height) })],
+    [t('details.vfx.reach'), t('units.world', { value: number(effect.size) })],
+    [t('details.data.loop'), effect.loop ? t('common.yes') : t('common.no')],
+    [t('details.vfx.speed'), effect.travel ? t('units.worldPerSecond', { value: number(effect.travel.speed) }) : undefined],
+    [t('details.vfx.maxDistance'), effect.travel ? (effect.travel.range !== undefined ? t('units.world', { value: number(effect.travel.range) }) : undefined) : undefined],
   ];
   return (
-    <Section title={t('preview.vfx.title')}>
+    <Section title={t('details.vfx.title')}>
       <div className="flex flex-wrap items-center gap-2">
-        <Badge>{isKind(effect.kind) ? t(`preview.vfx.kinds.${effect.kind}`) : effect.kind}</Badge>
+        <Badge>{effectKind(effect.kind, t)}</Badge>
         {effect.label && <span className="truncate font-medium">{effect.label}</span>}
       </div>
       <dl className="flex flex-col gap-1.5">
@@ -75,21 +72,21 @@ export function VfxSection({ vfx, projectAssets, onSelect }: { vfx: Vfx; project
       </dl>
       {effect.follows && (
         <Button variant="outline" size="sm" className="justify-between" disabled={!followed} onClick={() => followed && onSelect(followed)}>
-          <span className="truncate">{t('preview.vfx.then', { name: effect.follows })}</span>
+          <span className="truncate">{t('details.vfx.then', { name: effect.follows })}</span>
           <ArrowUpRightIcon data-icon="inline-end" />
         </Button>
       )}
       <Field orientation="horizontal">
-        <Switch id="preview-vfx-ring" checked={vfx.ring} onCheckedChange={vfx.setRing} />
-        <FieldLabel htmlFor="preview-vfx-ring">{t('preview.vfx.ring')}</FieldLabel>
+        <Switch id="details-vfx-ring" checked={vfx.ring} onCheckedChange={vfx.setRing} />
+        <FieldLabel htmlFor="details-vfx-ring">{t('details.vfx.ring')}</FieldLabel>
       </Field>
       {effect.travel && (
         <Field orientation="horizontal">
-          <Switch id="preview-vfx-flight" checked={vfx.flying} onCheckedChange={vfx.setFlying} />
-          <FieldLabel htmlFor="preview-vfx-flight">{t('preview.vfx.simulate')}</FieldLabel>
+          <Switch id="details-vfx-flight" checked={vfx.flying} onCheckedChange={vfx.setFlying} />
+          <FieldLabel htmlFor="details-vfx-flight">{t('details.vfx.simulate')}</FieldLabel>
         </Field>
       )}
-      {vfx.flying && effect.travel && <FieldDescription>{t('preview.vfx.flightNote', { speed: t('units.worldPerSecond', { value: number(effect.travel.speed) }) })}</FieldDescription>}
+      {vfx.flying && effect.travel && <FieldDescription>{t('details.vfx.flightNote', { speed: t('units.worldPerSecond', { value: number(effect.travel.speed) }) })}</FieldDescription>}
     </Section>
   );
 }

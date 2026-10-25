@@ -2,7 +2,6 @@ import { useEffect, useState, type RefObject } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Card, CardAction, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import type { TFn } from '@/i18n';
 import { cn } from '@/lib/utils';
 import { useT } from '@/i18n';
 import { dirname } from '@/lib/format';
@@ -15,6 +14,7 @@ import type { AssetFileMeta } from '@/lib/types';
 import { AssetContextMenu, AssetMenuButton, GroupContextMenu, GroupMenuButton } from './asset-menu';
 import { AssetThumb, GroupThumb } from './asset-thumb';
 import { EngineBadge } from './engine-badge';
+import { FrameSummary } from './frame-counts';
 import { StaleBadge } from './stale-badge';
 
 /** An item icon's rarity tier, in the color the project gave it, and how many fit in a slot. */
@@ -36,15 +36,6 @@ function ItemBadges({ asset }: { asset: AssetFileMeta }) {
   );
 }
 
-/** "8f · 8d" for an animation with 8 frames facing 8 directions; empty for stills and sheets. */
-function frameSummary({ atlasInfo: info }: AssetFileMeta, t: TFn): string {
-  if (!info || info.mode === 'sheet') return '';
-  return [
-    info.frameCount > 1 && t('assets.card.frameCount', { count: info.frameCount }),
-    info.directions.length > 1 && t('assets.card.directionCount', { count: info.directions.length }),
-  ].filter(Boolean).join(' · ');
-}
-
 interface CardProps {
   active: boolean;
   /** Its place in the whole list: the rows that are not on screen are not in the DOM, so a screen reader cannot count them. */
@@ -55,8 +46,10 @@ interface CardProps {
 function AssetCard({ asset, active, position, onOpen }: CardProps & { asset: AssetFileMeta }) {
   const [hovered, setHovered] = useState(false);
   const { t, bytes } = useT();
+  const role = roleOf(asset);
+  const detail = roleDetail(asset, t);
   return (
-    <AssetContextMenu asset={asset} onPreview={onOpen}>
+    <AssetContextMenu asset={asset} onDetails={onOpen}>
       <EntryCard
         id={assetDomId(asset.subpath)}
         active={active}
@@ -67,14 +60,14 @@ function AssetCard({ asset, active, position, onOpen }: CardProps & { asset: Ass
         flag={isStale(asset) ? <StaleBadge /> : null}
         title={assetTitle(asset)}
         description={dirname(asset.subpath) || '—'}
-        menu={<AssetMenuButton asset={asset} onPreview={onOpen} />}
+        menu={<AssetMenuButton asset={asset} onDetails={onOpen} />}
       >
-        {roleOf(asset) === 'gear' && <Badge variant="secondary">{roleDetail(asset, t) ?? t('assets.card.item')}</Badge>}
-        {(roleOf(asset) === 'vfx' || roleOf(asset) === 'ui') && asset.atlasInfo?.kind && <Badge variant="secondary">{asset.atlasInfo.kind}</Badge>}
-        {roleOf(asset) === 'icon' && <ItemBadges asset={asset} />}
+        {role === 'gear' && <Badge variant="secondary">{detail ?? t('assets.card.item')}</Badge>}
+        {(role === 'vfx' || role === 'ui') && detail && <Badge variant="secondary">{detail}</Badge>}
+        {role === 'icon' && <ItemBadges asset={asset} />}
         {asset.engine && <EngineBadge engine={asset.engine} />}
         {asset.width && <span>{asset.width}×{asset.height}</span>}
-        <span>{frameSummary(asset, t)}</span>
+        <FrameSummary info={asset.atlasInfo} />
         <span className="ml-auto">{bytes(asset.size)}</span>
       </EntryCard>
     </AssetContextMenu>

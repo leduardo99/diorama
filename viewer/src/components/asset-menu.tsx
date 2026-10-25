@@ -43,20 +43,20 @@ const askDelete = (assets: AssetFileMeta[]) => void NiceModal.show(DeleteAssetsM
 
 interface AssetProps {
   asset: AssetFileMeta;
-  onPreview?: (asset: AssetFileMeta) => void;
+  onDetails?: (asset: AssetFileMeta) => void;
 }
 
-function AssetItems({ asset, onPreview, parts: { Group, Item, Separator, Shortcut } }: AssetProps & { parts: MenuParts }) {
+function AssetItems({ asset, onDetails, parts: { Group, Item, Separator, Shortcut } }: AssetProps & { parts: MenuParts }) {
   const reexport = useReexport();
   const { t } = useT();
   const sheetPath = asset.sheet ? projectFile(asset.project, `sheets/${asset.sheet}`) : null;
   return (
     <>
       <Group>
-        {onPreview && (
-          <Item onSelect={() => onPreview(asset)}>
+        {onDetails && (
+          <Item onSelect={() => onDetails(asset)}>
             <EyeIcon />
-            {t('assets.menu.preview')}
+            {t('assets.menu.details')}
             <Shortcut>↵</Shortcut>
           </Item>
         )}
@@ -96,7 +96,7 @@ function AssetItems({ asset, onPreview, parts: { Group, Item, Separator, Shortcu
   );
 }
 
-export function AssetMenuButton({ asset, onPreview }: AssetProps) {
+export function AssetMenuButton({ asset, onDetails }: AssetProps) {
   const { t } = useT();
   return (
     <DropdownMenu>
@@ -113,19 +113,19 @@ export function AssetMenuButton({ asset, onPreview }: AssetProps) {
       </DropdownMenuTrigger>
       {/* The menu is portaled, but React still bubbles its clicks to the card that renders it. */}
       <DropdownMenuContent align="end" className="w-64" onClick={(e) => e.stopPropagation()} onCloseAutoFocus={(e) => e.preventDefault()}>
-        <AssetItems asset={asset} onPreview={onPreview} parts={dropdownParts} />
+        <AssetItems asset={asset} onDetails={onDetails} parts={dropdownParts} />
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
 
 /** Right-click menu around a card or row, with the same actions as the ⋯ button. */
-export function AssetContextMenu({ asset, onPreview, children }: AssetProps & { children: ReactNode }) {
+export function AssetContextMenu({ asset, onDetails, children }: AssetProps & { children: ReactNode }) {
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
       <ContextMenuContent className="w-64" onCloseAutoFocus={(e) => e.preventDefault()}>
-        <AssetItems asset={asset} onPreview={onPreview} parts={contextParts} />
+        <AssetItems asset={asset} onDetails={onDetails} parts={contextParts} />
       </ContextMenuContent>
     </ContextMenu>
   );
@@ -145,7 +145,7 @@ function GroupItems({ group, onOpen, parts: { Group, Item, Separator, Shortcut }
       <Group>
         <Item onSelect={() => onOpen(first)}>
           <EyeIcon />
-          {t('assets.menu.group.open')}
+          {t('assets.menu.group.details')}
           <Shortcut>↵</Shortcut>
         </Item>
         <Item onSelect={() => group.assets.filter((a) => a.sheet).forEach((a) => reexport.mutate(a))}>
