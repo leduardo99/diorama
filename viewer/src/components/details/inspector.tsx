@@ -122,7 +122,7 @@ export function Inspector({ player, asset, directionIndex, onDirection, onHighli
 
       {axis && steps.length > 1 && (
         <Section title={axisLabel(t, axis)}>
-          {/* A variant has no name in a clip sheet: its number is the button, "Variation 2" its label. */}
+          {/* A variant has no name in a clip sheet: its number is the button, "Variation 2" its label. The row shown is marked as the compass marks it. */}
           <ToggleGroup
             type="single"
             variant="outline"
@@ -134,7 +134,7 @@ export function Inspector({ player, asset, directionIndex, onDirection, onHighli
             className="w-fit flex-wrap"
           >
             {steps.map((_, i) => (
-              <ToggleGroupItem key={i} value={String(i)} aria-label={stepLabel(t, rows, i)} className="min-w-9">
+              <ToggleGroupItem key={i} value={String(i)} aria-label={stepLabel(t, rows, i)} className="min-w-9 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
                 {axis === 'variant' ? i + 1 : stepLabel(t, rows, i)}
               </ToggleGroupItem>
             ))}

@@ -159,6 +159,10 @@ assert.deepEqual(rowsOf(SHORTCUTS.assets).map((row) => row.keys.join(' ')), ['/'
 const step = rowsOf(SHORTCUTS.assets).find((row) => row.keys.join(' ') === '[ ]')!;
 assert.match(en(step.what), /animation.*asset/);
 assert.match(pt(step.what), /Animação.*asset/);
+// ↑ ↓ and the digits turn the facings, or step through a clip's variants or a wall's heights on a sheet that does not turn (`lib/rows.ts: keyedAxis`).
+const turn = rowsOf(SHORTCUTS.assets).find((row) => row.keys.join(' ') === '↑ ↓ 1–8')!;
+assert.match(en(turn.what), /direction.*variation.*height/);
+assert.match(pt(turn.what), /direção.*variação.*altura/);
 
 // 7. Every heading, every row and every key that is a word is in both dictionaries (not through t(), which falls back to English).
 const all = [ANYWHERE, ...SHORTCUT_TABS.flatMap((tab) => SHORTCUTS[tab])];
