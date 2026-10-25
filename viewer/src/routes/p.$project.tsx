@@ -8,6 +8,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { assetsQuery, projectsQuery } from '@/lib/queries';
 import { Rich, useT } from '@/i18n';
+import { projectTotals } from '@/lib/export-state';
 import { projectUrl } from '@/lib/project-paths';
 import { sectionOf } from '@/lib/sections';
 import { NewModal } from '@/modals/new-modal';
@@ -46,7 +47,8 @@ function ProjectNotFound({ data }: NotFoundRouteProps) {
 
 function ProjectLayout() {
   const { project } = Route.useParams();
-  const { t, plural, bytes } = useT();
+  const i18n = useT();
+  const { t } = i18n;
   const { data: projects } = useSuspenseQuery(projectsQuery);
   const { data: assets } = useSuspenseQuery(assetsQuery);
   const meta = projects.find((p) => p.name === project);
@@ -86,7 +88,7 @@ function ProjectLayout() {
           </TabsList>
         </Tabs>
         <span className="ml-auto text-xs whitespace-nowrap text-muted-foreground tabular-nums max-xl:hidden">
-          {plural('counts.assets', count)} · {bytes(meta.totalSize)} · {plural('counts.sheets', meta.sheetCount)}
+          {projectTotals(meta, count, i18n)}
         </span>
         <div className="flex shrink-0 items-center gap-2 pb-1.5 max-xl:ml-auto">
           {meta.hasGame && (
@@ -103,10 +105,16 @@ function ProjectLayout() {
               <TooltipContent side="bottom"><Rich id="project.playGameHint" /></TooltipContent>
             </Tooltip>
           )}
-          <Button variant="outline" size="sm" onClick={() => void NiceModal.show(NewModal, { tab: 'export', project })}>
-            <UploadIcon data-icon="inline-start" />
-            {t('project.export')}
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="sm" onClick={() => void NiceModal.show(NewModal, { tab: 'export', project })}>
+                <UploadIcon data-icon="inline-start" />
+                {t('project.export')}
+              </Button>
+            </TooltipTrigger>
+            {/* The Export tab's own description, in one span so it wraps as one paragraph (the content is a flex row). */}
+            <TooltipContent side="bottom"><span><Rich id="modals.new.exportDescription" /></span></TooltipContent>
+          </Tooltip>
           <Button size="sm" onClick={() => void NiceModal.show(NewModal, { tab: 'new-asset', project })}>
             <PlusIcon data-icon="inline-start" />
             {t('project.newAsset')}

@@ -1,4 +1,5 @@
 import { isOutOfDate } from '../../../tools/freshness';
+import type { Translator } from '../i18n/core';
 import type { AssetFileMeta, ProjectMeta } from './types';
 
 /**
@@ -20,3 +21,15 @@ export function pendingExports(assets: AssetFileMeta[], project: ProjectMeta | u
 
 /** What `tools/export.ts` takes to export one sheet: its path under sheets/ without the extension. */
 export const exportTarget = (sheet: string) => sheet.replace(/\.[^/.]+$/, '');
+
+/**
+ * The project bar's totals: its assets and the size of their images, then the sheets not exported yet, while there are
+ * any. A sheet exports to one asset at its own path, so the sheets are not counted a second time.
+ */
+export function projectTotals(project: ProjectMeta, assets: number, { plural, bytes }: Translator): string {
+  return [
+    plural('counts.assets', assets),
+    bytes(project.totalSize),
+    project.pendingSheets.length > 0 && plural('project.notExported', project.pendingSheets.length),
+  ].filter(Boolean).join(' · ');
+}
