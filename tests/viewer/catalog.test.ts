@@ -46,6 +46,19 @@ try {
   put('assets', 'gear/helm.json', 1000, JSON.stringify({ meta: { mode: 'directions', frameCount: 1, data: { role: 'gear', part: 'helm', label: 'Elmo', group: 'head' } } }));
   put('assets', 'gear/plain.png', 1000);
   put('assets', 'gear/plain.json', 1000, JSON.stringify({ meta: { mode: 'sheet', data: { role: 5 } } }));
+  // A sheet's rows are not always facings, in the shapes the sample exports: an interface piece's rows are its states, a
+  // wall's its heights, and a scenery clip sheet says the facing and the variant of each row.
+  const rowSheets: Array<[name: string, meta: object, facings: number]> = [
+    ['captain-idle', { mode: 'directions', frameCount: 16, directions: ['S', 'SW', 'W', 'NW', 'N', 'NE', 'E', 'SE'], data: { role: 'character' } }, 8],
+    ['button', { mode: 'directions', frameCount: 1, directions: ['S', 'W', 'N', 'E'], data: { role: 'ui', kind: 'button', states: ['normal', 'hover', 'pressed', 'disabled'] } }, 1],
+    ['crypt-wall', { mode: 'directions', frameCount: 64, directions: ['D0', 'D1'], data: { role: 'wall', rows: 'heights' } }, 1],
+    ['candle-cluster--flicker', { mode: 'directions', frameCount: 6, directions: ['D0', 'D1', 'D2'], data: { role: 'prop', rows: [0, 1, 2].map((variant) => ({ row: variant, dir: 0, variant })) } }, 1],
+    ['crypt-door--closing', { mode: 'directions', frameCount: 8, directions: ['S', 'W', 'N', 'E'], data: { role: 'door', rows: [0, 1, 2, 3].map((dir) => ({ row: dir, dir, variant: 0 })) } }, 4],
+  ];
+  for (const [name, meta] of rowSheets) {
+    put('assets', `rows/${name}.png`, 1000);
+    put('assets', `rows/${name}.json`, 1000, JSON.stringify({ meta }));
+  }
 
   const assets = await buildAssetCatalog(root);
   const byPath = (subpath: string) => assets.find((a) => a.subpath === subpath)!;
@@ -65,6 +78,8 @@ try {
   assert.deepEqual([helm?.role, helm?.part, helm?.label, helm?.group], ['gear', 'helm', 'Elmo', 'head']);
   assert.equal(byPath('gear/plain.png').atlasInfo?.role, null, 'a role that is not text is ignored');
   assert.equal(byPath('a.png').atlasInfo, null, 'no atlas, no role');
+  // A card's "8d" counts the directions a sheet faces, not its rows.
+  assert.deepEqual(rowSheets.map(([name]) => byPath(`rows/${name}.png`).atlasInfo?.facings), rowSheets.map(([, , facings]) => facings));
 
   // The viewer sorts sheets into types by their role: scenery kits bring four roles of their own.
   const roleFor = (role: string | null) => roleOf({ atlasInfo: role === null ? null : { role } } as Parameters<typeof roleOf>[0]);

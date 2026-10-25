@@ -26,6 +26,8 @@ export interface AtlasInfo {
   width: number;
   height: number;
   directions: string[];
+  /** How many directions the rows face (`facingsOf`): rows are not always facings. */
+  facings: number;
   eventCount: number;
   /** What the sheet is, from `meta.data.role`: 'character', 'gear', 'prop'... null for plain assets. */
   role: string | null;
@@ -97,6 +99,18 @@ async function readPngSize(file: string): Promise<{ width: number; height: numbe
 
 const text = (value: unknown): string | null => (typeof value === 'string' && value !== '' ? value : null);
 
+/**
+ * How many directions a sheet's rows face. An interface piece's rows are its states (normal, hover...), a wall or fence in
+ * several heights has a row per height (`data.rows: 'heights'`) and a scenery clip sheet says the facing and the variant of
+ * each row (`data.rows: [{ row, dir, variant }]`); any other sheet has a row per facing.
+ */
+function facingsOf(meta: Record<string, any>): number {
+  const rows = meta.data?.rows;
+  if (meta.data?.role === 'ui' || rows === 'heights') return 1;
+  if (Array.isArray(rows)) return new Set(rows.map((row) => row?.dir)).size;
+  return Array.isArray(meta.directions) ? meta.directions.length : 0;
+}
+
 const atlasCache = new Map<string, { key: string; info: AtlasInfo | null }>();
 
 async function readAtlasInfo(file: string, key: string): Promise<AtlasInfo | null> {
@@ -115,6 +129,7 @@ async function readAtlasInfo(file: string, key: string): Promise<AtlasInfo | nul
         width: Number(meta.width ?? 0),
         height: Number(meta.height ?? 0),
         directions: Array.isArray(meta.directions) ? meta.directions.map(String) : [],
+        facings: facingsOf(meta),
         eventCount: Array.isArray(meta.data?.events) ? meta.data.events.length : 0,
         role: text(meta.data?.role),
         part: text(meta.data?.part),

@@ -10,17 +10,21 @@ export function FrameCount({ info, className }: { info: AtlasInfo; className?: s
       <TooltipTrigger asChild>
         <span className={className}>{t('assets.card.frameCount', { count: info.frameCount })}</span>
       </TooltipTrigger>
-      <TooltipContent>{info.directions.length > 1 ? plural('assets.card.framesPerDirection', info.frameCount) : plural('counts.frames', info.frameCount)}</TooltipContent>
+      <TooltipContent>{info.facings > 1 ? plural('assets.card.framesPerDirection', info.frameCount) : plural('counts.frames', info.frameCount)}</TooltipContent>
     </Tooltip>
   );
 }
 
-/** "16f · 8d" for an animation of 16 frames facing 8 directions, each part explained in a tooltip; nothing for stills and sheets. */
+/**
+ * "16f · 8d" for an animation of 16 frames facing 8 directions, each part explained in a tooltip; nothing for stills and
+ * sheets. The directions are the facings of its rows (`AtlasInfo.facings`): an interface piece's states, a wall's heights
+ * and a scenery piece's variants are rows too, but not directions.
+ */
 export function FrameSummary({ info }: { info: AtlasInfo | null }) {
   const { t } = useT();
   if (!info || info.mode === 'sheet') return null;
   const frames = info.frameCount > 1;
-  const directions = info.directions.length;
+  const directions = info.facings;
   if (!frames && directions < 2) return null;
   return (
     <span>
