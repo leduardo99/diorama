@@ -4,7 +4,7 @@ import { advance, facingOf, hudOf, newActor, reset, startClip, stepPlayer, type 
 import { spawnFromEvent, stepEffects, type Effect } from '@/lib/playground/effects';
 import { floorY, hasCues, playCues, stepFx, type Fx } from '@/lib/playground/vfx';
 import type { Armed, Character } from '@/lib/playground/library';
-import { isTyping } from '@/lib/hotkeys';
+import { isModalOpen, isTyping } from '@/lib/hotkeys';
 import type { World } from '@/lib/scenery/background';
 import { useT } from '@/i18n';
 import { useLabel } from '@/lib/scenery/labels';
@@ -61,6 +61,14 @@ interface Props {
 
 const MOVE_KEYS = ['w', 'a', 's', 'd', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
 const HUD_INTERVAL_MS = 100;
+/** A key as the scene reads it: a letter in lower case whatever Shift does to it, any other key by its name. */
+const keyOf = (e: KeyboardEvent) => (e.key.length === 1 ? e.key.toLowerCase() : e.key);
+
+/** The action a digit plays (0 for 1): the digit row by its place, so Shift (running) still plays it where it types "!", the number pad by what it types. */
+function actionIndexOf(e: KeyboardEvent): number | null {
+  const digit = /^Digit([1-9])$/.exec(e.code)?.[1] ?? (/^[1-9]$/.test(e.key) ? e.key : null);
+  return digit ? Number(digit) - 1 : null;
+}
 
 /** A scene being played: its things at their states of now, how long it has run (what the loops follow) and what failed to draw. */
 interface Runtime {
@@ -257,16 +265,14 @@ export function Scene({ player, images, options, armed, resetKey, onPlaced, onSe
   // Keys come from the character's controls: WASD moves, Shift is the fastest gait, 1..9 and Space are its
   // actions in order, H plays hit, K death and R puts the character back to idle.
   useEffect(() => {
-    const onKey = (e: KeyboardEvent, down: boolean) => {
-      if (isTyping(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
-      const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    const keydown = (e: KeyboardEvent) => {
+      // A modal dialog over the scene (the shortcuts window) or an open menu owns the keyboard.
+      if (isTyping(e.target) || isModalOpen() || e.metaKey || e.ctrlKey || e.altKey) return;
+      const key = keyOf(e);
       const me = playerActor.current;
       if (MOVE_KEYS.includes(key) || key === 'Shift') {
         if (MOVE_KEYS.includes(key)) e.preventDefault();
-        if (down) held.current.add(key);
-        else held.current.delete(key);
-      } else if (!down) {
-        return;
+        held.current.add(key);
       } else if (key === 'Delete' || key === 'Backspace') {
         const actor = selected.current;
         if (actor && actor !== playerActor.current) {
@@ -277,8 +283,8 @@ export function Scene({ player, images, options, armed, resetKey, onPlaced, onSe
         if (selected.current) select(null);
       } else if (me?.character) {
         const { actions, hit, death } = me.character;
-        const index = key === ' ' ? 0 : Number(key) - 1;
-        if (Number.isInteger(index) && index >= 0 && actions[index]) {
+        const index = key === ' ' ? 0 : actionIndexOf(e);
+        if (index !== null && actions[index]) {
           e.preventDefault();
           startClip(me, actions[index], emit);
         } else if (key === 'h') startClip(me, hit, emit);
@@ -287,8 +293,8 @@ export function Scene({ player, images, options, armed, resetKey, onPlaced, onSe
         else if (key === 'e') interact();
       }
     };
-    const keydown = (e: KeyboardEvent) => onKey(e, true);
-    const keyup = (e: KeyboardEvent) => onKey(e, false);
+    // A key let go is always let go, wherever the focus went meanwhile (a field, a dialog) and whatever modifier is down: none stays held.
+    const keyup = (e: KeyboardEvent) => held.current.delete(keyOf(e));
     const blur = () => held.current.clear();
     window.addEventListener('keydown', keydown);
     window.addEventListener('keyup', keyup);
@@ -428,7 +434,7 @@ export function Scene({ player, images, options, armed, resetKey, onPlaced, onSe
         live.current.onHud(
           playerActor.current
             ? {
-                ...hudOf(playerActor.current, isMoving()),
+                ...hudOf(playerActor.current, isMoving(), opts.stepEvents),
                 world: runtime.current !== null,
                 scene: last ? `${last.name} · ${last.piece} f${last.frame}` : null,
                 use: found?.thing ? useLabel(live.current.t, found.thing.kind, found.thing.clip, found.now.run.world.catalog.pieces.find((p) => p.id === found.thing!.piece)?.label ?? found.thing.piece, found.thing.to) : null,
@@ -502,10 +508,13 @@ export function Scene({ player, images, options, armed, resetKey, onPlaced, onSe
   };
 
   return (
+    // Focusable, so the keys can be handed to it (a click, Tab, or closing the scene select); the ring shows only to the keyboard.
     <canvas
       ref={canvasRef}
+      id="playground-canvas"
+      tabIndex={0}
       aria-label={t('playground.sceneLabel')}
-      className="pixelated block size-full touch-none"
+      className="pixelated block size-full touch-none outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid"
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}

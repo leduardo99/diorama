@@ -160,3 +160,22 @@ function viewFx(fx: RuntimeFx<AssetRef>): FxView {
 
 /** A runtime effect in the view (the same view object every time it is asked for). */
 export const fxInView = (fx: RuntimeFx<AssetRef>): Fx => (fxViews.get(fx) ?? viewFx(fx)).shown;
+
+/** The zooms the playground offers (screen px per actor unit); "fit" is worked out from the scene and the view (`fitZoom`). */
+export const ZOOMS = [1, 2, 3, 4] as const;
+export type Zoom = 'fit' | (typeof ZOOMS)[number];
+/** The zoom with no scene to fit, and the one a first visit starts at. */
+export const DEFAULT_ZOOM = 2;
+/** Screen px kept round a fitted scene, as the Details window keeps round a frame. */
+const FIT_MARGIN = 48;
+
+/**
+ * The zoom that shows the whole of a scene (actor units) in a view (screen px), by the Details window's rule: the largest
+ * whole zoom that fits, up to the largest offered, else the fraction that fits (never under a tenth). A view with no room
+ * past its margin (a hidden or collapsed pane) fits nothing: null.
+ */
+export function fitZoom(scene: { width: number; height: number }, view: { width: number; height: number }): number | null {
+  if (view.width <= FIT_MARGIN || view.height <= FIT_MARGIN) return null;
+  const fit = Math.min((view.width - FIT_MARGIN) / scene.width, (view.height - FIT_MARGIN) / scene.height);
+  return fit >= 1 ? Math.min(Math.floor(fit), ZOOMS.at(-1)!) : Math.max(0.1, fit);
+}

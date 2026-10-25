@@ -7,11 +7,14 @@ import type { Live, Standing } from '@/lib/scenery/living';
 import { drawNavigation } from '@/lib/scenery/nav-draw';
 
 export interface SceneOptions {
+  /** Screen px per actor unit: the zoom chosen, or the one "Fit" worked out. */
   zoom: number;
   shadow: boolean;
   anchor: boolean;
   bounds: boolean;
   sockets: boolean;
+  /** The HUD names the base clip's strides (`step:<leg>`) too; off, its event is the last one that is not a stride. */
+  stepEvents: boolean;
   /** Time scale of the whole scene: 1 is real time, lower values slow it down to read frames and events, 0 freezes it. */
   speed: number;
   /** A saved scenery scene the actors live in (its ground behind them, its walls and props sorted in among them), or null. */

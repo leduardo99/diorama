@@ -1,13 +1,14 @@
 import assert from 'node:assert/strict';
 import { buildRows, listEntries, matches, pushRecent, RECENT_LIMIT, type Entry } from '../../viewer/src/lib/playground/catalog';
 import { shownFrame, type Atlas, type CharacterManifest } from '@diorama/runtime';
-import { advance, currentFrame, newActor, startClip, stepPlayer, type ClipEvent } from '../../viewer/src/lib/playground/actor';
+import { advance, currentFrame, hudOf, isStep, newActor, reset, startClip, stepPlayer, type ClipEvent } from '../../viewer/src/lib/playground/actor';
 import { socketPoint, spawnFromEvent, stepEffects, type Effect } from '../../viewer/src/lib/playground/effects';
 import { buildLibrary } from '../../viewer/src/lib/playground/library';
+import { DEFAULT_ZOOM, fitZoom, ZOOMS } from '../../viewer/src/lib/playground/view';
 import type { AssetFileMeta } from '../../viewer/src/lib/types';
 import { DIRS, clipSheet as sheet, type ClipSpec } from '../runtime/helpers';
 
-console.log('🧪 Checking the playground (palette search, folders, recents; the runtime\'s actors in the view: moves and root motion in actor units at each clip\'s scale, exact view points, the view\'s sides, sockets, the generic rings)...\n');
+console.log('🧪 Checking the playground (palette search, folders, recents; the runtime\'s actors in the view: moves and root motion in actor units at each clip\'s scale, exact view points, the view\'s sides, sockets, the generic rings; the HUD\'s strides, only when asked; the zoom that fits a scene)...\n');
 
 const entry = (key: string, name: string, group: string, kind: Entry['kind'] = 'animated') =>
   ({ key, name, group, kind, subtitle: '', cover: {}, armed: {} }) as unknown as Entry;
@@ -210,6 +211,49 @@ const walker = newActor(4, ghoul.locomotion[0], 100, 200, ghoul);
 for (let t = 0; t < 1.55; t += 0.01) advance(walker, 0.01, (e) => steps.push(`${e.name}@${e.frame}`));
 assert.deepEqual(steps, ['step:legL@0', 'step:legR@4', 'step:legL@0', 'step:legR@4'], 'two laps of an 8-frame clip at 10 fps');
 assert.equal(walker.lastEvent?.name, 'step:legR');
+
+// The HUD names strides only when asked: by default its event is the last one that is not a stride, so a hit stays while walking away.
+assert.ok(isStep('step:legL') && isStep('step') && !isStep('hit') && !isStep('stepping'));
+const hudSpecs: ClipSpec[] = [...strideSpecs, { key: 'stab', action: 'attack', clipKind: 'action', frames: 6, events: [{ frame: 2, name: 'hit' }] }];
+const hudLibrary = buildLibrary(
+  hudSpecs.map((c) => asset('characters/ghast', c.key)),
+  new Map(hudSpecs.map((c) => [`characters/ghast/${c.key}.png`, sheet(c)])),
+);
+const ghast = hudLibrary.characters[0];
+const room = { width: 5000, height: 5000 };
+// From idle, so no stride comes before the hit.
+const fighter = newActor(7, ghast.idle!, 400, 400, ghast);
+assert.equal(hudOf(fighter, false, false).event, null);
+assert.ok(startClip(fighter, ghast.actions[0], () => {}));
+for (let t = 0; t < 1; t += 0.01) stepPlayer(fighter, { dx: 0, dy: 0, run: false }, 0.01, room, () => {});
+assert.equal(fighter.act, null, 'the stab is over');
+assert.equal(hudOf(fighter, false, false).event, 'hit · stab f2', 'start and end are not events of the sheet');
+for (let t = 0; t < 1; t += 0.01) stepPlayer(fighter, { dx: 1, dy: 0, run: false }, 0.01, room, () => {});
+assert.equal(fighter.clip.key, 'walk');
+assert.ok(hudOf(fighter, true, true).event?.startsWith('step:'), 'asked for, the strides show');
+assert.equal(hudOf(fighter, true, false).event, 'hit · stab f2', 'by default the hit stays');
+reset(fighter);
+assert.equal(hudOf(fighter, false, false).event, null, 'R forgets it');
+assert.equal(hudOf(fighter, false, true).event, null);
+// Every event counts, not only the runtime's last: a frame that fires another event and then a stride keeps the other one.
+const creakSpecs: ClipSpec[] = [strideSpecs[0], { ...strideSpecs[1], events: [{ frame: 4, name: 'creak' }, { frame: 4, name: 'step:legR' }] }];
+const creakLibrary = buildLibrary(
+  creakSpecs.map((c) => asset('characters/creaker', c.key)),
+  new Map(creakSpecs.map((c) => [`characters/creaker/${c.key}.png`, sheet(c)])),
+);
+const creaker = newActor(8, creakLibrary.characters[0].locomotion[0], 400, 400, creakLibrary.characters[0]);
+for (let t = 0; t < 0.6; t += 0.01) advance(creaker, 0.01);
+assert.equal(creaker.lastEvent?.name, 'step:legR');
+assert.equal(hudOf(creaker, true, false).event, 'creak · walk f4');
+
+// The zoom that shows all of a scene, by the Details window's rule: the largest whole zoom, up to the largest offered, else a fraction.
+assert.equal(DEFAULT_ZOOM, 2);
+assert.equal(fitZoom({ width: 300, height: 200 }, { width: 1000, height: 700 }), 3, 'floor of min(952 / 300, 652 / 200)');
+assert.equal(fitZoom({ width: 100, height: 100 }, { width: 2000, height: 2000 }), ZOOMS.at(-1), 'never past 4×');
+assert.equal(fitZoom({ width: 1248, height: 984 }, { width: 1120, height: 720 }), (720 - 48) / 984, 'a sample scene in a laptop-sized box: a fraction, not floored');
+assert.equal(fitZoom({ width: 10000, height: 10000 }, { width: 500, height: 500 }), 0.1, 'never under a tenth');
+assert.equal(fitZoom({ width: 300, height: 200 }, { width: 0, height: 0 }), null, 'a hidden pane fits nothing');
+assert.equal(fitZoom({ width: 300, height: 200 }, { width: 48, height: 700 }), null);
 
 // The scene keeps a sprite's own width inside its sides: a wide cell stops further from the edge than a narrow one.
 const wideSpecs: ClipSpec[] = [
