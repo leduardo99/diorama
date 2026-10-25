@@ -115,7 +115,7 @@ export const baldric: Part<BaldricOptions> = ({ object: o, pose, body, at, mater
 };
 
 /** The trunk's length against the 23 units between the pelvis and the chest of the 80-unit `humanoid()`. */
-function trunkScale(ctx: Pick<PartContext, 'kit'>): number {
+export function trunkScale(ctx: Pick<PartContext, 'kit'>): number {
   const t = ctx.kit.skeleton.trunk;
   const pelvis = t.find(j => j.name === 'pelvis') ?? t[0];
   const chest = t.find(j => j.name === 'chest') ?? t[t.length - 2];

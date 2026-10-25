@@ -263,6 +263,8 @@ export const VOLUMES = {
   boneLimb: { ramp: RAMPS.bone, stroke: inner(RAMPS.bone, 0.8), edge },
   // Gaps carved into bone: one flat shadow tone, no outline.
   boneGroove: { ramp: { lit: PALETTES.boneDark, base: PALETTES.boneDark, dark: PALETTES.boneDark } },
+  // Living skin: a pale grey-violet, matte like cloth so it stays under the bone's brightness.
+  flesh: { ramp: RAMPS.flesh, stroke: inner(RAMPS.flesh), edge, form: { highlight: { ratio: 0.14, min: 0.5, max: 1.4 } } },
   // Matte cloth: no highlight, a wider core shadow.
   robe: { ramp: RAMPS.robe, stroke: inner(RAMPS.robe, 1), edge, form: { highlight: false, core: { ratio: 0.36, min: 1.2, max: 4 } } },
   sash: { ramp: RAMPS.sash, stroke: inner(RAMPS.sash), edge: inner(RAMPS.sash, 0.6), form: { highlight: false } },
