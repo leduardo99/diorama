@@ -266,7 +266,7 @@ export function Scene({ player, images, options, armed, resetKey, onPlaced, onSe
   // actions in order, H plays hit, K death and R puts the character back to idle.
   useEffect(() => {
     const keydown = (e: KeyboardEvent) => {
-      // A modal dialog over the scene (the shortcuts window) owns the keyboard.
+      // A modal dialog over the scene (the shortcuts window) or an open menu owns the keyboard.
       if (isTyping(e.target) || isModalOpen() || e.metaKey || e.ctrlKey || e.altKey) return;
       const key = keyOf(e);
       const me = playerActor.current;
