@@ -1,12 +1,12 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from '@tanstack/react-router';
+import { useNavigate, useRouter } from '@tanstack/react-router';
 import { toast } from 'sonner';
 import { api } from './api';
 import { exportTarget, pendingExports } from './export-state';
 import { useT } from '../i18n';
 import { stripExtension } from './format';
 import { projectDir } from './project-paths';
-import { assetsQuery, projectsQuery } from './queries';
+import { assetsQuery, exampleRunQuery, projectsQuery } from './queries';
 import type { AssetFileMeta } from './types';
 
 /** Disk changed under the catalog: refetch everything derived from it. */
@@ -111,22 +111,30 @@ export const SAMPLE_PROJECT = 'soulkeeper';
 export const SAMPLE_COMMAND = 'npm run example';
 
 /**
- * Brings the sample in: `example` copies it into projects/ and exports it there (tools/cli.ts), then the project opens.
- * The callbacks live on the hook: the empty state that starts it is gone once the project opens. A failed run leaves
- * its output in `data` for the empty state to show.
+ * Brings the sample in: `example` copies it into projects/ and exports it there (tools/cli.ts), then the project opens
+ * if the user is still on the start page (they may have opened another project meanwhile; the toast offers it then).
+ * The callbacks live on the hook: the empty state that starts it may be gone when it ends. A failed run leaves its
+ * output in `data` for the empty state to show; a run refused because another one goes on (`running`) is no failure:
+ * the empty state shows that one running.
  */
 export function useTrySample() {
   const refresh = useRefreshCatalog();
-  const navigate = useNavigate();
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const { t } = useT();
   return useMutation({
     mutationFn: () => api.cli({ command: 'example' }),
     onSuccess: async (result) => {
       // A run that failed half way may still have copied the project: the catalog shows what is there either way.
-      await refresh();
+      await Promise.all([refresh(), queryClient.invalidateQueries({ queryKey: exampleRunQuery.queryKey })]);
       if (!result.ok) return;
-      toast.success(t('projects.none.sampleReady'), { description: projectDir(SAMPLE_PROJECT) });
-      void navigate({ to: '/p/$project', params: { project: SAMPLE_PROJECT } });
+      const open = () => void router.navigate({ to: '/p/$project', params: { project: SAMPLE_PROJECT } });
+      const onStartPage = Boolean(router.matchRoute({ to: '/' }));
+      toast.success(t('projects.none.sampleReady'), {
+        description: projectDir(SAMPLE_PROJECT),
+        action: onStartPage ? undefined : { label: t('projects.none.open', { project: SAMPLE_PROJECT }), onClick: open },
+      });
+      if (onStartPage) open();
     },
   });
 }

@@ -28,11 +28,11 @@ npm install
 npx playwright install chromium
 npm run doctor
 npm test
-npm run check -- soulkeeper
+npm run check -- examples/soulkeeper
 npm run example
 ```
 
-`npm run check -- soulkeeper` type checks the sample, checks its layout and that it is deterministic. `npm run example` brings Soulkeeper, the sample game, in as a project of yours: it copies `examples/soulkeeper` to `projects/soulkeeper` and exports it there (163 sheets, about 45 seconds on four performance cores). The viewer shows only your projects, those of `projects/`, so the copy is what it opens and what its editors save into, and the sample in `examples/` stays as it ships. Run it again and it keeps your copy, exporting only the sheets whose code changed (`--changed`); `npm run example -- --force` replaces the copy with a fresh one, after moving yours to the viewer's trash (`.diorama-trash/`).
+`npm run check -- examples/soulkeeper` type checks the sample, checks its layout and that it is deterministic. `npm run example` brings Soulkeeper, the sample game, in as a project of yours: it copies `examples/soulkeeper` to `projects/soulkeeper` and exports it there (163 sheets, about 45 seconds on four performance cores). The viewer shows only your projects, those of `projects/`, so the copy is what it opens and what its editors save into, and the sample in `examples/` stays as it ships. Run it again and it keeps your copy, exporting only the sheets whose code changed (`--changed`); `npm run example -- --force` replaces the copy with a fresh one, after moving yours to the viewer's trash (`.diorama-trash/`), and prints how to get yours back.
 
 To open the viewer: on Windows, run `dev.bat`; on macOS and Linux, run `sh dev.sh`. Any system can run `npm run view` and then open `http://localhost:5173`. With no project yet, it says what Diorama is and offers "New project" and "Try the sample", which runs `npm run example` for you and opens Soulkeeper. Its characters also play in Phaser on the test bench of `@diorama/phaser`, `http://localhost:5173/packages/phaser/demo/?project=soulkeeper`; Soulkeeper has no game of its own yet (when it has one, "Play game" opens it at `/projects/soulkeeper/game/`).
 

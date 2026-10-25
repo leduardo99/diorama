@@ -149,7 +149,15 @@ try {
   const copyTrashed = await deleteProject(root, 'sample');
   assert.ok(!existsSync(copy) && existsSync(join(root, '.diorama-trash', 'projects', copyTrashed.trashId, 'sample', 'sheets/gear/helm.ts')));
   assert.ok(existsSync(sample), 'the sample stays');
-  await restoreProject(root, 'sample', copyTrashed.trashId);
+  assert.deepEqual(await restoreProject(root, 'sample', copyTrashed.trashId), { restored: 'sample' });
+  assert.equal(readFileSync(join(copy, 'assets/gear/helm.png'), 'utf8'), 'mine', 'the restore brings the copy back, whole');
+  assert.ok(existsSync(join(copy, 'sheets/gear/helm.ts')) && !existsSync(join(root, '.diorama-trash', 'projects', copyTrashed.trashId)), 'and empties its trash entry');
+  // A link where the project was (or one that leads nowhere) is something there too: the restore never moves onto it.
+  const again = await deleteProject(root, 'sample');
+  symlinkSync(join(root, 'nowhere'), copy);
+  await rejects(() => restoreProject(root, 'sample', again.trashId), 'a restore onto a dangling link');
+  rmSync(copy);
+  await restoreProject(root, 'sample', again.trashId);
   rmSync(copy, { recursive: true });
   assert.ok(!existsSync(join(root, '.diorama-trash', 'assets', 'sample')), 'restoring the last trash entry of a project leaves no empty folder');
   assert.ok(existsSync(join(root, '.diorama-trash', 'assets', project)), 'entries of other projects stay');

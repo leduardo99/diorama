@@ -105,6 +105,28 @@ export function availableProjects(repo = process.cwd()): string {
   return all.length ? `Available: ${all.map(p => `${p.name} (${p.root})`).join(', ')}` : 'There are no projects yet: npm run new-project -- <name>';
 }
 
+/**
+ * Why `spec` names no project, and what there is instead, for an error message. `projects/<name>` is answered with the
+ * projects of projects/ alone (the viewer runs every command on its project so, and has no samples to offer),
+ * `examples/<name>` with the samples, and a bare name with both folders (`availableProjects`).
+ */
+export function missingProject(spec: string, repo = process.cwd()): { message: string; hint: string } {
+  const clean = spec.replace(/\\/g, '/').replace(/\/+$/, '');
+  const qualified = /^(projects|examples)\/([^/]+)$/.exec(clean);
+  if (qualified?.[1] === 'projects') {
+    const names = listProjects(repo, ['projects']).map(p => p.name);
+    return {
+      message: `project "${qualified[2]}" does not exist in projects/.`,
+      hint: names.length ? `Projects: ${names.join(', ')}` : 'There are no projects in projects/ yet: npm run new-project -- <name>',
+    };
+  }
+  if (qualified?.[1] === 'examples') {
+    const names = listProjects(repo, ['examples']).map(p => p.name);
+    return { message: `there is no sample "${qualified[2]}" in examples/.`, hint: names.length ? `Samples: ${names.join(', ')}` : 'There are no samples in examples/.' };
+  }
+  return { message: `project "${spec}" does not exist in projects/ or examples/.`, hint: availableProjects(repo) };
+}
+
 /** OS files that never count as project content. */
 export const OS_METADATA = new Set(['.DS_Store', 'Thumbs.db', 'desktop.ini']);
 

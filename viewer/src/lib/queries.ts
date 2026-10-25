@@ -15,6 +15,12 @@ export const assetsQuery = queryOptions({
   queryFn: api.assets,
 });
 
+/** Whether `npm run example` is running (any run: the viewer's, a terminal's): the empty state shows it as running. */
+export const exampleRunQuery = queryOptions({
+  queryKey: ['example-run'],
+  queryFn: api.exampleRun,
+});
+
 export const deletePlanQuery = (project: string, subpath: string) =>
   queryOptions({
     queryKey: ['delete-plan', project, subpath],

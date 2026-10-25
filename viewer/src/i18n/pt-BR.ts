@@ -76,6 +76,11 @@ export const ptBR: Shape<typeof en> = {
       commandLabel: 'Comando',
       sampleFailed: 'O exemplo não foi trazido',
       sampleReady: 'O Soulkeeper está pronto',
+      sampleThere: 'O Soulkeeper está nos seus projetos',
+      sampleThereHint: 'A cópia está em <code>projects/soulkeeper</code>, sua para mudar; <code>examples/soulkeeper</code> continua como veio.',
+      sampleExportFailed: 'O exemplo foi copiado, mas a exportação falhou',
+      sampleRetryHint: 'Abra-o para ver o que já está lá. Experimentar o exemplo de novo exporta o que ainda falta.',
+      open: 'Abrir {project}',
     },
     switcher: {
       label: 'Trocar de projeto',

@@ -78,6 +78,11 @@ export const en = {
       commandLabel: 'Command',
       sampleFailed: 'The sample was not brought in',
       sampleReady: 'Soulkeeper is ready',
+      sampleThere: 'Soulkeeper is in your projects',
+      sampleThereHint: 'The copy is in <code>projects/soulkeeper</code>, yours to change; <code>examples/soulkeeper</code> stays as it ships.',
+      sampleExportFailed: 'The sample was copied, but its export failed',
+      sampleRetryHint: 'Open it to see what is there. Trying the sample again exports what is still missing.',
+      open: 'Open {project}',
     },
     switcher: {
       label: 'Switch project',

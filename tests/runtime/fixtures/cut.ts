@@ -1,7 +1,7 @@
 /**
  * Cuts the runtime's fixtures again from the sample's export, after a change of the contract (or of the sample) that the
  * tests should see. Every JSON file under tests/runtime/fixtures/ is replaced by the sheet of the same path in
- * examples/soulkeeper/assets/ (export the sample first: `npm run export -- soulkeeper`), less what the tests do not read,
+ * examples/soulkeeper/assets/ (export the sample first: `npm run export -- examples/soulkeeper`), less what the tests do not read,
  * so the files stay small:
  * - the cells' rects (`frames`), except on the sheets in `FRAMES`, whose cells the tests read;
  * - a clip's `motion` (`meta.data.motion`) and the space profile that scenery, scenes and effects repeat (`meta.data.space`).
