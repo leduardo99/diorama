@@ -62,6 +62,14 @@ export const hood: Part<HoodOptions> = (ctx, { size = 1, point = true }) => {
   return cap;
 };
 
+/**
+ * How squarely a body's back is turned to the camera: 0 from the front and up to the profiles, 1
+ * from the three-quarter rear view on, in between for the facings that lean towards the back.
+ * `facing` is the body's forward along the floor against the direction to the camera: -1 seen from
+ * behind, 0 in profile, 1 from the front.
+ */
+const rearness = (facing: number) => Math.min(1, Math.max(0, (-facing - 0.3) / 0.25));
+
 /** Options of `cloak`. */
 export interface CloakOptions {
   /** Length of the fall from the shoulders, in units. Default: down to the ankles of the standing body. */
@@ -75,6 +83,8 @@ export interface CloakOptions {
  * drapes flat along the floor once the body lies, a small front collar the fall hangs from, and a
  * hem of a few broad folds. The fall takes the `cloak` role when the outfit gives one, so a cloak
  * can wear a cloth of its own value and hue next to the coat and the hood.
+ * Seen from the front it stays behind the body; seen from behind (the back and the three-quarter
+ * rear views) it is the outermost garment: it hangs straight down the back and draws over the coat.
  * Slot: `back`. Roles: `cloak` (fallback `cloth`), `clothAccent` (optional: the fall's edge).
  * Returns the fall.
  */
@@ -101,7 +111,14 @@ export const cloak: Part<CloakOptions> = (ctx, { length, seed = 'cloak' }) => {
   const [first, second] = kit.skeleton.legs;
   const knees = lerp3(j[`${first.name}.knee`], j[`${second.name}.knee`], 0.5);
   const sway = sub3(knees, j.chest);
-  const swing = scale3(sub3(sway, scale3(UP, dot3(sway, UP))), 0.12 * (1 - lie));
+  let swing = scale3(sub3(sway, scale3(UP, dot3(sway, UP))), 0.12 * (1 - lie));
+  // Seen from behind (`rear`, measured on the hips and along the floor, so a twist of the shoulders in
+  // an attack or a lean in a run does not count; 0 once the body lies) the fall hangs against the back:
+  // it can sway away from it, but not forward through the body, which is where the knees' reach ahead
+  // of the chest would take it, and a long cloak would shrink to a stub. Nothing changes in the front
+  // facings or the profiles.
+  const rear = rearness(dot3(hipForward, norm3(sub3(cam.viewDir, scale3(UP, dot3(cam.viewDir, UP)))))) * (1 - lie);
+  swing = sub3(swing, scale3(chestFwd, rear * Math.max(0, dot3(swing, chestFwd))));
   const L = (length ?? j.pelvis.z + 9) * (1 - 0.36 * lie);
   const top = add3(chest, add3(scale3(up, 5.2 * s), scale3(chestFwd, -3.2)));
   const hang = norm3(add3(scale3(up, -1), scale3(chestFwd, -0.16)));
@@ -125,10 +142,13 @@ export const cloak: Part<CloakOptions> = (ctx, { length, seed = 'cloak' }) => {
   const fall = Round.loft(ends.map(u => ({ center: centre(u), rx: mix(widths, u), ry: mix(deeps, u), axes: [hipRight, hipForward] as [Vec3, Vec3] })));
   // The fall hangs down the back. Its centroid sits high enough on the trunk to sort in front of
   // the legs, so while the chest faces the camera a bias drops it behind the body: from the front
-  // it wraps the silhouette's edges instead of covering the coat and the legs; from the back its
-  // own depth already makes it the body's coat-facing side.
+  // it wraps the silhouette's edges instead of covering the coat and the legs. From behind it is
+  // the outermost garment: a coat that rests on the body it covers sorts as deep as the trunk, and
+  // the long fall's centroid sits well below that, so the bias lifts the fall to the depth of the
+  // back it hangs from and it drapes over the coat instead of hiding under it.
   const frontness = Math.max(0, dot3(chestFwd, cam.viewDir));
-  const behind = { bias: -52 * frontness };
+  const hungFrom = Math.max(0, cam.depth(chest) - fall.depth(cam));
+  const behind = { bias: rear * hungFrom - 52 * frontness };
   o.add(fall, cloth, behind);
   // The hem: three broad folds that overlap and drape, each its own length — wide cloth masses,
   // not a row of tongues. They ride `on` the fall, so the same bias keeps them behind the body.
@@ -140,12 +160,13 @@ export const cloak: Part<CloakOptions> = (ctx, { length, seed = 'cloak' }) => {
     const mid = lerp3(base, tip, 0.55);
     o.add(new Tube([base, mid, tip], { start: mix(widths, 0.8) * 0.62 * rng.float(0.95, 1.15), end: 0.5 }), cloth, { on: fall, ...behind });
   }
-  // The fall's edge in the accent cloth, when the outfit gives one.
+  // The fall's edge in the accent cloth, when the outfit gives one: the whole edge from behind, and
+  // from the other facings the part of it that faces the camera.
   const trim = materials.clothAccent;
   if (trim) {
     for (const side of [-1, 1]) {
       const run = ends.map(u => centre(u, side * mix(widths, u) * 0.97));
-      const arc = run.filter(p => cam.faces(norm3(sub3(p, j.chest))));
+      const arc = rear > 0.5 ? run : run.filter(p => cam.faces(norm3(sub3(p, j.chest))));
       if (arc.length > 1) o.add(new Tube(arc, 0.8), trim, { on: fall, ...behind });
     }
   }
