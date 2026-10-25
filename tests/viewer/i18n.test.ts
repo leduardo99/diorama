@@ -5,7 +5,7 @@ import ts from 'typescript';
 import { createTranslator, DEFAULT_LANG, isLang, LANG_NAMES, LANGS, placeholdersOf, stringsOf } from '../../viewer/src/i18n/core';
 import { langStore, LANG_STORAGE_KEY, readStoredLang, setLang } from '../../viewer/src/i18n/store';
 
-console.log('🧪 Checking the interface languages (both dictionaries agree, formats follow the language, nothing is left hard-coded)...\n');
+console.log('🧪 Checking the interface languages (both dictionaries agree, formats follow the language, nothing is left hard-coded, one word per term)...\n');
 
 const en = stringsOf('en');
 const pt = stringsOf('pt-BR');
@@ -74,7 +74,7 @@ for (const translator of [english, portuguese]) {
 }
 assert.deepEqual([english.t('projects.none.open', { project: 'soulkeeper' }), portuguese.t('projects.none.open', { project: 'soulkeeper' })], ['Open soulkeeper', 'Abrir soulkeeper']);
 assert.equal(english.t('projects.none.exporting', { done: 3, total: 163 }), 'Exporting the sheets: 3 of 163 done');
-assert.equal(portuguese.t('projects.none.exporting', { done: 3, total: 163 }), 'Exportando as sheets: 3 de 163 prontas');
+assert.equal(portuguese.t('projects.none.exporting', { done: 3, total: 163 }), 'Exportando os sheets: 3 de 163 prontos');
 assert.ok(!en.has('projects.switcher.example') && !en.has('modals.new.exampleOption'), 'no project is marked as an example: the viewer lists projects/ only');
 
 // 5. Numbers, dates, sizes, lists and times follow the language.
@@ -190,5 +190,40 @@ for (const file of sourceFiles(ROOT)) {
 }
 assert.ok(existsSync(ROOT) && scanned > 2000, `the scan looked at the code (${scanned} texts)`);
 assert.deepEqual(problems, [], `Portuguese interface text outside src/i18n: put it in the dictionaries and use t()\n${problems.join('\n')}`);
+
+// 8. Portuguese says each term one way (#53): a string whose English has the term says it with the Portuguese word, and no
+//    Portuguese string says a variant. Frame, slot and Sockets stay in English. The words are read in the text, not in the
+//    key, and {placeholders} are not words.
+const wordsOf = (text: string) => new Set(text.replace(/\{\w+\}/g, ' ').toLowerCase().split(/[^\p{L}-]+/u).filter(Boolean));
+const GLOSSARY: Array<{ en: string[]; pt: string[]; not: string[]; except?: string[] }> = [
+  { en: ['frame', 'frames'], pt: ['frame', 'frames'], not: ['quadro', 'quadros'] },
+  { en: ['clip', 'clips'], pt: ['clipe', 'clipes'], not: ['clip', 'clips'] },
+  // "Espaço" is also the space bar (keys.space), so a slot said that way is caught by the English side, not by `not`.
+  { en: ['slot', 'slots'], pt: ['slot', 'slots'], not: ['vaga', 'vagas'] },
+  { en: ['socket', 'sockets'], pt: ['socket', 'sockets'], not: ['encaixe', 'encaixes'] },
+  // "fit" the verb ("an add-on that only fit the swapped piece") is not the zoom.
+  { en: ['fit'], pt: ['ajustar'], not: ['fit'], except: ['customize.board.droppedAddOns.one', 'customize.board.droppedAddOns.other'] },
+  { en: ['add-on', 'add-ons'], pt: ['complemento', 'complementos'], not: ['add-on', 'add-ons'] },
+];
+assert.ok(wordsOf('Slot ocupado por {name}').has('slot') && !wordsOf('Vestir {slot}').has('slot') && wordsOf('Pivô / bordas do frame').has('frame') && wordsOf('{count} add-ons.').has('add-ons'), 'the word splitter');
+// Sheet stays sheet, never "folha", and is masculine ("o sheet", "os sheets"); export as a noun is "o export", "os exports".
+const FEMININE_SHEET = /\b(a|as|da|das|na|nas|uma|umas|esta|estas|essa|essas|pela|pelas)\s+(sprite\s+)?sheets?\b/i;
+assert.ok(FEMININE_SHEET.test('exporta as sprite sheets') && !FEMININE_SHEET.test('Exportando os sheets') && !FEMININE_SHEET.test('Há {count} sheet em sheets/'), 'the gender check');
+
+const glossaryProblems: string[] = [];
+for (const [key, text] of en) {
+  const said = pt.get(key)!;
+  const words = wordsOf(said);
+  for (const term of GLOSSARY) {
+    if (term.except?.includes(key)) continue;
+    if (term.en.some((word) => wordsOf(text).has(word)) && !term.pt.some((word) => words.has(word))) glossaryProblems.push(`${key}: the English says ${term.en[0]}, so the Portuguese says ${term.pt[0]}: ${JSON.stringify(said)}`);
+    const variant = term.not.find((word) => words.has(word));
+    if (variant) glossaryProblems.push(`${key}: "${variant}" is a variant, say ${term.pt[0]}: ${JSON.stringify(said)}`);
+  }
+  if (words.has('folha') || words.has('folhas')) glossaryProblems.push(`${key}: sheet stays sheet ("os sheets"), not folha: ${JSON.stringify(said)}`);
+  if (FEMININE_SHEET.test(said)) glossaryProblems.push(`${key}: sheet is masculine ("o sheet", "os sheets"): ${JSON.stringify(said)}`);
+  if (words.has('exportação') || words.has('exportações')) glossaryProblems.push(`${key}: export as a noun is "o export", "os exports": ${JSON.stringify(said)}`);
+}
+assert.deepEqual(glossaryProblems, [], `Portuguese says each term one way (the GLOSSARY in this section)\n${glossaryProblems.join('\n')}`);
 
 console.log(`✅ i18n checks passed (${en.size} strings in each language, ${scanned} texts of the code scanned)`);

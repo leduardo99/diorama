@@ -3,6 +3,7 @@ import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, 
 import { Field, FieldLabel } from '@/components/ui/field';
 import { Kbd } from '@/components/ui/kbd';
 import { useT } from '@/i18n';
+import { coverClip } from '@/lib/playground/catalog';
 import type { Character } from '@/lib/playground/library';
 
 interface Props {
@@ -11,7 +12,7 @@ interface Props {
   onPlayer: (id: string) => void;
 }
 
-const coverOf = (c: Character) => (c.idle ?? c.locomotion[0] ?? c.actions[0]).asset;
+const coverOf = (c: Character) => coverClip(c).asset;
 
 /** Searchable by name and folder; [ and ] step through the list without opening it. */
 export function PlayerPicker({ characters, player, onPlayer }: Props) {
