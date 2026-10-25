@@ -208,7 +208,7 @@ export const CATALOG: GearCatalog = {
 // ----------------------------------------------------------------------------------------------
 
 export const CHARACTERS: OutfitCharacterInfo[] = [
-  { id: 'guard', label: 'Ossuary Guard', ...GUARD_RIG, outfit: GUARD_OUTFIT },
-  { id: 'malvek', label: 'Malvek Ravenlight', ...MALVEK_RIG, outfit: MALVEK_OUTFIT },
-  { id: 'captain', label: 'Ossuary Captain', ...CAPTAIN_RIG, outfit: CAPTAIN_OUTFIT },
+  { id: 'guard', ...GUARD_RIG, outfit: GUARD_OUTFIT },
+  { id: 'malvek', ...MALVEK_RIG, outfit: MALVEK_OUTFIT },
+  { id: 'captain', ...CAPTAIN_RIG, outfit: CAPTAIN_OUTFIT },
 ];

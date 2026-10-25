@@ -52,7 +52,10 @@ export const DEFAULT_TILT = 48;
 /** A character: its clips and the bindings of its controls, its camera and the effects it cues. */
 export interface Character<A extends SheetRef = SheetRef> {
   id: string;
+  /** The manifest's `name`, the character's id ('ossuary-guard'); without a manifest, the folder's last segment. */
   name: string;
+  /** The name people read: the manifest's `label` ('Ossuary Guard'), else `name` (atlases exported before labels). */
+  label: string;
   folder: string;
   clips: Clip<A>[];
   idle: Clip<A> | null;
@@ -314,9 +317,11 @@ function bindings<A extends SheetRef>(clips: Clip<A>[], manifest: CharacterManif
 function makeCharacter<A extends SheetRef>(folder: string, clips: Clip<A>[]): Character<A> {
   const manifest = clips.map((c) => manifestOf(c.atlas)).find((m) => m !== undefined);
   const own = playableClips(clips, manifest);
+  const name = manifest?.name ?? basenameOf(folder);
   return {
     id: `${folder}|${manifest?.name ?? clips[0].atlas.meta.data?.skeleton ?? ''}`,
-    name: manifest?.name ?? basenameOf(folder),
+    name,
+    label: manifest?.label ?? name,
     folder,
     clips: own,
     ...bindings(own, manifest),

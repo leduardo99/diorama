@@ -45,7 +45,8 @@ Every sheet's JSON repeats the whole character manifest, so reading any one shee
 
 ## 4. The manifest (`meta.data.character`)
 
-- `name`, `skeleton`, `cell` (logical size), `scale`, `pivot`, `directions`, `camera` (`tilt`, `heightBoost`) and `sockets` (names).
+- `name` (the character's id) and `label` (the name to show; atlases exported before labels have none: show `name`).
+- `skeleton`, `cell` (logical size), `scale`, `pivot`, `directions`, `camera` (`tilt`, `heightBoost`) and `sockets` (names).
 - `clips`: one entry per clip, with `key`, `name`, `kind`, `category`, `tags`, `loop`, `hold`, `seconds`, `frames`, `fps`, `groundSpeed`, `events` and `travel`.
 - `controls`: default bindings.
   - `idle`: the idle key.

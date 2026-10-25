@@ -43,7 +43,10 @@ export interface WieldHand {
 
 /** Every sheet of a character repeats this: reading any one of them describes them all. */
 export interface CharacterManifest {
+  /** The character's id ('ossuary-guard'). */
   name: string;
+  /** The name to show ('Ossuary Guard'). Older atlases have none: show `name`. */
+  label?: string;
   skeleton?: string;
   /** The cell's logical size and the pivot in it. */
   cell?: { width: number; height: number };
