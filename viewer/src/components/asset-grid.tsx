@@ -46,6 +46,8 @@ interface CardProps {
 function AssetCard({ asset, active, position, onOpen }: CardProps & { asset: AssetFileMeta }) {
   const [hovered, setHovered] = useState(false);
   const { t, bytes } = useT();
+  const role = roleOf(asset);
+  const detail = roleDetail(asset, t);
   return (
     <AssetContextMenu asset={asset} onDetails={onOpen}>
       <EntryCard
@@ -60,9 +62,9 @@ function AssetCard({ asset, active, position, onOpen }: CardProps & { asset: Ass
         description={dirname(asset.subpath) || '—'}
         menu={<AssetMenuButton asset={asset} onDetails={onOpen} />}
       >
-        {roleOf(asset) === 'gear' && <Badge variant="secondary">{roleDetail(asset, t) ?? t('assets.card.item')}</Badge>}
-        {(roleOf(asset) === 'vfx' || roleOf(asset) === 'ui') && asset.atlasInfo?.kind && <Badge variant="secondary">{asset.atlasInfo.kind}</Badge>}
-        {roleOf(asset) === 'icon' && <ItemBadges asset={asset} />}
+        {role === 'gear' && <Badge variant="secondary">{detail ?? t('assets.card.item')}</Badge>}
+        {(role === 'vfx' || role === 'ui') && detail && <Badge variant="secondary">{detail}</Badge>}
+        {role === 'icon' && <ItemBadges asset={asset} />}
         {asset.engine && <EngineBadge engine={asset.engine} />}
         {asset.width && <span>{asset.width}×{asset.height}</span>}
         <FrameSummary info={asset.atlasInfo} />

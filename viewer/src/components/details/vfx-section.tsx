@@ -6,7 +6,7 @@ import { Field, FieldDescription, FieldLabel } from '@/components/ui/field';
 import { Switch } from '@/components/ui/switch';
 import { useT } from '@/i18n';
 import type { EffectMeta } from '@/lib/atlas';
-import { roleOf } from '@/lib/asset-role';
+import { effectKind, roleOf } from '@/lib/asset-role';
 import { basename, stripExtension } from '@/lib/format';
 import type { AssetFileMeta } from '@/lib/types';
 import { usePref } from '@/lib/use-pref';
@@ -42,9 +42,6 @@ export function useVfx(player: Player, directionIndex: number) {
 
 export type Vfx = ReturnType<typeof useVfx>;
 
-const KINDS = ['projectile', 'impact', 'cast', 'aura', 'area', 'burst', 'trail'] as const;
-const isKind = (kind: string): kind is (typeof KINDS)[number] => (KINDS as readonly string[]).includes(kind);
-
 /** What an effect sheet says about the effect: kind, layer, reach, speed, what follows it; and the toggles of the Details window. */
 export function VfxSection({ vfx, projectAssets, onSelect }: { vfx: Vfx; projectAssets: AssetFileMeta[]; onSelect: (asset: AssetFileMeta) => void }) {
   const { effect } = vfx;
@@ -62,7 +59,7 @@ export function VfxSection({ vfx, projectAssets, onSelect }: { vfx: Vfx; project
   return (
     <Section title={t('details.vfx.title')}>
       <div className="flex flex-wrap items-center gap-2">
-        <Badge>{isKind(effect.kind) ? t(`details.vfx.kinds.${effect.kind}`) : effect.kind}</Badge>
+        <Badge>{effectKind(effect.kind, t)}</Badge>
         {effect.label && <span className="truncate font-medium">{effect.label}</span>}
       </div>
       <dl className="flex flex-col gap-1.5">

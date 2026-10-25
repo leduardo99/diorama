@@ -3,7 +3,8 @@ import { cpSync, mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } fro
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { buildAssetCatalog, buildProjectCatalog } from '../../viewer/server/catalog';
-import { detailsTitle, roleOf } from '../../viewer/src/lib/asset-role';
+import { createTranslator } from '../../viewer/src/i18n/core';
+import { detailsTitle, roleDetail, roleOf } from '../../viewer/src/lib/asset-role';
 import { exportTarget, isStale, pendingExports } from '../../viewer/src/lib/export-state';
 import { clipsOf } from '../../viewer/src/lib/groups';
 import type { AssetFileMeta, AtlasInfo } from '../../viewer/src/lib/types';
@@ -97,6 +98,14 @@ try {
   // yet each is titled by its own label, never by the folder.
   assert.ok(clipsOf(sample, sample.find((a) => a.subpath === 'scenery/crypt-archway.png')!).length > 1);
   assert.deepEqual(['scenery/coffin.png', 'scenery/crypt-door--closing.png', 'scenery/crypt-archway.png'].map(titleOf), ['Coffin', 'Crypt door', 'Crypt archway']);
+
+  // A badge names an effect's kind in the language of the screen, as the Details window does; a kind the interface has no
+  // word for, and an interface piece's kind, are shown as the atlas writes them.
+  const detailOf = (info: Partial<AtlasInfo>, lang: 'en' | 'pt-BR') => roleDetail(sheet('vfx/x.png', info), createTranslator(lang).t);
+  assert.deepEqual([detailOf({ role: 'vfx', kind: 'projectile' }, 'en'), detailOf({ role: 'vfx', kind: 'projectile' }, 'pt-BR')], ['Projectile', 'Projétil']);
+  assert.equal(detailOf({ role: 'vfx', kind: 'beam' }, 'pt-BR'), 'beam');
+  assert.equal(detailOf({ role: 'vfx' }, 'en'), null);
+  assert.equal(detailOf({ role: 'ui', kind: 'button' }, 'pt-BR'), 'button');
 
   // 2. Sheets with no image at their own path are pending; code in src/ is not a sheet, nor are exported ones.
   const [meta] = await buildProjectCatalog(root);
