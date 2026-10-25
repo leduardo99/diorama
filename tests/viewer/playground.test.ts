@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { buildRows, entrySubtitle, listEntries, matches, pushRecent, RECENT_LIMIT, sceneToPlay, type Entry } from '../../viewer/src/lib/playground/catalog';
+import { buildRows, entrySubtitle, findsCharacter, listEntries, matches, pushRecent, RECENT_LIMIT, sceneToPlay, type Entry } from '../../viewer/src/lib/playground/catalog';
 import { createTranslator } from '../../viewer/src/i18n/core';
 import { shownFrame, type Atlas, type CharacterManifest } from '@diorama/runtime';
 import { advance, currentFrame, hudOf, isStep, newActor, reset, startClip, stepPlayer, type ClipEvent } from '../../viewer/src/lib/playground/actor';
@@ -107,6 +107,9 @@ assert.equal(entrySubtitle(mageEntry.detail, createTranslator('en')), 'character
 assert.equal(entrySubtitle(mageEntry.detail, createTranslator('pt-BR')), 'characters/mage · 8 animações');
 assert.ok(['battle', 'characters/mage', 'battle-mage', 'MAGE characters'].every((query) => matches(mageEntry, query)), 'found by label, folder and id');
 assert.ok(!matches(mageEntry, 'wolf'));
+// The Control picker's own search (Base UI would search the label alone) finds the same queries.
+assert.ok(['battle', 'characters/mage', 'battle-mage', 'MAGE characters'].every((query) => findsCharacter(battleMage, query)), 'the picker finds by label, folder and id');
+assert.ok(!findsCharacter(battleMage, 'wolf') && findsCharacter(battleMage, ''));
 assert.equal(hudOf(newActor(1, battleMage.idle!, 0, 0, battleMage), false, false).character, 'Battle Mage');
 
 // A gear item names its wearer as text (`character: 'guard'`): it is an object to place, not a character, and not a crash.

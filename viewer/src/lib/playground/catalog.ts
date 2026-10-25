@@ -74,12 +74,21 @@ export function listEntries(library: Library): Entry[] {
   return [...characters, ...sprites];
 }
 
+/** Every word of the query appears somewhere in the text, in any order, ignoring case. */
+function hasEveryWord(text: string, query: string): boolean {
+  const haystack = text.toLowerCase();
+  return query.toLowerCase().split(/\s+/).filter(Boolean).every((word) => haystack.includes(word));
+}
+
 /** Every word of the query must appear in "group/name", or for a character in its folder or id ("characters/guard", "ossuary-guard"). */
 export function matches(entry: Entry, query: string): boolean {
   const character = entry.armed.type === 'character' ? ` ${entry.armed.character.folder} ${entry.armed.character.name}` : '';
-  const haystack = `${entry.group}/${entry.name}${character}`.toLowerCase();
-  return query.toLowerCase().split(/\s+/).filter(Boolean).every((word) => haystack.includes(word));
+  return hasEveryWord(`${entry.group}/${entry.name}${character}`, query);
 }
+
+/** The Control picker's search: every word of the query in the character's label, folder or id ("Ravenlight", "characters/guard", "ossuary-guard"). */
+export const findsCharacter = (character: Pick<Character, 'label' | 'folder' | 'name'>, query: string): boolean =>
+  hasEveryWord(`${character.label} ${character.folder} ${character.name}`, query);
 
 const inFilter = (entry: Entry, filter: KindFilter) =>
   filter === 'all' || (filter === 'character' ? entry.kind === 'character' : entry.kind !== 'character');

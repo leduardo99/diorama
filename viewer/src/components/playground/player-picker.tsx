@@ -3,7 +3,7 @@ import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, 
 import { Field, FieldLabel } from '@/components/ui/field';
 import { Kbd } from '@/components/ui/kbd';
 import { useT } from '@/i18n';
-import { coverClip } from '@/lib/playground/catalog';
+import { coverClip, findsCharacter } from '@/lib/playground/catalog';
 import type { Character } from '@/lib/playground/library';
 
 interface Props {
@@ -33,7 +33,9 @@ export function PlayerPicker({ characters, player, onPlayer }: Props) {
           // Hand the keyboard back to the scene: WASD and Space would otherwise type into the search.
           document.getElementById('playground-player')?.blur();
         }}
-        itemToStringValue={(character) => `${character.label} ${character.folder} ${character.name}`}
+        // Base UI searches the label alone unless it is given a filter: this one also searches the folder and the id.
+        filter={findsCharacter}
+        itemToStringValue={(character) => character.id}
         itemToStringLabel={(character) => character.label}
       >
         <ComboboxInput id="playground-player" placeholder={t('playground.player.search')} />

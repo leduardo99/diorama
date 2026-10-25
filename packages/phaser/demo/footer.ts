@@ -75,10 +75,11 @@ function characterLinks(project: BenchProject, current: string | null, label: st
   const nav = document.createElement('nav');
   nav.className = 'links';
   nav.setAttribute('aria-label', label);
-  for (const { id, label } of project.characters) {
+  for (const character of project.characters) {
+    const { id } = character;
     const link = document.createElement('a');
     link.href = hrefWith(project.name, id);
-    link.textContent = label;
+    link.textContent = character.label;
     link.title = id;
     if (id === current) link.setAttribute('aria-current', 'page');
     nav.append(link);
