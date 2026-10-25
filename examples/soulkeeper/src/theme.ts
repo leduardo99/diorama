@@ -54,6 +54,11 @@ export const PALETTES = {
   ironLit: '#8a8799',
   iron: '#535064',
   ironDark: '#2b2935',
+  // Armour plate: a darker steel than `steel` with a bright lit step, so fitted plates read as
+  // polished metal (a dark base, lit edges, a deep core shadow) and not as flat grey.
+  armorLit: '#dedce8',
+  armor: '#7a778c',
+  armorDark: '#383545',
   soulLit: '#d6fff2',
   soul: '#5cf0c4',
   soulDark: '#1d8a76',
@@ -327,6 +332,14 @@ export const VOLUMES = {
   soul: { ramp: RAMPS.soul },
   // Polished steel: a step lighter than `iron`, still darker than `blade`, so armor separates from bone.
   steel: { ramp: { lit: PALETTES.stoneLit, base: PALETTES.ironLit, dark: PALETTES.iron }, stroke: inner(RAMPS.iron), edge: inner(RAMPS.iron, 0.6), form: { highlight: { ratio: 0.2, min: 0.6, max: 1.6 } } },
+  // Armour plate: the darker steel ramp with a broad highlight on the lit edge, a deep core shadow
+  // and a cool reflected light inside it, the three cues that make a curved plate read as metal.
+  armor: {
+    ramp: { lit: PALETTES.armorLit, base: PALETTES.armor, dark: PALETTES.armorDark },
+    stroke: inner({ dark: PALETTES.armorDark }),
+    edge: inner({ dark: PALETTES.armorDark }, 0.6),
+    form: { highlight: { ratio: 0.22, min: 0.7, max: 1.8 }, core: { ratio: 0.36, min: 1.1, max: 4 }, rim: { color: PALETTES.ironLit, width: 0.55 } },
+  },
   // Gilded metal for rank (pauldrons, a sword's guard, a crest's comb).
   brass: {
     ramp: { lit: PALETTES.brassLit, base: PALETTES.brass, dark: PALETTES.brassDark },

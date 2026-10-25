@@ -52,7 +52,7 @@ import {
   fleshArm, fleshHand, fleshHead, fleshLeg, fleshLegs, fleshTorso, cuirass, glove, greave, grimoire, groundShockwave, hairCrop, hairTail, hairWaves, helmCrest, highCollar,
   hood, hornedHelm, lamedPauldron, legWraps, longCoat, notchedSword, palmFlame, pouch, reaperScythe, ribBreastplate, ribCage, roundShield, sashTail,
   scytheFist, scytheHeld, scytheSmear, shawl, skullBuckle, skullPauldron, skullSutures, soulLantern, swordHeld, tabard, tunic, weaponSmear, wingedHelm,
-  platePauldron, plateGreave, spear, spearHeld, spiritWings, tassets,
+  fittedSleeve, leggings, platePauldron, plateGreave, plateVambrace, spear, spearHeld, spiritWings, tassets,
 } from '.';
 
 // ----------------------------------------------------------------------------------------------
@@ -149,7 +149,7 @@ const PARTS: PartInfo[] = [
   },
   {
     id: 'plate-pauldron', label: 'Plate pauldron', group: 'shoulders', equip: 'pauldron', part: platePauldron, slots: ['shoulder'], roles: ['metal', 'trim'],
-    options: [num('lames', 'Lames', 1, 0, 2, 1), size()],
+    options: [num('lames', 'Lames', 2, 0, 3, 1), size()],
   },
   {
     id: 'skull-pauldron', label: 'Skull pauldron', group: 'shoulders', equip: 'pauldron', part: skullPauldron, slots: ['shoulder'], roles: ['metal', 'bone', 'hollow'],
@@ -157,7 +157,7 @@ const PARTS: PartInfo[] = [
   },
 
   // Torso: what is worn around the trunk.
-  { id: 'tunic', label: 'Tunic', group: 'torso', part: tunic, slots: ['pelvis'], roles: ['cloth'], options: [num('hem', 'Hem', 9, 5, 14, 0.5)] },
+  { id: 'tunic', label: 'Tunic', group: 'torso', part: tunic, slots: ['pelvis'], roles: ['cloth'], options: [num('hem', 'Hem', 9, 5, 14, 0.5), num('waist', 'Rises up the waist', 3, 3, 12, 0.5), num('width', 'Breadth', 1, 0.8, 1.2)] },
   {
     id: 'tabard', label: 'Tabard', group: 'torso', part: tabard, slots: ['pelvis'], roles: ['clothAccent'],
     options: [num('length', 'Length', 14, 8, 24, 1), num('width', 'Width', 6.4, 4, 12, 0.2)],
@@ -170,11 +170,11 @@ const PARTS: PartInfo[] = [
   },
   {
     id: 'cuirass', label: 'Cuirass', group: 'torso', equip: 'cuirass', part: cuirass, slots: ['chest'], roles: ['metal', 'trim'],
-    options: [num('ease', 'Ease', 0.6, 0, 3, 0.1), flag('keel', 'Keel')],
+    options: [num('ease', 'Ease', 0.4, 0, 3, 0.1), flag('keel', 'Keel'), num('width', 'Breadth', 1, 0.8, 1.3)],
   },
   {
     id: 'tassets', label: 'Tassets', group: 'torso', equip: 'tassets', part: tassets, slots: ['pelvis'], roles: ['metal', 'trim'],
-    options: [num('length', 'Length', 12, 8, 18, 0.5), flag('back', 'Plate behind')],
+    options: [num('length', 'Length', 12, 6, 18, 0.5), num('top', 'Top above the hips', 9.5, 2, 12, 0.5), flag('split', 'Split at the front'), flag('back', 'Plate behind')],
   },
   { id: 'high-collar', label: 'High collar', group: 'torso', part: highCollar, slots: ['chest'], roles: ['cloth', 'clothAccent'], options: [num('height', 'Height', 1, 0.7, 1.5)] },
   // `length` is left out: by default it follows the skeleton (down to a hand above the ankles), so it has no fixed default to offer.
@@ -195,12 +195,15 @@ const PARTS: PartInfo[] = [
   { id: 'belt', label: 'Belt', group: 'garments', equip: 'belt', part: belt, slots: ['pelvis'], roles: ['leather', 'metal'], options: [flag('buckle', 'Buckle')] },
   { id: 'pouch', label: 'Pouch', group: 'garments', part: pouch, slots: ['pelvis'], roles: ['leather'], options: [hip('Hip')] },
   { id: 'greave', label: 'Greave', group: 'garments', equip: 'greave', part: greave, slots: ['shin'], roles: ['metal'], options: [flag('kneeCop', 'Knee cop')] },
-  { id: 'plate-greave', label: 'Plate greave', group: 'garments', equip: 'greave', part: plateGreave, slots: ['shin'], roles: ['metal', 'trim'], options: [flag('kneeCop', 'Knee cop')] },
+  { id: 'plate-greave', label: 'Plate greave', group: 'garments', equip: 'greave', part: plateGreave, slots: ['shin'], roles: ['metal'], options: [flag('kneeCop', 'Knee cop')] },
   { id: 'bracer', label: 'Bracer', group: 'garments', equip: 'bracer', part: bracer, slots: ['forearm'], roles: ['metal'], options: [size(1, 0.8, 1.4)] },
+  { id: 'plate-vambrace', label: 'Plate vambrace', group: 'garments', equip: 'bracer', part: plateVambrace, slots: ['forearm'], roles: ['metal', 'trim'] },
   { id: 'leg-wraps', label: 'Leg wraps', group: 'garments', equip: 'greave', part: legWraps, slots: ['shin'], roles: ['leather'], options: [num('count', 'Wraps', 2, 0, 3, 1)] },
   { id: 'coat-sleeve', label: 'Coat sleeve', group: 'garments', part: coatSleeve, slots: ['shoulder'], roles: ['cloth', 'clothAccent'] },
+  { id: 'fitted-sleeve', label: 'Fitted sleeve', group: 'garments', part: fittedSleeve, slots: ['shoulder'], roles: ['cloth'], options: [size(1, 0.8, 1.3)] },
+  { id: 'leggings', label: 'Leggings', group: 'garments', part: leggings, slots: ['thigh'], roles: ['leather'] },
   { id: 'boot', label: 'Boot', group: 'garments', equip: 'boots', part: boot, slots: ['foot'], roles: ['leather'] },
-  { id: 'glove', label: 'Glove', group: 'garments', equip: 'gloves', part: glove, slots: ['hand'], roles: ['leather'], options: [num('cuff', 'Cuff', 1, 0.8, 1.4)] },
+  { id: 'glove', label: 'Glove', group: 'garments', equip: 'gloves', part: glove, slots: ['hand'], roles: ['leather'], options: [num('cuff', 'Cuff', 1, 0.8, 1.4), size(1, 0.6, 1.3)] },
   {
     id: 'sash-tail', label: 'Sash tail', group: 'garments', part: sashTail, slots: ['pelvis'], roles: ['clothAccent'], requires: 'belt',
     options: [hip('Buckle side'), num('length', 'Length', 17, 8, 26, 1)],
@@ -263,7 +266,7 @@ const PARTS: PartInfo[] = [
   { id: 'rib-cage', label: 'Rib cage', group: 'bodies', kind: 'body', part: ribCage, slots: ['chest'], roles: ['boneLimb', 'bone', 'hollow'] },
   { id: 'bone-arm', label: 'Bone arm', group: 'bodies', kind: 'body', part: boneArm, slots: ['shoulder'], roles: ['boneLimb', 'bone'] },
   { id: 'bone-hand', label: 'Open bone hand', group: 'bodies', kind: 'body', part: boneHand, slots: ['hand'], roles: ['boneLimb', 'bone'] },
-  { id: 'flesh-torso', label: 'Flesh torso', group: 'bodies', kind: 'body', part: fleshTorso, slots: ['chest'], roles: ['skin'] },
+  { id: 'flesh-torso', label: 'Flesh torso', group: 'bodies', kind: 'body', part: fleshTorso, slots: ['chest'], roles: ['skin'], options: [num('width', 'Breadth', 1, 0.75, 1.25), num('bottom', 'Starts below the chest', 20.5, 10, 20.5, 0.5)] },
   { id: 'flesh-arm', label: 'Flesh arm', group: 'bodies', kind: 'body', part: fleshArm, slots: ['shoulder'], roles: ['skin'] },
   { id: 'flesh-hand', label: 'Flesh hand', group: 'bodies', kind: 'body', part: fleshHand, slots: ['hand'], roles: ['skin'] },
   { id: 'flesh-leg', label: 'Flesh leg', group: 'bodies', kind: 'body', part: fleshLeg, slots: ['thigh'], roles: ['skin'] },

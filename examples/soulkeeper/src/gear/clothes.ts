@@ -13,7 +13,7 @@ import { partFrame, solvePose, type Part } from '@core/rig';
 import { Blob, Round, Tube, UP, add3, dot3, len3, lerp3, norm3, scale3, sub3, vec3, visibleArc, type Vec3 } from '@core/volume';
 import { headFrame } from './heads';
 import { trunkScale } from './torso';
-import { legOf, plate, role, scaleOf, tornPanel, type NoOptions } from './util';
+import { armOf, legOf, plate, role, scaleOf, tornPanel, type NoOptions } from './util';
 
 /** Options of `hood`. */
 export interface HoodOptions {
@@ -202,10 +202,70 @@ export const boot: Part<NoOptions> = ctx => {
   return boot;
 };
 
+/** Options of `fittedSleeve`. */
+export interface FittedSleeveOptions {
+  /** Scale of the sleeve's thickness. Default 1. */
+  size?: number;
+}
+
+/**
+ * A fitted cloth sleeve over the whole arm, the sleeve of a doublet worn under armour: a rounded
+ * shoulder, the upper arm, the elbow and the forearm down to the wrist as one slim mass, fuller
+ * than the bare arm, so the arm keeps a believable thickness and a vambrace and a glove fit over it.
+ * It covers the arm whole, so it can stand in for the `flesh-arm`. Follows the skeleton's scale.
+ * Mirrored by side.
+ * Slot: `shoulder` (side -1 left, 1 right). Roles: `cloth`. Returns the sleeve, so a shield can rest on it.
+ */
+export const fittedSleeve: Part<FittedSleeveOptions> = (ctx, { size = 1 }) => {
+  const { object: o, pose, body, at, materials } = ctx;
+  const k = scaleOf(ctx);
+  const w = k * size;
+  const [sh, el, ha] = pose.chains[armOf(ctx, at.side).name];
+  const wrist = add3(ha, scale3(norm3(sub3(ha, el)), 0.4 * k));
+  const sleeve = new Blob([
+    Round.ellipsoid(partFrame(sh, body.forward, body.up), 2.75 * w, 2.75 * w, 2.75 * w),
+    new Tube([sh, el], { start: 4.6 * w, end: 3.6 * w }),
+    Round.ellipsoid(partFrame(el, pose.frame.forward), 1.75 * w, 1.75 * w, 1.75 * w),
+    new Tube([el, wrist], { start: 3.3 * w, end: 2.6 * w }),
+  ]);
+  o.add(sleeve, role(materials, 'cloth'));
+  return sleeve;
+};
+
+/**
+ * Leggings: fitted leather over the seat, the thigh and the knee, ending under a greave or inside a
+ * boot's shaft — legwear for a skirt that ends above the knee. Each side covers its half of the hips
+ * as well, so no skin shows under a short skirt, even when the body lies. Follows the leg, the trunk
+ * and the skeleton's scale.
+ * Slot: `thigh` (side -1 left, 1 right). Roles: `leather`. Returns the leg, so a greave can rest on it.
+ */
+export const leggings: Part<NoOptions> = ctx => {
+  const { object: o, pose, body, at, materials } = ctx;
+  const { up, hipRight, hipForward } = body;
+  const k = scaleOf(ctx);
+  const leather = role(materials, 'leather');
+  const [hip, knee, ankle] = pose.chains[legOf(ctx, at.side).name];
+  // The seat: this side's half of the hips, set low on them, so it covers the bare hips from below
+  // (what shows of them under a short skirt once the body lies) and sorts under a skirt standing.
+  const pelvis = pose.joints.pelvis ?? hip;
+  const seat = Round.ellipsoid(partFrame(add3(pelvis, add3(scale3(up, -1 * k), scale3(hipRight, at.side * 1.8 * k))), hipForward, up), 4.6 * k, 4.3 * k, 4.2 * k);
+  o.add(seat, leather);
+  const mass = new Blob([
+    new Tube([hip, knee], { start: 4.9 * k, end: 3.7 * k }),
+    Round.ellipsoid(partFrame(knee, pose.frame.forward), 2.45 * k, 2.45 * k, 2.55 * k),
+    new Tube([knee, lerp3(knee, ankle, 0.35)], { start: 3.7 * k, end: 3.2 * k }),
+  ]);
+  // The bias lifts the leggings over the bare leg they cover.
+  o.add(mass, leather, { bias: 2 * k });
+  return mass;
+};
+
 /** Options of `glove`. */
 export interface GloveOptions {
   /** Width of the cuff at the wrist. Default 1. */
   cuff?: number;
+  /** Scale of the whole glove. Default 1. */
+  size?: number;
 }
 
 /**
@@ -213,10 +273,10 @@ export interface GloveOptions {
  * way, and a cuff round the wrist. The cuff covers the wrist the `flesh-arm` ends at.
  * Slot: `hand` (side -1 left, 1 right). Roles: `leather`.
  */
-export const glove: Part<GloveOptions> = (ctx, { cuff = 1 }) => {
+export const glove: Part<GloveOptions> = (ctx, { cuff = 1, size = 1 }) => {
   const { object: o, at, materials } = ctx;
   const leather = role(materials, 'leather');
-  const k = scaleOf(ctx);
+  const k = scaleOf(ctx) * size;
   const f = at.frame;
   const band = new Tube([f.at(0.2 * k, -2.9 * k, 0.6 * k), f.at(0.4 * k, 0, 1.9 * k), f.at(0.2 * k, 2.9 * k, 0.6 * k), f.at(-0.2 * k, 2.6 * k, -1.3 * k), f.at(-0.2 * k, -2.6 * k, -1.3 * k), f.at(0.2 * k, -2.9 * k, 0.6 * k)], 1.15 * cuff * k);
   // The bias lifts the glove over the arm it covers: the arm's mass averages deeper than the hand.

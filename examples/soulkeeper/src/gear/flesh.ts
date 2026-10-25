@@ -288,21 +288,47 @@ export const fleshHead: Part<FleshHeadOptions> = (
   return skull;
 };
 
+/** Options of `fleshTorso`. */
+export interface FleshTorsoOptions {
+  /** Scale of the trunk's breadth below the neck (its width and depth; the neck stays). Default 1. */
+  width?: number;
+  /**
+   * How far below the chest joint the trunk starts, on the 80-unit scale: 20.5 reaches down to the
+   * hips; a body whose cuirass ends at the waist can start it under the cuirass (about 12), so no
+   * skin shows below the plate and a skirt needs no host to cover it. Default 20.5.
+   */
+  bottom?: number;
+}
+
+/** Rings of the trunk, waist to neck: [height above the chest joint, half-width, half-depth], on the 80-unit scale. */
+const TORSO_RINGS: [number, number, number][] = [[-20.5, 5.2, 3.9], [-14, 4.9, 3.7], [-8, 5.5, 4], [-2.5, 6.7, 4.4], [0.8, 7.6, 4.3], [3.4, 6, 3.6], [6, 2.9, 2.6], [9, 2.35, 2.1]];
+
 /**
  * The living trunk, neck included: one loft from the waist up through the ribs and the chest's
  * breadth to a neck that ends under the jaw, so the head never floats and garments sit on a body,
- * not on air. Follows the trunk, so a hit recoils it and a death lays it down. Returns the loft,
- * so garments can rest on it.
+ * not on air. `width` makes it slighter or broader; `bottom` starts it higher, under a short
+ * cuirass. Follows the trunk, so a hit recoils it and a death lays it down. Returns the loft, so
+ * garments can rest on it.
  * Slot: `chest`. Roles: `skin`.
  */
-export const fleshTorso: Part<NoOptions> = ctx => {
+export const fleshTorso: Part<FleshTorsoOptions> = (ctx, { width = 1, bottom = 20.5 }) => {
   const { object: o, body, at, materials } = ctx;
   const { up, right: across, forward: chestFwd } = body;
   const s = trunkScale(ctx);
   const k = scaleOf(ctx);
   const c = at.frame.origin;
-  const ring = (h: number, rx: number, ry: number) => ({ center: add3(c, scale3(up, h * s)), rx: rx * k, ry: ry * k, axes: [across, chestFwd] as [Vec3, Vec3] });
-  const torso = Round.loft([ring(-20.5, 5.2, 3.9), ring(-14, 4.9, 3.7), ring(-8, 5.5, 4), ring(-2.5, 6.7, 4.4), ring(0.8, 7.6, 4.3), ring(3.4, 6, 3.6), ring(6, 2.9, 2.6), ring(9, 2.35, 2.1)]);
+  // The rings above the start, with one cut at the start itself.
+  let rings = TORSO_RINGS;
+  const from = -bottom;
+  if (from > rings[0][0]) {
+    const i = Math.max(1, rings.findIndex(r => r[0] > from));
+    const [a, b] = [rings[i - 1], rings[i]];
+    const w = (from - a[0]) / (b[0] - a[0]);
+    rings = [[from, a[1] + (b[1] - a[1]) * w, a[2] + (b[2] - a[2]) * w], ...rings.slice(i)];
+  }
+  // The neck (the rings above the shoulders) keeps its breadth.
+  const breadth = (h: number) => (h < 5 ? width : 1);
+  const torso = Round.loft(rings.map(([h, rx, ry]) => ({ center: add3(c, scale3(up, h * s)), rx: rx * k * breadth(h), ry: ry * k * breadth(h), axes: [across, chestFwd] as [Vec3, Vec3] })));
   o.add(torso, role(materials, 'skin'));
   return torso;
 };

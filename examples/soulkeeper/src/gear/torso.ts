@@ -17,21 +17,31 @@ import { legOf, plate, role, scaleOf, tornPanel } from './util';
 export interface TunicOptions {
   /** How far the hem hangs below the pelvis joint. Default 9. */
   hem?: number;
+  /**
+   * How far up the trunk the tunic rises, above the pelvis joint: 3 starts it at the hips; higher
+   * wraps the waist, narrowing to it, for a skirt worn under a cuirass that ends at the waist.
+   * Default 3.
+   */
+  waist?: number;
+  /** Scale of the skirt's breadth from the hips to the hem (the waist stays). Default 1. */
+  width?: number;
 }
 
 /**
  * A short tunic: a loft that widens from the waist to the hem. Lying down, the hem rides up a
  * little so the skirt does not trail past the cell. It follows the skeleton's scale (`scaleOf`),
- * `hem` included. Returns the tunic, so a belt can rest on it.
+ * `hem` included; `waist` raises it to wrap the waist under a short cuirass. Returns the tunic, so a
+ * belt can rest on it.
  * Slot: `pelvis`. Roles: `cloth`.
  */
-export const tunic: Part<TunicOptions> = (ctx, { hem = 9 }) => {
+export const tunic: Part<TunicOptions> = (ctx, { hem = 9, waist = 3, width = 1 }) => {
   const { object: o, body, at, materials } = ctx;
   const { up, hipRight, hipForward, lie } = body;
   const k = scaleOf(ctx);
   const pelvis = at.frame.origin;
-  const ring = (dz: number, side: number, depth: number) => ({ center: add3(pelvis, scale3(up, dz * k)), rx: side * k, ry: depth * k, axes: [hipRight, hipForward] as [Vec3, Vec3] });
-  const skirt = Round.loft([ring(3, 6.2, 4.7), ring(-3, 7.2, 5.6), ring(-hem + 3 * lie, 8, 6.4)]);
+  const ring = (dz: number, side: number, depth: number, breadth = width) => ({ center: add3(pelvis, scale3(up, dz * k)), rx: side * k * breadth, ry: depth * k * breadth, axes: [hipRight, hipForward] as [Vec3, Vec3] });
+  const top = waist > 3 ? [ring(waist, 5.1, 4.1, 1), ring(Math.min(3, waist - 3), 6.2, 4.7)] : [ring(3, 6.2, 4.7)];
+  const skirt = Round.loft([...top, ring(-3, 7.2, 5.6), ring(-hem + 3 * lie, 8, 6.4)]);
   o.add(skirt, role(materials, 'cloth'));
   return skirt;
 };

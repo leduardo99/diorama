@@ -14,8 +14,8 @@
  *   `extra.eyes`, and a resting face set by its options), `fleshTorso` (chest), `fleshArm`
  *   (shoulder), `fleshHand` (hand), `fleshLeg` (thigh), `hairCrop`, `hairTail` and `hairWaves`
  *   (head), and `fleshLegs`, the base body of a living figure; all of it follows the skeleton's scale;
- * - `clothes.ts`: `hood` (head), `cloak` (back), `apron` (pelvis), `shawl` (chest), `boot` (foot)
- *   and `glove` (hand), the soft garments a living body wears;
+ * - `clothes.ts`: `hood` (head), `cloak` (back), `apron` (pelvis), `shawl` (chest), `boot` (foot),
+ *   `glove` (hand), `fittedSleeve` (shoulder) and `leggings` (thigh), the soft garments a living body wears;
  * - `heads.ts`: `boneSkull`, `skullSutures`, `hornedHelm` and `fireCrown` (head), `headFrame`;
  * - `crests.ts`: `helmCrest` (head, resting on a helm);
  * - `shoulders.ts`: `lamedPauldron` and `skullPauldron` (shoulder);
@@ -24,7 +24,8 @@
  * - `garments.ts`: `belt`, `pouch`, `sashTail`, `skullBuckle` and `grimoire` (pelvis), `greave` and
  *   `legWraps` (shin), `bracer` (forearm), `coatSleeve` (shoulder);
  * - `plate.ts`: `wingedHelm` (head, resting on the hair or the head), `cuirass` (chest), `platePauldron`
- *   (shoulder), `tassets` (pelvis) and `plateGreave` (shin), plate with gilded edges for the flesh body;
+ *   (shoulder), `tassets` (pelvis), `plateVambrace` (forearm) and `plateGreave` (shin), plate with
+ *   gilded edges for the flesh body;
  * - `shields.ts`: `roundShield` (forearm), `shieldDisc`;
  * - `weapons.ts`: `notchedSword` (hand), `swordHeld`; `reaperScythe`, `scytheFist` and `soulLantern`
  *   (hand), `scytheHeld` and the `SCYTHE_REST_*` constants; `spear` (hand), `spearHeld`, `SPEAR` and
@@ -41,8 +42,8 @@
  * - `trim` (optional): the gilded edges of the plate and the spear's bands (`metal` when not set);
  * - `plume` (optional): the crest's horsehair (`clothAccent`, then `cloth`, when not set);
  * - `blade`: the blade and the spear's head (falls back to `metalAccent`, then `metal`);
- * - `cloth`: tunic; `clothAccent`: tabard, the painted band of the shield;
- * - `leather`: belt, pouch, baldric, wraps, sword grip, boots, gloves;
+ * - `cloth`: tunic, fitted sleeves; `clothAccent`: tabard, the painted band of the shield;
+ * - `leather`: belt, pouch, baldric, wraps, sword grip, boots, gloves, leggings;
  * - `cloak` (optional): the cloak's fall (`cloth` when not set);
  * - `wood`: shield disc, the spear's shaft; `woodSeam` (optional): its plank seams, `woodDark` of the theme when not set;
  * - `bone`: skull, jaw, teeth, horns; `boneLimb`: limb bones, spine, ribs (falls back to `bone`);

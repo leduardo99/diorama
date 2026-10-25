@@ -1,7 +1,8 @@
 /**
  * Plate: armour of fitted steel plates with gilded edges, made for the living body of `flesh.ts` —
- * a winged helm over the hair, a cuirass over the torso, plate pauldrons, tassets over a skirt and
- * plate greaves.
+ * a winged helm over the hair, a fitted cuirass over the torso, plate pauldrons, tassets over a
+ * skirt, plate vambraces and plate greaves. Worn over a slight body (`flesh-torso` with a `width`
+ * under 1, `fitted-sleeve`, `leggings`), they make a slim armoured figure rather than a bulky one.
  *
  * Every plate follows the skeleton's scale (`scaleOf`) like the flesh it covers, and the trunk
  * through `ctx.body`, so a hit recoils it and a death lays it flat; the helm is built on the shared
@@ -15,10 +16,10 @@
 
 import { Polygon } from '@core/draw';
 import { along, partFrame, ringsAlong, type Part } from '@core/rig';
-import { Frame3, Round, Solid, Tube, add3, cross3, dot3, lerp3, norm3, scale3, sub3, vec3, visibleArc, type Vec3 } from '@core/volume';
+import { Frame3, Round, Solid, Tube, UP, add3, cross3, dot3, lerp3, norm3, scale3, sub3, vec3, visibleArc, type Vec3 } from '@core/volume';
 import { headFrame } from './heads';
 import { trunkScale } from './torso';
-import { legOf, plate, role, scaleOf } from './util';
+import { armOf, legOf, plate, role, scaleOf, type NoOptions } from './util';
 
 /** The gilded edge of a plate: the `trim` role, or the plate's own metal when the outfit has none. */
 const gilt = (materials: Parameters<typeof role>[0]) => role(materials, 'trim', 'metal');
@@ -146,37 +147,41 @@ export const wingedHelm: Part<WingedHelmOptions> = (ctx, { size = 1, wings = tru
 
 /**
  * Rings of the cuirass, waist to neckline: [height above the chest joint, half-width, half-depth,
- * how far forward of the trunk's axis], on the 80-unit scale. The middle rings sit a little forward,
- * so the plate swells over the chest and narrows to the waist.
+ * how far forward of the trunk's axis], on the 80-unit scale. A fitted breastplate: it ends at the
+ * natural waist, narrowest just above its lower edge, swells forward over the chest and narrows
+ * again to the neckline, so the trunk tapers from the chest to the waist.
  */
 const CUIRASS_RINGS: [number, number, number, number][] = [
-  [-21, 5.6, 4.3, 0.1],
-  [-14, 5.3, 4.1, 0.2],
-  [-8, 6, 4.5, 0.45],
-  [-3, 7, 4.8, 0.55],
-  [0.6, 7.8, 4.6, 0.35],
-  [3.4, 6.4, 3.8, 0],
-  [4.9, 4.2, 3, 0],
+  [-13, 4.45, 3.65, 0.15],
+  [-10.5, 4.0, 3.55, 0.2],
+  [-6.5, 4.85, 4.05, 0.5],
+  [-3, 5.85, 4.5, 0.65],
+  [0.4, 6.05, 4.25, 0.35],
+  [3.2, 5.1, 3.55, 0],
+  [4.8, 3.7, 2.9, 0],
 ];
 
 /** Options of `cuirass`. */
 export interface CuirassOptions {
-  /** Room added round the body it encloses, on every side. Default 0.6. */
+  /** Room added round the body it encloses, on every side. Default 0.4. */
   ease?: number;
-  /** A raised keel down the front of the breastplate. Default true. */
+  /** A raised keel down the middle of the breastplate, edged in gilt. Default true. */
   keel?: boolean;
+  /** Scale of the shell's breadth (its width and depth; the heights stay). Default 1. */
+  width?: number;
 }
 
 /**
- * A cuirass: a breastplate and backplate as one steel shell from the waist to the neckline, swelling
- * over the chest, with a gilded band round the neckline and another round the waist, a raised keel
- * down the front and a gilded line curving from each shoulder to the waist. It follows the trunk
- * (`ctx.body`), so a hit recoils it and a death lays it down. Worn over a body it rests `on` it
+ * A cuirass: a fitted breastplate and backplate as one steel shell from the natural waist to the
+ * neckline, swelling over the chest and tapering to the waist, with a gilded band along the
+ * neckline and the lower edge and a raised keel down the middle with a gilded line on it. It ends
+ * at the waist, so tassets or a skirt hang from under its edge. It follows the trunk (`ctx.body`),
+ * so a hit recoils it and a death lays it down. Worn over a body it rests `on` it
  * (`on: '<torso id>'`) and encloses it, the way a coat does; `ease` adds the room. The neck stays
  * bare above the neckline. Returns the shell, so other pieces can rest on it.
- * Slot: `chest`. Roles: `metal`, `trim` (optional: the bands and the lines).
+ * Slot: `chest`. Roles: `metal`, `trim` (optional: the bands and the keel's line).
  */
-export const cuirass: Part<CuirassOptions> = (ctx, { ease = 0.6, keel = true }) => {
+export const cuirass: Part<CuirassOptions> = (ctx, { ease = 0.4, keel = true, width = 1 }) => {
   const { object: o, kit, body, at, materials, host } = ctx;
   const { up, right: across, forward: chestFwd } = body;
   const cam = kit.camera;
@@ -185,23 +190,25 @@ export const cuirass: Part<CuirassOptions> = (ctx, { ease = 0.6, keel = true }) 
   const c = at.frame.origin;
   const metal = role(materials, 'metal');
   const trim = gilt(materials);
-  const centre = (h: number, fwd: number) => add3(c, add3(scale3(up, h * s), scale3(chestFwd, fwd * k)));
-  const shell = Round.loft(CUIRASS_RINGS.map(([h, rx, ry, fwd]) => ({ center: centre(h, fwd), rx: (rx + ease) * k, ry: (ry + ease) * k, axes: [across, chestFwd] as [Vec3, Vec3] })));
+  const centre = (h: number, fwd: number) => add3(c, add3(scale3(up, h * s), scale3(chestFwd, fwd * k * width)));
+  const rings = CUIRASS_RINGS.map(([h, rx, ry, fwd]) => [h, rx * width, ry * width, fwd] as const);
+  const shell = Round.loft(rings.map(([h, rx, ry, fwd]) => ({ center: centre(h, fwd), rx: (rx + ease) * k, ry: (ry + ease) * k, axes: [across, chestFwd] as [Vec3, Vec3] })));
   o.add(shell, metal, host ? { on: host } : {});
   // Half-width and half-depth of the shell at a height, and its centre there.
   const ringAt = (h: number) => {
-    const r = CUIRASS_RINGS;
     let i = 1;
-    while (i < r.length - 1 && h > r[i][0]) i++;
-    const w = Math.max(0, Math.min(1, (h - r[i - 1][0]) / (r[i][0] - r[i - 1][0])));
-    const mix = (j: number) => r[i - 1][j] + (r[i][j] - r[i - 1][j]) * w;
+    while (i < rings.length - 1 && h > rings[i][0]) i++;
+    const w = Math.max(0, Math.min(1, (h - rings[i - 1][0]) / (rings[i][0] - rings[i - 1][0])));
+    const mix = (j: 1 | 2 | 3) => rings[i - 1][j] + (rings[i][j] - rings[i - 1][j]) * w;
     return { rx: (mix(1) + ease) * k, ry: (mix(2) + ease) * k, at: centre(h, mix(3)) };
   };
-  // The bands: the half of each ring that faces the camera.
-  for (const [h, width] of [[4.4, 0.95], [-20.2, 1.15]] as const) {
+  // The bands along the neckline and the lower edge: the half of each ring that faces the camera.
+  const top = rings[rings.length - 1][0] - 0.4;
+  const bottom = rings[0][0] + 0.55;
+  for (const [h, w] of [[top, 0.7], [bottom, 0.8]] as const) {
     const ring = ringAt(h);
     const arc = visibleArc(cam, ring.at, across, chestFwd, ring.rx + 0.15 * k, ring.ry + 0.15 * k);
-    if (arc.length > 1) o.add(new Tube(arc, width * k), trim, { on: shell });
+    if (arc.length > 1) o.add(new Tube(arc, w * k), trim, { on: shell });
   }
   // A point on the shell's surface at height h, at an angle round the trunk (0 straight ahead, positive towards the right).
   const surface = (h: number, angle: number, lift = 0.1) => {
@@ -213,20 +220,24 @@ export const cuirass: Part<CuirassOptions> = (ctx, { ease = 0.6, keel = true }) 
     return norm3(add3(scale3(chestFwd, Math.cos(angle) / ring.ry), scale3(across, Math.sin(angle) / ring.rx)));
   };
   // Only the runs that face the camera: a line on the far side would show through the shell.
-  const line = (points: [number, number][], width: number, style: typeof metal) => {
+  const line = (points: [number, number, number][], w: number, style: typeof metal) => {
     let run: Vec3[] = [];
     const flush = () => {
-      if (run.length > 1) o.add(new Tube(run, width * k), style, { on: shell });
+      if (run.length > 1) o.add(new Tube(run, w * k), style, { on: shell });
       run = [];
     };
-    for (const [h, a] of points) {
-      if (cam.faces(normalAt(h, a))) run.push(surface(h, a));
+    for (const [h, a, lift] of points) {
+      if (cam.faces(normalAt(h, a))) run.push(surface(h, a, lift));
       else flush();
     }
     flush();
   };
-  if (keel) line([[3.6, 0], [-2, 0], [-8, 0], [-14, 0], [-19.6, 0]], 1, metal);
-  for (const side of [-1, 1]) line([[3.2, side * 0.95], [0, side * 0.75], [-4, side * 0.5], [-9, side * 0.42], [-14, side * 0.48], [-19.4, side * 0.62]], 0.45, trim);
+  if (keel) {
+    // The keel: a low steel ridge from the neckline to the lower edge, and one straight gilded line on its crest.
+    const run: [number, number, number][] = [[top - 0.6, 0, 0.1], [0, 0, 0.25], [-3, 0, 0.3], [-6.5, 0, 0.25], [-10.5, 0, 0.15], [bottom + 0.4, 0, 0.1]];
+    line(run, 1.1, metal);
+    line(run.map(([h, a, lift]) => [h, a, lift + 0.35]), 0.38, trim);
+  }
   return shell;
 };
 
@@ -236,41 +247,60 @@ export const cuirass: Part<CuirassOptions> = (ctx, { ease = 0.6, keel = true }) 
 
 /** Options of `platePauldron`. */
 export interface PlatePauldronOptions {
-  /** Lames stepping down the upper arm under the shell, 0 to 2. Default 1. */
+  /** Lames stepping down the upper arm under the cap, 0 to 3. Default 2. */
   lames?: number;
-  /** Scale of the shell and its lames. Default 1. */
+  /** Scale of the cap and its lames. Default 1. */
   size?: number;
 }
 
 /**
- * A plate pauldron: a smooth steel shell domed over the shoulder, with a gilded rim, and lames that
- * step down the upper arm under it. It tilts out along the line of the
- * shoulder and follows the trunk. Mirrored by side. Returns the shell.
+ * A plate pauldron shaped to the shoulder: a low steel cap over the joint, tilted out along the
+ * slope of the shoulder, with a gilded rim, and narrower lames that step down the outside of the
+ * upper arm under it, each overlapping the one below, so it reads as layered plates rather than a
+ * ball. The lames follow the upper arm part of the way, so a raised arm carries them along. It
+ * follows the trunk. Mirrored by side. Returns the cap.
  * Slot: `shoulder` (side -1 left, 1 right). Roles: `metal`, `trim` (optional: the rim).
  */
-export const platePauldron: Part<PlatePauldronOptions> = (ctx, { lames = 1, size = 1 }) => {
-  const { object: o, kit, body, at, materials } = ctx;
+export const platePauldron: Part<PlatePauldronOptions> = (ctx, { lames = 2, size = 1 }) => {
+  const { object: o, pose, kit, body, at, materials } = ctx;
   const { up, right: across, forward: chestFwd } = body;
   const cam = kit.camera;
   const k = scaleOf(ctx) * size;
   const side = at.side;
   const metal = role(materials, 'metal');
   const trim = gilt(materials);
-  const tilt = norm3(sub3(up, scale3(across, 0.55 * side)));
-  const base = add3(at.frame.origin, add3(scale3(up, 1.4 * k), scale3(across, 0.6 * side * k)));
-  const count = Math.max(0, Math.min(2, Math.round(lames)));
+  const [sh, el] = pose.chains[armOf(ctx, side).name];
+  const arm = norm3(sub3(el, sh));
+  // The cap's axis leans out over the arm, so the plate slopes down from the neck to the arm like
+  // the shoulder under it, instead of standing up off it.
+  const tilt = norm3(add3(up, scale3(across, 0.75 * side)));
+  const base = add3(at.frame.origin, add3(scale3(up, 1.0 * k), scale3(across, 0.6 * side * k)));
+  // Down the outside of the upper arm: halfway between straight down-and-out and the arm's own line.
+  const step = norm3(lerp3(norm3(sub3(scale3(across, 0.45 * side), up)), arm, 0.5));
+  const count = Math.max(0, Math.min(3, Math.round(lames)));
   // The lames first, from the lowest up, so each one above overlaps the one below.
   for (let i = count; i >= 1; i--) {
-    const centre = add3(base, add3(scale3(up, -2.3 * i * k), scale3(across, 1.25 * i * side * k)));
-    const lame = Round.ellipsoid(partFrame(centre, chestFwd, tilt), (4.3 - 0.45 * i) * k, (4.5 - 0.5 * i) * k, 1.6 * k);
+    const centre = add3(base, scale3(step, 1.75 * i * k));
+    const lameUp = norm3(lerp3(tilt, scale3(step, -1), 0.2 * i));
+    const lame = Round.ellipsoid(partFrame(centre, chestFwd, lameUp), (3.05 - 0.22 * i) * k, (3.15 - 0.3 * i) * k, 1.05 * k);
     o.add(lame, metal);
   }
-  const shellFrame = partFrame(base, chestFwd, tilt);
-  const shell = Round.ellipsoid(shellFrame, 4.7 * k, 5.1 * k, 2.9 * k);
-  o.add(shell, metal);
-  const rim = visibleArc(cam, shellFrame.at(0, 0, -0.6 * k), shellFrame.forward, shellFrame.right, 4.75 * k, 5.15 * k);
-  if (rim.length > 1) o.add(new Tube(rim, 0.6 * k), trim, { on: shell });
-  return shell;
+  const capFrame = partFrame(base, chestFwd, tilt);
+  const cap = Round.ellipsoid(capFrame, 3.2 * k, 3.35 * k, 1.9 * k);
+  o.add(cap, metal);
+  // The gilded rim along the cap's lower edge only, where it laps over the lames: seen from the side
+  // a whole ring would read as a target on the shoulder.
+  let run: Vec3[] = [];
+  const flush = () => {
+    if (run.length > 1) o.add(new Tube(run, 0.5 * k), trim, { on: cap });
+    run = [];
+  };
+  for (const p of visibleArc(cam, capFrame.at(0, 0, -0.45 * k), capFrame.forward, capFrame.right, 3.22 * k, 3.38 * k)) {
+    if (dot3(sub3(p, base), up) < 0.4 * k) run.push(p);
+    else flush();
+  }
+  flush();
+  return cap;
 };
 
 // ----------------------------------------------------------------------------------------------
@@ -279,21 +309,30 @@ export const platePauldron: Part<PlatePauldronOptions> = (ctx, { lames = 1, size
 
 /** Options of `tassets`. */
 export interface TassetsOptions {
-  /** Length of the plates from the waist, on the 80-unit scale. Default 12. */
+  /** Length of the plates from their top, on the 80-unit scale. Default 12. */
   length?: number;
+  /**
+   * Height of the plates' top above the pelvis joint, on the 80-unit scale: 9.5 hangs them from
+   * the waist, under the edge of a fitted cuirass; about 2.5 from the hips. Default 9.5.
+   */
+  top?: number;
+  /** A gap down the front between the two front plates, where the skirt under them shows. Default true. */
+  split?: boolean;
   /** The plate behind, over the seat. Default true. */
   back?: boolean;
 }
 
 /**
- * Tassets: a skirt of steel plates hanging from the waist over the hips — two in front, one on each
- * side and one behind — each of two overlapping lames with a gilded hem. The front plates follow
- * their thigh, so they swing with the stride; once the body lies they drape from the waist along the
- * floor, the way the tabard does. Worn over a cloth skirt (a `tunic` with a long hem).
+ * Tassets: a short skirt of steel plates hanging from the waist and flaring over the hips — two in
+ * front, one on each side and one behind — each of two overlapping lames with a gilded hem. With
+ * `split` the front pair stands apart, so the cloth skirt shows down the middle and the legs read
+ * under it. The front plates follow their thigh, so they swing with the stride; once the body lies
+ * they drape from the waist along the floor, the way the tabard does. Worn over a cloth skirt (a
+ * `tunic` that rises to the waist).
  * Slot: `pelvis`. Roles: `metal`, `trim` (optional: the hems). Returns the front-left plate.
  */
-export const tassets: Part<TassetsOptions> = (ctx, { length = 12, back = true }) => {
-  const { object: o, pose, kit, body, at, materials } = ctx;
+export const tassets: Part<TassetsOptions> = (ctx, { length = 12, top: rise = 9.5, split = true, back = true }) => {
+  const { object: o, pose, kit, body, at, materials, host } = ctx;
   const { up, hipRight, hipForward, lie } = body;
   const cam = kit.camera;
   const k = scaleOf(ctx);
@@ -309,39 +348,49 @@ export const tassets: Part<TassetsOptions> = (ctx, { length = 12, back = true })
     return norm3(sub3(chain[1], chain[0]));
   };
   // Each plate: its angle round the hips (0 ahead, positive to the right), width, and the leg it follows.
+  const front = split ? { angle: 0.58, width: 3.5 } : { angle: 0.42, width: 5.6 };
   const plates: { angle: number; width: number; follow: number }[] = [
-    { angle: -0.42, width: 5.6, follow: -1 },
-    { angle: 0.42, width: 5.6, follow: 1 },
-    { angle: -1.45, width: 5, follow: 0 },
-    { angle: 1.45, width: 5, follow: 0 },
-    ...(back ? [{ angle: Math.PI, width: 7, follow: 0 }] : []),
+    { angle: -front.angle, width: front.width, follow: -1 },
+    { angle: front.angle, width: front.width, follow: 1 },
+    { angle: -1.5, width: 3.6, follow: 0 },
+    { angle: 1.5, width: 3.6, follow: 0 },
+    ...(back ? [{ angle: Math.PI, width: 6, follow: 0 }] : []),
   ];
+  // The ring the plates hang from: round the waist when they start high, round the hips when low.
+  const ahead = 5.6 - 0.17 * (rise - 2.6);
+  const beside = 7 - 0.29 * (rise - 2.6);
   const L = length * k * (1 - 0.3 * lie);
+  const on = host ? { on: host } : {};
   let first: ReturnType<typeof plate> | undefined;
   for (const p of plates) {
     const out = norm3(add3(scale3(hipForward, Math.cos(p.angle)), scale3(hipRight, Math.sin(p.angle))));
     const tangent = norm3(cross3(up, out));
-    const top = add3(pelvis, add3(scale3(up, 2.6 * k), add3(scale3(hipForward, Math.cos(p.angle) * 5.6 * k), scale3(hipRight, Math.sin(p.angle) * 7 * k))));
-    let down = norm3(add3(scale3(up, -1), scale3(out, 0.3)));
-    if (p.follow !== 0) down = norm3(lerp3(down, add3(thigh(p.follow), scale3(out, 0.3)), 0.6));
+    const top = add3(pelvis, add3(scale3(up, rise * k), add3(scale3(hipForward, Math.cos(p.angle) * ahead * k), scale3(hipRight, Math.sin(p.angle) * beside * k))));
+    let down = norm3(add3(scale3(up, -1), scale3(out, 0.2)));
+    if (p.follow !== 0) down = norm3(lerp3(down, add3(thigh(p.follow), scale3(out, 0.2)), 0.45));
     if (lie > 0) {
       const drop = Math.max(0, Math.min(0.95, (top.z - 0.6 * k) / L));
       down = norm3(lerp3(down, add3(scale3(flatAway, Math.sqrt(1 - drop * drop)), vec3(0, 0, -drop)), lie));
     }
     const W = p.width * k;
     const facing = cam.faces(out);
+    // Only the plates on the camera's side rest on the skirt: one behind the body sorts by its own
+    // depth, or resting on the skirt would lift it over the cuirass in front.
+    const near = dot3(out, cam.viewDir) > -0.3 ? on : {};
     // Two lames: the upper one over the lower, the lower one hemmed in gilt.
-    const lowerTop = add3(top, scale3(down, 0.42 * L));
-    const lowerEdge: [number, number][] = [[0.5, 0.56], [0.58, 0.3], [0.6, 0], [0.58, -0.3], [0.5, -0.56]];
-    const lower = plate(lowerTop, down, tangent, Polygon.fromPoints([{ x: 0, y: -W / 2 }, { x: 0, y: W / 2 }, ...lowerEdge.map(([x, y]) => ({ x: x * L, y: y * W }))]), 0.7 * k);
-    o.add(lower, metal);
-    const upper = plate(add3(top, scale3(out, 0.35 * k)), down, tangent, Polygon.fromPoints([
-      { x: 0, y: -W * 0.48 }, { x: 0, y: W * 0.48 }, { x: 0.5 * L, y: W * 0.52 }, { x: 0.5 * L, y: -W * 0.52 },
-    ]), 0.7 * k);
-    o.add(upper, metal, facing ? { on: lower } : {});
+    const lowerTop = add3(top, scale3(down, 0.45 * L));
+    const lowerEdge: [number, number][] = [[0.5, 0.56], [0.56, 0.32], [0.58, 0], [0.56, -0.32], [0.5, -0.56]];
+    const lower = plate(lowerTop, down, tangent, Polygon.fromPoints([{ x: 0, y: -W / 2 }, { x: 0, y: W / 2 }, ...lowerEdge.map(([x, y]) => ({ x: x * L, y: y * W }))]), 0.6 * k);
+    o.add(lower, metal, near);
+    const upper = plate(add3(top, scale3(out, 0.3 * k)), down, tangent, Polygon.fromPoints([
+      { x: 0, y: -W * 0.46 }, { x: 0, y: W * 0.46 }, { x: 0.52 * L, y: W * 0.52 }, { x: 0.52 * L, y: -W * 0.52 },
+    ]), 0.6 * k);
+    // Resting on the skirt like the lower lame, added after it, so it laps over it without rising
+    // over a cuirass that rests on the skirt too (`on` the lower lame would lift it over everything there).
+    o.add(upper, metal, near);
     if (facing) {
-      const hem = lowerEdge.map(([x, y]) => add3(lowerTop, add3(scale3(down, x * L), add3(scale3(tangent, y * W), scale3(out, 0.75 * k)))));
-      o.add(new Tube(hem, 0.7 * k), trim, { on: lower });
+      const hem = lowerEdge.map(([x, y]) => add3(lowerTop, add3(scale3(down, x * L), add3(scale3(tangent, y * W), scale3(out, 0.65 * k)))));
+      o.add(new Tube(hem, 0.55 * k), trim, { on: lower });
     }
     first ??= lower;
   }
@@ -354,33 +403,60 @@ export const tassets: Part<TassetsOptions> = (ctx, { length = 12, back = true })
 
 /** Options of `plateGreave`. */
 export interface PlateGreaveOptions {
-  /** A round cop over the knee. Default true. */
+  /** A small cop over the front of the knee. Default true. */
   kneeCop?: boolean;
 }
 
 /**
- * A plate greave fitted to the flesh leg: a steel shell down the shin from under the knee to the
- * ankle, a gilded band round its top, and a knee cop. Pair it with a `boot` for the foot.
- * Slot: `shin` (side -1 left, 1 right). Roles: `metal`, `trim` (optional: the band). Returns the shin plate.
+ * A plate greave fitted to the flesh leg: a slim steel shell down the shin from under the knee to
+ * the ankle, swelling over the calf and narrowing to the ankle, and a small cop over the front of
+ * the knee, plain steel with no band round the top (from above a band reads as a ring round the
+ * knee). Pair it with a `boot` for the foot; over `leggings` it rests on them (`on: '<leggings id>'`).
+ * Slot: `shin` (side -1 left, 1 right). Roles: `metal`. Returns the shin plate.
  */
 export const plateGreave: Part<PlateGreaveOptions> = (ctx, { kneeCop = true }) => {
-  const { object: o, pose, kit, at, materials } = ctx;
-  const cam = kit.camera;
+  const { object: o, pose, at, materials, host } = ctx;
   const k = scaleOf(ctx);
+  const on = host ? { on: host } : {};
   const [, knee, ankle] = pose.chains[legOf(ctx, at.side).name];
   const metal = role(materials, 'metal');
-  const trim = gilt(materials);
-  const shin = along([knee, ankle], [0.14, 0.45, 0.8, 0.97]);
-  const shell = Round.loft(ringsAlong(shin, [[3.15 * k, 3.35 * k], [2.95 * k, 3.1 * k], [2.55 * k, 2.7 * k], [2.4 * k, 2.55 * k]], pose.frame.forward));
+  const shin = along([knee, ankle], [0.12, 0.36, 0.7, 0.97]);
+  const shell = Round.loft(ringsAlong(shin, [[2.05 * k, 2.2 * k], [2.3 * k, 2.45 * k], [1.75 * k, 1.85 * k], [1.6 * k, 1.7 * k]], pose.frame.forward));
   // The bias keeps the plate over the leg it encloses and the boot's shaft under it.
-  o.add(shell, metal, { bias: 13 * k });
-  const ring = partFrame(shin[0], sub3(ankle, knee), pose.frame.forward);
-  const band = visibleArc(cam, shin[0], ring.right, ring.up, 3.25 * k, 3.45 * k);
-  if (band.length > 1) o.add(new Tube(band, 0.75 * k), trim, { on: shell });
+  o.add(shell, metal, { bias: 13 * k, ...on });
   if (kneeCop) {
-    const copFrame = partFrame(add3(knee, pose.frame.dir(1.1 * k, 0, 0.2 * k)), pose.frame.forward);
-    const cop = Round.ellipsoid(copFrame, 2.4 * k, 2.9 * k, 2.7 * k);
-    o.add(cop, metal, { bias: 13 * k });
+    const copFrame = partFrame(add3(knee, pose.frame.dir(1.75 * k, 0, 0.35 * k)), pose.frame.forward);
+    const cop = Round.ellipsoid(copFrame, 0.8 * k, 1.45 * k, 1.4 * k);
+    o.add(cop, metal, { bias: 14 * k, ...on });
   }
+  return shell;
+};
+
+// ----------------------------------------------------------------------------------------------
+// Plate vambraces
+// ----------------------------------------------------------------------------------------------
+
+/**
+ * A plate vambrace: a steel shell round the forearm from below the elbow to the wrist, tapering
+ * from the forearm's swell to the wrist and flaring a little there, with a gilded line along its
+ * wrist edge. Wear it over a sleeve (or the bare arm), resting on it (`on: '<sleeve id>'`), and pair
+ * it with a `glove`; a shield can rest on it.
+ * Slot: `forearm` (side -1 left, 1 right). Roles: `metal`, `trim` (optional: the wrist edge). Returns the shell.
+ */
+export const plateVambrace: Part<NoOptions> = ctx => {
+  const { object: o, pose, kit, at, materials, host } = ctx;
+  const cam = kit.camera;
+  const k = scaleOf(ctx);
+  const [, el, ha] = pose.chains[armOf(ctx, at.side).name];
+  const metal = role(materials, 'metal');
+  const trim = gilt(materials);
+  // Rounded off at the elbow end, so the shell reads as a fitted plate and not a cut pipe.
+  const fore = along([el, ha], [0.24, 0.3, 0.55, 0.82, 0.97]);
+  const shell = Round.loft(ringsAlong(fore, [[1.3 * k, 1.25 * k], [1.72 * k, 1.64 * k], [1.62 * k, 1.55 * k], [1.38 * k, 1.32 * k], [1.6 * k, 1.5 * k]], UP));
+  // The bias keeps the plate over the sleeve it encloses.
+  o.add(shell, metal, { bias: 4 * k, ...(host ? { on: host } : {}) });
+  const ring = partFrame(fore[4], sub3(ha, el), UP);
+  const band = visibleArc(cam, fore[4], ring.right, ring.up, 1.65 * k, 1.55 * k);
+  if (band.length > 1) o.add(new Tube(band, 0.45 * k), trim, { on: shell });
   return shell;
 };
