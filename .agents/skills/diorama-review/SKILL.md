@@ -81,9 +81,9 @@ The `diorama-volume` skill lists the readability checks (silhouette, value contr
 
 Each project page has four tabs:
 
-- **Assets.** Every exported sheet, filterable by kind (characters, items, scenery, props, effects, icons, interface) with a Details window that plays animations, and a banner when a source is newer than its export.
+- **Assets.** Every exported sheet, filterable by kind (characters, gear, scenery, props, effects, icons, interface) with a Details window that plays animations, and a banner when a source is newer than its export.
 - **Playground.** Characters and props play from their exported atlases. WASD moves, Shift runs, 1 to 9 trigger the character's actions in order, H is a hit, K a death and R resets. Effects start at their sockets on the clip's events, and a chosen scene becomes the world: the character slides along walls, stops at shut doors, and E uses the nearest door, lever or chest. The toolbar has a time scale (1×, ¼×, ⅒×, Pause) to read frames and events; a badge shows when it is not 1×. A chosen scene opens fitted (Fit: all of it in view), and the HUD, "Now playing", names the strides (`step:<leg>`) only with the toolbar's "Step events" on.
-- **Customize.** The gear kit's customizer: dress a character by slot, swap and remove pieces, undo, and save the outfit as a new character (`new-outfit-character`).
+- **Customize.** The gear kit's customizer: dress a character by slot, swap and take off gear, undo, and save the outfit as a new character (`new-outfit-character`).
 - **Scenery.** The scene painter for the project's scenery kit: floors, walls, fences, doors, props and scale figures, with the navigation overlay, saved as scenes (`new-scene`).
 
 Leave the server running while you work. Stop it with Ctrl+C when you are done.

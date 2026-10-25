@@ -112,6 +112,7 @@ export function stepPlayer(actor: Actor, input: { dx: number; dy: number; run: b
 }
 
 export interface HudInfo {
+  /** The character's label ("Ossuary Guard"), the name every surface shows; a sprite's clip key. */
   character: string;
   clip: string;
   kind: string;
@@ -136,7 +137,7 @@ export function hudOf(actor: Actor, moving: boolean, stepEvents: boolean): Omit<
   const state = actor.held ? 'hold' : actor.act ? 'action' : moving ? 'moving' : 'idle';
   const last = stepEvents ? actor.lastEvent : (lastNotStep.get(actor) ?? null);
   return {
-    character: actor.character?.name ?? clip.key,
+    character: actor.character?.label ?? clip.key,
     clip: clip.key,
     kind: clip.kind,
     state,

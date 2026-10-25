@@ -3,7 +3,7 @@ import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, 
 import { Field, FieldLabel } from '@/components/ui/field';
 import { Kbd } from '@/components/ui/kbd';
 import { useT } from '@/i18n';
-import { coverClip } from '@/lib/playground/catalog';
+import { coverClip, findsCharacter } from '@/lib/playground/catalog';
 import type { Character } from '@/lib/playground/library';
 
 interface Props {
@@ -14,7 +14,7 @@ interface Props {
 
 const coverOf = (c: Character) => coverClip(c).asset;
 
-/** Searchable by name and folder; [ and ] step through the list without opening it. */
+/** Each character by its label, with its folder under it; searchable by label, folder and id. [ and ] step through the list without opening it. */
 export function PlayerPicker({ characters, player, onPlayer }: Props) {
   const { t, plural } = useT();
   return (
@@ -33,8 +33,10 @@ export function PlayerPicker({ characters, player, onPlayer }: Props) {
           // Hand the keyboard back to the scene: WASD and Space would otherwise type into the search.
           document.getElementById('playground-player')?.blur();
         }}
-        itemToStringValue={(character) => `${character.folder} ${character.name}`}
-        itemToStringLabel={(character) => character.name}
+        // Base UI searches the label alone unless it is given a filter: this one also searches the folder and the id.
+        filter={findsCharacter}
+        itemToStringValue={(character) => character.id}
+        itemToStringLabel={(character) => character.label}
       >
         <ComboboxInput id="playground-player" placeholder={t('playground.player.search')} />
         <ComboboxContent>
@@ -46,7 +48,7 @@ export function PlayerPicker({ characters, player, onPlayer }: Props) {
                   <AssetThumb asset={coverOf(character)} />
                 </div>
                 <div className="flex min-w-0 flex-col">
-                  <span className="truncate font-medium">{character.name}</span>
+                  <span className="truncate font-medium">{character.label}</span>
                   <span className="truncate text-muted-foreground">
                     {character.folder} · {plural('assets.card.animations', character.clips.length)}
                   </span>

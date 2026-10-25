@@ -38,12 +38,13 @@ interface CatalogProject {
 interface CatalogAsset {
   project: string;
   subpath: string;
-  atlasInfo: { role: string | null } | null;
+  /** `character` is the clip's manifest, its id and the name people read (null for older atlases without one). */
+  atlasInfo: { role: string | null; character?: { name: string; label: string } | null } | null;
 }
 
 const CHARACTER_SHEET = /^characters\/([^/]+)\/[^/]+\.png$/;
 
-/** The projects that have exported characters, and their character folders in the catalog's order. */
+/** The projects that have exported characters, and their character folders in the catalog's order, each with its label. */
 async function readCatalog(): Promise<BenchProject[] | null> {
   try {
     const [projects, assets] = await Promise.all(['/__api/projects', '/__api/assets'].map(async (url) => {
@@ -51,12 +52,17 @@ async function readCatalog(): Promise<BenchProject[] | null> {
       if (!response.ok) throw new Error(`${url}: ${response.status}`);
       return response.json() as Promise<unknown>;
     })) as [CatalogProject[], CatalogAsset[]];
-    const byProject = new Map<string, Set<string>>();
+    const byProject = new Map<string, Map<string, string>>();
     for (const asset of assets) {
       const id = CHARACTER_SHEET.exec(asset.subpath)?.[1];
-      if (id && asset.atlasInfo?.role === 'character') (byProject.get(asset.project) ?? byProject.set(asset.project, new Set()).get(asset.project)!).add(id);
+      if (!id || asset.atlasInfo?.role !== 'character') continue;
+      const characters = byProject.get(asset.project) ?? byProject.set(asset.project, new Map()).get(asset.project)!;
+      if (!characters.has(id) || asset.atlasInfo.character) characters.set(id, asset.atlasInfo.character?.label ?? id);
     }
-    return projects.flatMap(({ name }) => (byProject.has(name) ? [{ name, characters: [...byProject.get(name)!] }] : []));
+    return projects.flatMap(({ name }) => {
+      const characters = byProject.get(name);
+      return characters ? [{ name, characters: [...characters].map(([id, label]) => ({ id, label })) }] : [];
+    });
   } catch {
     return null;
   }
@@ -72,14 +78,14 @@ document.documentElement.lang = lang;
 const catalog = await readCatalog();
 const projectName = query.get('project') ?? 'soulkeeper';
 const project = catalog?.find((p) => p.name === projectName) ?? null;
-const character = query.get('character') ?? project?.characters[0] ?? null;
+const character = query.get('character') ?? project?.characters[0]?.id ?? null;
 renderFooter(footer, lang, catalog ?? [], project, character);
 
 if (!catalog) {
   showNothing([], { kind: 'catalog' });
 } else if (!project) {
   showNothing(catalog, { kind: 'project', name: projectName });
-} else if (character === null || !project.characters.includes(character)) {
+} else if (character === null || !project.characters.some((c) => c.id === character)) {
   showNothing(catalog, { kind: 'character', id: character ?? '', project });
 } else {
   const game: Phaser.Game = new Phaser.Game(withDiorama({

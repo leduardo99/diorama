@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Rich, useT } from '@/i18n';
-import { isTyping, useWindowKeydown } from '@/lib/hotkeys';
+import { historyCommand, isTyping, useWindowKeydown } from '@/lib/hotkeys';
 import { useRefreshGearItems } from '@/lib/mutations';
 import { kitQuery, type GearKit } from '@/lib/outfit/catalog';
 import { projectsQuery } from '@/lib/queries';
@@ -71,7 +71,7 @@ function Customizer({ project, kit, character }: { project: string; kit: GearKit
   const i18n = useT();
   const { t, plural } = i18n;
   const { outfit, edit, reset, changed, undo, redo, canUndo, canRedo } = useDraft(`${project}:${character.id}`, character.outfit);
-  const refreshItems = useRefreshGearItems();
+  const refreshGear = useRefreshGearItems();
   // The outfit by place on the body (swap a piece in one click), or the flat list of pieces in drawing order.
   const [mode, setMode] = usePref<string>('customize.mode', 'slots');
   const [basics, setBasics] = usePref<boolean>('customize.basics', false);
@@ -80,15 +80,11 @@ function Customizer({ project, kit, character }: { project: string; kit: GearKit
 
   useWindowKeydown((e) => {
     if (isTyping(e.target) || document.querySelector('[role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"]')) return;
-    const key = e.key.toLowerCase();
-    if ((e.metaKey || e.ctrlKey) && key === 'z') {
-      e.preventDefault();
-      if (e.shiftKey) redo();
-      else undo();
-    } else if (e.ctrlKey && key === 'y') {
-      e.preventDefault();
-      redo();
-    }
+    const step = historyCommand(e);
+    if (!step) return;
+    e.preventDefault();
+    if (step === 'redo') redo();
+    else undo();
   });
 
   return (
@@ -101,7 +97,13 @@ function Customizer({ project, kit, character }: { project: string; kit: GearKit
               <SelectTrigger id="customize-character" className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectGroup>
-                  {kit.characters.map((c) => <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>)}
+                  {/* The kit's label with its id, in the list and in the trigger; typing picks by the label. */}
+                  {kit.characters.map((c) => (
+                    <SelectItem key={c.id} value={c.id} textValue={c.label}>
+                      {c.label}
+                      <span className="text-muted-foreground">{c.id}</span>
+                    </SelectItem>
+                  ))}
                 </SelectGroup>
               </SelectContent>
             </Select>
@@ -132,9 +134,9 @@ function Customizer({ project, kit, character }: { project: string; kit: GearKit
                 <TabsTrigger value="list">{t('customize.modeList')}</TabsTrigger>
               </TabsList>
             </Tabs>
-            <Button variant="ghost" size="xs" disabled={refreshItems.isPending} onClick={() => refreshItems.mutate({ project })} title={t('customize.updateItemsHint')}>
-              {refreshItems.isPending ? <Spinner data-icon="inline-start" /> : <RefreshCwIcon data-icon="inline-start" />}
-              {t('customize.updateItems')}
+            <Button variant="ghost" size="xs" disabled={refreshGear.isPending} onClick={() => refreshGear.mutate({ project })} title={t('customize.updateGearHint')}>
+              {refreshGear.isPending ? <Spinner data-icon="inline-start" /> : <RefreshCwIcon data-icon="inline-start" />}
+              {t('customize.updateGear')}
             </Button>
           </div>
         </div>

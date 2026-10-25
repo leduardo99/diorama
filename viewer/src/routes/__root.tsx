@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { assetsQuery, projectsQuery } from '@/lib/queries';
-import { isTyping, useWindowKeydown } from '@/lib/hotkeys';
+import { APP_KEYS, isModalOpen, isTyping, useWindowKeydown } from '@/lib/hotkeys';
 import { Rich, useT } from '@/i18n';
 import { AppHeader } from '@/components/app-header';
 import { NewModal } from '@/modals/new-modal';
@@ -46,12 +46,14 @@ function NotFound() {
 
 function Shell() {
   useWindowKeydown((e) => {
-    if (e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target)) return;
-    if (document.querySelector('[role="dialog"], [role="alertdialog"]')) return;
-    if (e.key === 'n' || e.key === 'N') {
+    // A modal dialog or an open menu keeps the keys; a popover does not (the Playground's and the painter's selection
+    // popovers stay open while the page is used), so N and ? still work over one.
+    if (e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target) || isModalOpen()) return;
+    const key = e.key.toLowerCase();
+    if (key === APP_KEYS.newThing) {
       e.preventDefault();
       void NiceModal.show(NewModal, {});
-    } else if (e.key === '?') {
+    } else if (key === APP_KEYS.help) {
       e.preventDefault();
       void NiceModal.show(ShortcutsModal);
     }

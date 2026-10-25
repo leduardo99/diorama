@@ -41,6 +41,11 @@ export interface AtlasInfo {
   rarity: { id: string; label: string; color: string } | null;
   /** An item icon: how many fit in one inventory slot. */
   stack: number | null;
+  /**
+   * A character's sheet: its manifest's id and the name people read (`meta.data.character`), the label falling back to the
+   * id for atlases exported before labels; null for any other sheet (a gear sheet names its wearer as text, not a manifest).
+   */
+  character: { name: string; label: string } | null;
 }
 
 export interface AssetFileMeta {
@@ -99,6 +104,13 @@ async function readPngSize(file: string): Promise<{ width: number; height: numbe
 
 const text = (value: unknown): string | null => (typeof value === 'string' && value !== '' ? value : null);
 
+/** The character a sheet is a clip of, from its manifest: a gear sheet's `character` is its wearer's id as text, not one. */
+function characterOf(meta: Record<string, any>): AtlasInfo['character'] {
+  const manifest = meta.data?.character;
+  const name = manifest !== null && typeof manifest === 'object' ? text(manifest.name) : null;
+  return name === null ? null : { name, label: text(manifest.label) ?? name };
+}
+
 /**
  * How many directions a sheet's rows face. An interface piece's rows are its states (normal, hover...), a wall or fence in
  * several heights has a row per height (`data.rows: 'heights'`) and a scenery clip sheet says the facing and the variant of
@@ -138,6 +150,7 @@ async function readAtlasInfo(file: string, key: string): Promise<AtlasInfo | nul
         kind: text(meta.data?.effect?.kind) ?? text(meta.data?.item?.kind) ?? (meta.data?.role === 'ui' ? text(meta.data?.kind) : null),
         rarity: meta.data?.item && text(meta.data.item.rarity) ? { id: String(meta.data.item.rarity), label: text(meta.data.item.rarityLabel) ?? String(meta.data.item.rarity), color: text(meta.data.item.rarityColor) ?? '#9ca3af' } : null,
         stack: typeof meta.data?.item?.stack === 'number' ? meta.data.item.stack : null,
+        character: characterOf(meta),
       };
     }
   } catch {

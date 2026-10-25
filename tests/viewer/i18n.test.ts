@@ -216,6 +216,8 @@ const GLOSSARY: Array<{ en: string[]; pt: string[]; not: string[]; except?: stri
   // "fit" the verb ("an add-on that only fit the swapped piece") is not the zoom.
   { en: ['fit'], pt: ['ajustar'], not: ['fit'], except: ['customize.board.droppedAddOns.one', 'customize.board.droppedAddOns.other'] },
   { en: ['add-on', 'add-ons'], pt: ['complemento', 'complementos'], not: ['add-on', 'add-ons'] },
+  // Gear stays Gear ("o gear"), never "equipamento".
+  { en: ['gear'], pt: ['gear'], not: ['equipamento', 'equipamentos'] },
 ];
 assert.ok(wordsOf('Slot ocupado por {name}').has('slot') && !wordsOf('Vestir {slot}').has('slot') && wordsOf('Pivô / bordas do frame').has('frame') && wordsOf('{count} add-ons.').has('add-ons'), 'the word splitter');
 // Sheet stays sheet, never "folha", and is masculine ("o sheet", "os sheets"); export as a noun is "o export", "os exports".
@@ -237,5 +239,22 @@ for (const [key, text] of en) {
   if (words.has('exportação') || words.has('exportações')) glossaryProblems.push(`${key}: export as a noun is "o export", "os exports": ${JSON.stringify(said)}`);
 }
 assert.deepEqual(glossaryProblems, [], `Portuguese says each term one way (the GLOSSARY in this section)\n${glossaryProblems.join('\n')}`);
+
+// 9. Gear is called Gear, in both languages (#53): the Assets type and its badge, the kit, its toasts, the Slots board and
+//    its picker never call it items, parts or pieces. Item icons stay items, scenery pieces and the List tab's outfit pieces
+//    (gear and body parts together) stay pieces, and the body parts (customize.board.bodyNote) are parts.
+const GEAR_KEY = /^(roles\.\w+\.gear|assets\.card\.gear|toasts\.gear\w*|details\.icon\.gearPart|customize\.(noKit\.\w+|updateGear\w*|picker\.\w+|board\.(?!bodyNote\b)\w+))(\.|$)/;
+const gearKeys = [...en.keys()].filter((key) => GEAR_KEY.test(key));
+assert.ok(gearKeys.length > 30 && gearKeys.includes('toasts.gearExported.other') && !gearKeys.includes('customize.board.bodyNote'), `the gear strings (${gearKeys.length})`);
+const OTHER_NAMES = { en: ['item', 'items', 'part', 'parts', 'piece', 'pieces'], pt: ['item', 'itens', 'peça', 'peças', 'parte', 'partes', 'equipamento', 'equipamentos'] };
+const misnamed = gearKeys.flatMap((key) => (['en', 'pt'] as const).flatMap((lang) => {
+  const said = (lang === 'en' ? en : pt).get(key)!;
+  const word = OTHER_NAMES[lang].find((name) => wordsOf(said).has(name));
+  return word ? [`${key} (${lang}): "${word}" in ${JSON.stringify(said)}`] : [];
+}));
+assert.deepEqual(misnamed, [], `gear is called gear\n${misnamed.join('\n')}`);
+assert.deepEqual(['roles.filter.gear', 'roles.badge.gear', 'assets.card.gear', 'customize.picker.gear'].flatMap((key) => [english.t(key), portuguese.t(key)]), Array(8).fill('Gear'));
+// The picker's headings agree with "gear", masculine in Portuguese.
+assert.deepEqual([portuguese.t('customize.picker.similar'), portuguese.t('customize.picker.others')], ['Parecidos', 'Outros']);
 
 console.log(`✅ i18n checks passed (${en.size} strings in each language, ${scanned} texts of the code scanned)`);

@@ -62,7 +62,7 @@ function AssetCard({ asset, active, position, onOpen }: CardProps & { asset: Ass
         description={dirname(asset.subpath) || '—'}
         menu={<AssetMenuButton asset={asset} onDetails={onOpen} />}
       >
-        {role === 'gear' && <Badge variant="secondary">{detail ?? t('assets.card.item')}</Badge>}
+        {role === 'gear' && <Badge variant="secondary">{detail ?? t('assets.card.gear')}</Badge>}
         {(role === 'vfx' || role === 'ui') && detail && <Badge variant="secondary">{detail}</Badge>}
         {role === 'icon' && <ItemBadges asset={asset} />}
         {asset.engine && <EngineBadge engine={asset.engine} />}
@@ -90,7 +90,8 @@ function GroupCard({ group, active, position, onOpen }: CardProps & { group: Ass
         thumb={<GroupThumb clips={group.assets} hovering={hovered} />}
         flag={staleClips > 0 ? <StaleBadge count={staleClips} /> : null}
         title={group.name}
-        description={dirname(group.folder) || '—'}
+        // A character is named by its label, with its folder (its id among the exports) under it.
+        description={group.character ? group.folder : dirname(group.folder) || '—'}
         menu={<GroupMenuButton group={group} onOpen={onOpen} />}
       >
         {first.engine && <EngineBadge engine={first.engine} />}

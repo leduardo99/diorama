@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { buildRows, listEntries, matches, pushRecent, RECENT_LIMIT, sceneToPlay, type Entry } from '../../viewer/src/lib/playground/catalog';
+import { buildRows, entrySubtitle, findsCharacter, listEntries, matches, pushRecent, RECENT_LIMIT, sceneToPlay, type Entry } from '../../viewer/src/lib/playground/catalog';
+import { createTranslator } from '../../viewer/src/i18n/core';
 import { shownFrame, type Atlas, type CharacterManifest } from '@diorama/runtime';
 import { advance, currentFrame, hudOf, isStep, newActor, reset, startClip, stepPlayer, type ClipEvent } from '../../viewer/src/lib/playground/actor';
 import { socketPoint, spawnFromEvent, stepEffects, type Effect } from '../../viewer/src/lib/playground/effects';
@@ -88,12 +89,28 @@ const library = buildLibrary(assets, withManifest);
 assert.equal(library.characters.length, 1);
 const mage = library.characters[0];
 assert.equal(mage.name, 'mage');
+assert.equal(mage.label, 'mage', 'a manifest without a label (exported before labels) is named by its id');
 assert.equal(mage.idle?.key, 'idle');
 assert.deepEqual(mage.locomotion.map((c) => c.key), ['walk', 'run']);
 assert.deepEqual(mage.actions.map((c) => c.key), ['slash', 'howl', 'dodge'], 'bound by the runtime (its rules: tests/runtime/library.test.ts)');
 assert.deepEqual([mage.locomotion[1].groundSpeed, mage.locomotion[1].scale], [80, 2], 'groundSpeed is in world units (logical px): the view multiplies it by scale');
 assert.deepEqual(mage.actions[0].travel?.slice(0, 3), [0, 2, 4], 'travel is in world units too');
 assert.deepEqual([mage.actions[0].asset.subpath, mage.actions[0].asset.url, mage.actions[0].asset.path], ['characters/mage/slash.png', '/characters/mage/slash.png', 'characters/mage/slash'], 'a clip keeps the asset it was read from, and the runtime\'s path');
+
+// A character is named by its label, the name people read, with its folder (what a game loads it by) under it, in the
+// palette as in the Control picker; it is found by its label, its folder and its id, and the HUD and the popover say the label.
+const labelled = buildLibrary(assets, new Map(specs.map((c) => [`characters/mage/${c.key}.png`, sheet(c, { ...manifest, name: 'battle-mage', label: 'Battle Mage' })])));
+const [battleMage] = labelled.characters;
+const [mageEntry] = listEntries(labelled);
+assert.deepEqual([mageEntry.name, mageEntry.detail], ['Battle Mage', { type: 'character', clips: 8, id: 'characters/mage' }]);
+assert.equal(entrySubtitle(mageEntry.detail, createTranslator('en')), 'characters/mage · 8 animations');
+assert.equal(entrySubtitle(mageEntry.detail, createTranslator('pt-BR')), 'characters/mage · 8 animações');
+assert.ok(['battle', 'characters/mage', 'battle-mage', 'MAGE characters'].every((query) => matches(mageEntry, query)), 'found by label, folder and id');
+assert.ok(!matches(mageEntry, 'wolf'));
+// The Control picker's own search (Base UI would search the label alone) finds the same queries.
+assert.ok(['battle', 'characters/mage', 'battle-mage', 'MAGE characters'].every((query) => findsCharacter(battleMage, query)), 'the picker finds by label, folder and id');
+assert.ok(!findsCharacter(battleMage, 'wolf') && findsCharacter(battleMage, ''));
+assert.equal(hudOf(newActor(1, battleMage.idle!, 0, 0, battleMage), false, false).character, 'Battle Mage');
 
 // A gear item names its wearer as text (`character: 'guard'`): it is an object to place, not a character, and not a crash.
 const gearAtlas = (() => { const a = sheet({ key: 'helm', action: 'idle', clipKind: 'idle', frames: 1 }); a.meta.data = { role: 'gear', part: 'helm', label: 'Elmo', group: 'head', character: 'guard' }; return a; })();

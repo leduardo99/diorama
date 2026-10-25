@@ -71,9 +71,10 @@ export const assetColumns = helper.columns([
     sortFn: byText((a) => a.subpath),
     // Every word of the query must appear somewhere in "project/path".
     filterFn: (row, _columnId, query: string) => {
-      // A gear item is also found by its label and group (its id, as the kit writes it).
-      const { label, group } = row.original.atlasInfo ?? {};
-      const haystack = `${row.original.project}/${row.original.subpath} ${label ?? ''} ${group ?? ''}`.toLowerCase();
+      // A gear sheet is also found by its label and group (its id, as the kit writes it), a character's clip by its
+      // character's label and id ("Ravenlight", "ossuary-guard").
+      const { label, group, character } = row.original.atlasInfo ?? {};
+      const haystack = `${row.original.project}/${row.original.subpath} ${label ?? ''} ${group ?? ''} ${character?.label ?? ''} ${character?.name ?? ''}`.toLowerCase();
       return query.toLowerCase().split(/\s+/).filter(Boolean).every((word) => haystack.includes(word));
     },
     cell: ({ row }) => (

@@ -5,6 +5,7 @@ import { MapPinIcon } from 'lucide-react';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
 import { Rich, useT } from '@/i18n';
 import { isTyping } from '@/lib/hotkeys';
+import { isPainterKey } from '@/lib/scenery/keys';
 import {
   anchorFor, doorAt, edgeInside, edgeOf, fill, inside, isDoor, pickAt, pieceOf, placeDoor, placeProp, sameEdge, toggleFigure, wallsOnBorders, withLayers,
   type Cell, type Edge, type EraseLayer, type Layer, type Picked, type Selection,
@@ -361,11 +362,11 @@ export const SceneCanvas = memo(function SceneCanvas(props: Props) {
       box.current?.setAttribute('data-space', String(on));
     };
     const down = (e: KeyboardEvent) => {
-      if (e.key !== ' ' || e.repeat || isTyping(e.target)) return;
+      if (!isPainterKey('pan', e.key) || e.repeat || isTyping(e.target)) return;
       e.preventDefault();
       hold(true);
     };
-    const up = (e: KeyboardEvent) => e.key === ' ' && hold(false);
+    const up = (e: KeyboardEvent) => isPainterKey('pan', e.key) && hold(false);
     const lost = () => hold(false);
     window.addEventListener('keydown', down);
     window.addEventListener('keyup', up);

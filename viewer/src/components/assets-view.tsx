@@ -9,7 +9,7 @@ import { assetsRoute } from '@/lib/routes';
 import { useT } from '@/i18n';
 import { dirname } from '@/lib/format';
 import { pendingExports } from '@/lib/export-state';
-import { entryCover, entryKey, groupAnimations, type AssetEntry } from '@/lib/groups';
+import { entryCover, entryKey, entryOf, groupAnimations, type AssetEntry } from '@/lib/groups';
 import { usePref } from '@/lib/use-pref';
 import { useAssetTable } from '@/lib/use-asset-table';
 import { useEntrySelection } from '@/lib/use-asset-selection';
@@ -85,7 +85,8 @@ export function AssetsView() {
     },
   });
   const open = (asset: AssetFileMeta) => {
-    setActiveKey(asGrid ? (entries.map(entryKey).find((k) => k === asset.subpath || k === `group:${dirname(asset.subpath)}`) ?? asset.subpath) : asset.subpath);
+    const entry = asGrid ? entryOf(entries, asset) : undefined;
+    setActiveKey(entry ? entryKey(entry) : asset.subpath);
     openDetails(asset);
   };
 
