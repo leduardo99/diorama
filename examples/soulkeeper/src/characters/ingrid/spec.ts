@@ -13,10 +13,10 @@
  * `center`; `tip` (the spear's point) comes from the spear the outfit holds. `thrust` and
  * `soulspear` are made for a polearm (`wields`).
  *
- * Cell 208 x 224, pivot (104, 148), Malvek's: the spear is 108 long and stands to about 106 at rest;
- * the thrust carries its point about 80 ahead of her and its butt 50 behind, the death lays it on the
- * floor beside her, and the spread wings span about 60. The pivot is the centre of the footprint, the
- * same in every clip.
+ * Cell 208 x 224, pivot (104, 148), Malvek's: the spear is 108 long and stands to about 104 at rest;
+ * the thrust draws its butt about 54 behind her and carries its point about 86 ahead, Soul Spear raises
+ * its head to about 133 on the draw, the death lays it on the floor beside her, and the spread wings
+ * span about 90. The pivot is the centre of the footprint, the same in every clip.
  */
 
 import { alpha } from '@core/draw';

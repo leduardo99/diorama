@@ -4,7 +4,8 @@
  * bracers, tassets over an olive skirt, plate greaves over boots — a crimson cape, the round shield
  * on her left forearm, a spear in her right hand, and spirit wings of soul fire folded on her back.
  * Her face is warm golden-brown with arched brows, a lash line and a calm half-smile at rest (the
- * flesh head's `smile`, `arch` and `lashes`).
+ * flesh head's `smile`, `arch` and `lashes`), turned a little to the camera in the 3/4 views (`turn`),
+ * so both eyes read there.
  *
  * It is `OutfitData` like the guard's (`../guard/outfit.ts`): part ids and material names of the
  * catalog, so the viewer's customizer edits exactly what the game exports. `character.ts` draws it
@@ -28,8 +29,9 @@ export const OUTFIT: OutfitData = {
   base: 'flesh-legs',
   // Which theme material plays each role of the gear kit for Ingrid: warm golden-brown skin and
   // near-black hair, polished steel plate with brass edges, an olive skirt (`moss`) under the tassets,
-  // a crimson cape with a lighter edge, leather boots, the shield's painted planks and the spear's
-  // shaft, the kit's pale blade for the spear's head, and the soul fire for the wings.
+  // a crimson cape with a lighter edge, leather boots, dark wood for the shield's painted planks and
+  // the spear's shaft (darker than her skin, so the shaft never merges with the forearm beside it),
+  // the kit's pale blade for the spear's head, and the soul fire for the wings.
   materials: {
     skin: 'skinWarm',
     hair: 'hair',
@@ -40,7 +42,7 @@ export const OUTFIT: OutfitData = {
     cloak: 'sash',
     clothAccent: 'sashLit',
     leather: 'leather',
-    wood: 'shield',
+    wood: 'wood',
     blade: 'blade',
     glow: 'soul',
   },
@@ -64,7 +66,7 @@ export const OUTFIT: OutfitData = {
     { part: 'flesh-hand', slot: 'hand', side: -1 },
     { part: 'flesh-hand', slot: 'hand', side: 1 },
     { part: 'round-shield', slot: 'forearm', side: -1, on: 'armL', options: { radius: 7.6 } },
-    { part: 'flesh-head', slot: 'head', id: 'head', options: { smile: 0.5, arch: 0.7, lashes: true } },
+    { part: 'flesh-head', slot: 'head', id: 'head', options: { smile: 0.5, arch: 0.7, lashes: true, turn: 0.4 } },
     { part: 'hair-waves', slot: 'head', on: 'head', id: 'hair' },
     { part: 'winged-helm', slot: 'head', on: 'hair' },
     { part: 'spear', slot: 'hand', side: 1, id: 'spear' },

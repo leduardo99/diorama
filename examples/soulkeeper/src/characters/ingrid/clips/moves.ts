@@ -10,10 +10,11 @@
  */
 
 import { defineClip, idle, locomotion, type Clip, type Drive, type SkeletonSpec } from '@core/rig';
-import { SPEAR_REST_YAW } from '../../../gear';
 import { holdArms } from '../hold';
 
 const TAU = Math.PI * 2;
+/** In the walk the spear leans forward more than out, its head carried ahead of her. */
+const WALK_YAW = 0.6;
 
 /** 1.6 s at 16 frames (10 fps): a slow breath, the shield hand drifting once, the spear steady. */
 export function ingridIdle(skeleton: SkeletonSpec, seconds = 1.6): Clip {
@@ -42,7 +43,7 @@ export function ingridLocomotion(skeleton: SkeletonSpec, gait: 'walk' | 'run'): 
         run ? [6 + 4 * swingR, -2, 2] : [1.6 * swingR, 0, 5],
         run ? [4 + 5 * swingL, 2, 3 + 0.8 * Math.abs(swingL)] : [2.4 * swingL, 0, 0.6],
       );
-      return { ...d, arms, extra: run ? { weaponYaw: -0.3, weaponPitch: 0.42 } : { weaponYaw: SPEAR_REST_YAW, weaponPitch: 1.25 } };
+      return { ...d, arms, extra: run ? { weaponYaw: -0.3, weaponPitch: 0.42 } : { weaponYaw: WALK_YAW, weaponPitch: 1.22 } };
     },
   });
 }

@@ -1,7 +1,7 @@
 /**
  * How Ingrid stands holding what she holds: the shared pose of every clip's arms. The right hand
  * grips the spear at her side, at the height where its butt just rests on the floor and the shaft
- * stands upright; the left forearm carries the round shield a little forward of the hip. Both are
+ * stands nearly upright (`SPEAR_REST`); the left forearm carries the round shield a little forward of the hip. Both are
  * hand targets in the creature's frame (forward, right, up), solved by IK; a clip moves them with
  * `holdArms` (they follow the chest, so a lean or a breath carries the hands along) and adds its own
  * offsets. Measures are for `humanoid(1.18)` (the shoulders are about 10.6 out and 66.7 up).
@@ -9,8 +9,12 @@
 
 import type { ArmDrive, Drive, Local } from '@core/rig';
 
-/** Right hand on the spear, left hand under the shield, at rest. */
-export const HAND_R: Local = [4, 13.5, 44];
+/**
+ * Right hand on the spear, left hand under the shield, at rest. The spear hand sits forward and out
+ * of the shoulder, so the shaft and the head stand clear of the face and the helm in the profiles
+ * and the 3/4 views instead of crossing them.
+ */
+export const HAND_R: Local = [6.5, 16.5, 44];
 export const HAND_L: Local = [6, -12.5, 45];
 /** Where the elbows point: down, a little out and back, so the upper arms hang. */
 export const ELBOW_R: Local = [-0.4, 0.4, -1];

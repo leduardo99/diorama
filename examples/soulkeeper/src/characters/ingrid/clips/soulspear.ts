@@ -72,8 +72,11 @@ export function soulspear(skeleton: SkeletonSpec, seconds = 1): Clip {
         },
         extra: {
           wings: track(u, [[0, 0.08], [U(1), 0.3], [U(4), 1], [b.hold, 1], [U(12), 0.55], [U(14), 0.15], [1, 0.08]]),
-          weaponYaw: B(SPEAR_REST_YAW, 0.05, -0.1, -0.06),
-          weaponPitch: B(SPEAR_REST_PITCH, 0.62, -0.12, -0.02),
+          // Raised steep over the shoulder and turned a little out on the draw: a spear aimed forward
+          // and up points along the view from the front and vanishes there, so it stands nearly
+          // upright, its head well above the hand in every facing; still a little out on the drive.
+          weaponYaw: B(SPEAR_REST_YAW, 0.35, 0.25, 0.18),
+          weaponPitch: B(SPEAR_REST_PITCH, 1.3, -0.06, 0.02),
           brow: B(0, 0.5, -0.7, -0.4),
           mouth: B(0, 0.15, 0.7, 0.3),
         },
