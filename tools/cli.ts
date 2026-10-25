@@ -36,12 +36,13 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, dirname, extname, join, relative, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { deflateSync, inflateSync } from 'node:zlib';
 import pc from 'picocolors';
 import { FIRST_PIECE, KIT_KINDS, kitFiles, readKitTheme, type KitKind, type KitTheme } from './kits.js';
+import { serverOn } from './dev-server.js';
 import { checkLayout, type LayoutReport } from './layout.js';
 import { lintProject, type LintIssue } from './lint.js';
 import { GENERATED_SHEETS, LAYOUT, REVIEW, availableProjects, findProject, generatedHeader, listProjects, listSheets, walkFiles, type ProjectRef } from './project.js';
@@ -607,32 +608,6 @@ function check(positionals: string[], flags: Record<string, string | true>): voi
 // game
 // ---------------------------------------------------------------------------
 
-/** A folder's real path, links followed (the folder itself when it cannot be read). */
-const realDir = (dir: string) => {
-  try {
-    return realpathSync(dir);
-  } catch {
-    return resolve(dir);
-  }
-};
-
-/**
- * What answers on a port: nothing; this repository's dev server (npm run view, `npm run game`), which says so at
- * /__api/server (vite.config.ts) with the folder it serves; the dev server of another checkout of Diorama; or some other
- * program.
- */
-async function serverOn(port: number): Promise<{ kind: 'none' | 'ours' | 'other' } | { kind: 'diorama'; root: string }> {
-  let response: Response;
-  try {
-    response = await fetch(`http://localhost:${port}/__api/server`, { headers: { accept: 'application/json' }, signal: AbortSignal.timeout(2000) });
-  } catch {
-    // Nothing answers (or nothing that speaks HTTP: then the dev server cannot take the port, and says so).
-    return { kind: 'none' };
-  }
-  const body = (await response.json().catch(() => null)) as { app?: unknown; root?: unknown } | null;
-  if (!response.ok || body?.app !== 'diorama' || typeof body.root !== 'string') return { kind: 'other' };
-  return realDir(body.root) === realDir(ROOT) ? { kind: 'ours' } : { kind: 'diorama', root: body.root };
-}
 
 /** Serves a project's game/ (rule 8) with the viewer's dev server, which resolves @diorama/phaser and serves assets/ next to it. */
 async function game(positionals: string[], flags: Record<string, string | true>): Promise<void> {
