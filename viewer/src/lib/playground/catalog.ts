@@ -7,8 +7,11 @@ import type { Armed, Character, Library } from './library';
 export type EntryKind = 'character' | 'animated' | 'still';
 export type KindFilter = 'all' | 'character' | 'object';
 
-/** What an entry says under its name, as numbers: `entrySubtitle` turns it into words in the language of the screen. */
-export type EntryDetail = { type: 'character'; clips: number } | { type: 'sprite'; frames: number; facings: number };
+/**
+ * What an entry says under its name, as numbers: `entrySubtitle` turns it into words in the language of the screen. A
+ * character's `id` is its folder (`characters/guard`), what the runtime and a game load it by.
+ */
+export type EntryDetail = { type: 'character'; clips: number; id: string } | { type: 'sprite'; frames: number; facings: number };
 
 export interface Entry {
   key: string;
@@ -29,9 +32,9 @@ export type Row =
 /** The group of an entry at the top of the project, which the list names in the language of the screen. */
 export const ROOT = '';
 
-/** "3 animations", "8 frames · 8 directions": the line under an entry's name. */
+/** "characters/guard · 3 animations", "8 frames · 8 directions": the line under an entry's name. */
 export function entrySubtitle(detail: EntryDetail, { plural, t }: Pick<Translator, 'plural' | 't'>): string {
-  if (detail.type === 'character') return plural('assets.card.animations', detail.clips);
+  if (detail.type === 'character') return `${detail.id} · ${plural('assets.card.animations', detail.clips)}`;
   return [detail.frames > 1 ? plural('playground.entry.frames', detail.frames) : t('playground.entry.still'), detail.facings > 1 ? t('playground.entry.directions', { count: detail.facings }) : ''].filter(Boolean).join(' · ');
 }
 
@@ -48,9 +51,9 @@ export function listEntries(library: Library): Entry[] {
     return {
       key: `character:${character.id}`,
       kind: 'character',
-      name: character.name,
+      name: character.label,
       group: dirname(character.folder) || ROOT,
-      detail: { type: 'character', clips: character.clips.length },
+      detail: { type: 'character', clips: character.clips.length, id: character.folder },
       cover: first.asset,
       armed: { key: `character:${character.id}`, type: 'character', character },
     };
@@ -71,11 +74,21 @@ export function listEntries(library: Library): Entry[] {
   return [...characters, ...sprites];
 }
 
-/** Every word of the query must appear in "group/name". */
-export function matches(entry: Entry, query: string): boolean {
-  const haystack = `${entry.group}/${entry.name}`.toLowerCase();
+/** Every word of the query appears somewhere in the text, in any order, ignoring case. */
+function hasEveryWord(text: string, query: string): boolean {
+  const haystack = text.toLowerCase();
   return query.toLowerCase().split(/\s+/).filter(Boolean).every((word) => haystack.includes(word));
 }
+
+/** Every word of the query must appear in "group/name", or for a character in its folder or id ("characters/guard", "ossuary-guard"). */
+export function matches(entry: Entry, query: string): boolean {
+  const character = entry.armed.type === 'character' ? ` ${entry.armed.character.folder} ${entry.armed.character.name}` : '';
+  return hasEveryWord(`${entry.group}/${entry.name}${character}`, query);
+}
+
+/** The Control picker's search: every word of the query in the character's label, folder or id ("Ravenlight", "characters/guard", "ossuary-guard"). */
+export const findsCharacter = (character: Pick<Character, 'label' | 'folder' | 'name'>, query: string): boolean =>
+  hasEveryWord(`${character.label} ${character.folder} ${character.name}`, query);
 
 const inFilter = (entry: Entry, filter: KindFilter) =>
   filter === 'all' || (filter === 'character' ? entry.kind === 'character' : entry.kind !== 'character');

@@ -4,14 +4,12 @@
  * language: the viewer remembers its header's choice under `diorama.lang` in this browser, on the same origin.
  */
 
-import { readable } from './bench.js';
-
 export type Lang = 'en' | 'pt-BR';
 
-/** A project of the catalog that has characters, and their ids (`assets/characters/<id>/`). */
+/** A project of the catalog that has characters: their ids (`assets/characters/<id>/`) and labels, the names people read. */
 export interface BenchProject {
   name: string;
-  characters: string[];
+  characters: { id: string; label: string }[];
 }
 
 const WORDS = {
@@ -72,15 +70,17 @@ function projectLinks(projects: BenchProject[], current: string | null, label: s
   return nav;
 }
 
-/** Links to the project's characters, the one playing marked as the page's own. */
+/** Links to the project's characters by their labels, each with its id (the `?character=` key) as a tooltip, the one playing marked as the page's own. */
 function characterLinks(project: BenchProject, current: string | null, label: string): HTMLElement {
   const nav = document.createElement('nav');
   nav.className = 'links';
   nav.setAttribute('aria-label', label);
-  for (const id of project.characters) {
+  for (const character of project.characters) {
+    const { id } = character;
     const link = document.createElement('a');
     link.href = hrefWith(project.name, id);
-    link.textContent = readable(id);
+    link.textContent = character.label;
+    link.title = id;
     if (id === current) link.setAttribute('aria-current', 'page');
     nav.append(link);
   }

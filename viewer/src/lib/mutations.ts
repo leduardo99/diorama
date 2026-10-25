@@ -206,7 +206,7 @@ export function useRefreshGearItems() {
   const { t, plural } = useT();
   return useMutation({
     mutationFn: async ({ project }: { project: string }) => {
-      const toastId = toast.loading(t('toasts.itemsUpdating'));
+      const toastId = toast.loading(t('toasts.gearUpdating'));
       try {
         const created = await api.cli({ command: 'gear-items', project });
         if (!created.ok) throw new Error(created.output);
@@ -216,15 +216,15 @@ export function useRefreshGearItems() {
         const pending = pendingExports(assets, meta && { ...meta, pendingSheets: meta.pendingSheets.filter((s) => s.startsWith(GEAR_ITEMS)) });
         const count = pending.stale.length + pending.missing.length;
         if (count === 0) {
-          toast.success(t('toasts.itemsUpToDate'), { id: toastId, description: plural('toasts.itemsExported', assets.length) });
+          toast.success(t('toasts.gearUpToDate'), { id: toastId, description: plural('toasts.gearExported', assets.length) });
           return;
         }
-        toast.loading(t('toasts.itemsExporting'), { id: toastId, description: plural('toasts.itemsChanged', count) });
+        toast.loading(t('toasts.gearExporting'), { id: toastId, description: plural('toasts.gearChanged', count) });
         const exported = await api.cli({ command: 'export', project, subpath: GEAR_ITEMS });
         if (!exported.ok) throw new Error(exportFailureText(exported.output, t('toasts.fixTypeErrors')));
-        toast.success(t('toasts.itemsUpdated'), { id: toastId, description: plural('toasts.itemsExported', count) });
+        toast.success(t('toasts.gearUpdated'), { id: toastId, description: plural('toasts.gearExported', count) });
       } catch (error) {
-        toast.error(t('toasts.itemsUpdateFailed'), { id: toastId, description: error instanceof Error ? error.message : String(error) });
+        toast.error(t('toasts.gearUpdateFailed'), { id: toastId, description: error instanceof Error ? error.message : String(error) });
       }
     },
     onSettled: refresh,

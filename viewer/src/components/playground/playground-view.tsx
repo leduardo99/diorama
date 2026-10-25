@@ -14,6 +14,7 @@ import { DEFAULT_ZOOM, fitZoom, type Zoom } from '@/lib/playground/view';
 import { Rich, useT } from '@/i18n';
 import { projectUrl } from '@/lib/project-paths';
 import { isModalOpen, isTyping, useWindowKeydown } from '@/lib/hotkeys';
+import { isKey } from '@/lib/playground/keys';
 import { useSheetImages } from '@/lib/playground/use-sheet-images';
 import { usePref } from '@/lib/use-pref';
 import type { Atlas } from '@/lib/atlas';
@@ -116,13 +117,13 @@ export function PlaygroundView() {
 
   useWindowKeydown((e) => {
     if (e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target) || isModalOpen()) return;
-    if (e.key === 'Escape' && armed) {
+    if (isKey('escape', e.key) && armed) {
       setArmed(null);
-    } else if ((e.key === '[' || e.key === ']') && library.characters.length > 1) {
+    } else if (isKey('switchCharacter', e.key) && library.characters.length > 1) {
       const at = library.characters.findIndex((c) => c.id === player?.id);
       const next = library.characters[(at + (e.key === ']' ? 1 : -1) + library.characters.length) % library.characters.length];
       setPlayerId(next.id);
-    } else if (e.key === '/') {
+    } else if (isKey('search', e.key)) {
       e.preventDefault();
       document.getElementById('playground-search')?.focus();
     }

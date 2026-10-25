@@ -22,13 +22,20 @@ export const isRoleId = (value: string): value is RoleId => (roleIds as readonly
 export const assetTitle = (asset: AssetFileMeta) => asset.atlasInfo?.label ?? basename(stripExtension(asset.subpath));
 
 /**
- * The name the Details window carries. A character's clip is titled by its character, not by the clip: for now the folder
- * its clips live in ("captain" for characters/captain/idle.png), as its group card is. Anything else carries its own title,
- * its label or else its file name, even a scenery piece whose folder holds other animated sheets.
+ * The name people read for a character's sheet, the one every surface shows ("Ossuary Guard"): its manifest's label, or its
+ * id for an atlas exported before labels. Null for any other sheet.
+ */
+export const characterLabel = (asset: AssetFileMeta): string | null => asset.atlasInfo?.character?.label ?? null;
+
+/**
+ * The name the Details window carries. A character's clip is titled by its character, not by the clip: its label
+ * (`characterLabel`), as its group card is, or for an older sheet without a manifest the folder its clips live in
+ * ("captain" for characters/captain/idle.png). Anything else carries its own title, its label or else its file name, even a
+ * scenery piece whose folder holds other animated sheets.
  */
 export function detailsTitle(asset: AssetFileMeta): string {
   const folder = dirname(asset.subpath);
-  return roleOf(asset) === 'character' && folder ? basename(folder) : assetTitle(asset);
+  return characterLabel(asset) ?? (roleOf(asset) === 'character' && folder ? basename(folder) : assetTitle(asset));
 }
 
 /** The group of a gear item ("Head"), or null for anything else. */
