@@ -37,6 +37,11 @@ export interface WingedHelmOptions {
   wingSize?: number;
   /** A raised ridge over the crown, front to back. Default true. */
   ridge?: boolean;
+  /**
+   * How far the rim rides up the forehead (0 just over the brows .. 1 high on the brow, a strip of
+   * forehead showing under it). The dome rises with it, so the helm still sits on the hair. Default 0.
+   */
+  rise?: number;
 }
 
 /** The dome as [height along its axis, half-length forward, half-width], from the rim up. */
@@ -51,15 +56,16 @@ const DOME_TILT = 0.32;
 
 /**
  * A winged helm: a rounded steel dome whose rim rides high over the brow and low over the nape, so
- * the whole face reads under it and the hair falls out from under it at the sides and the back; a
- * gilded band round the rim, a raised ridge over the crown, and a wing at each temple — four steel
- * feathers swept back from the temple and fanned up, so they slant back in profile and open out
- * from the front, the leading one edged in gilt, from a gilded boss.
+ * the whole face reads under it (`rise` lifts it further, baring a strip of forehead) and the hair
+ * falls out from under it at the sides and the back; a gilded band round the rim, a raised ridge
+ * over the crown, and a wing at each temple — four steel feathers swept back from the temple and
+ * fanned up, so they slant back in profile and open out from the front, the leading one edged in
+ * gilt, from a gilded boss.
  * Rests on the hair (`on: '<hair id>'`) or the head: it is drawn over the hair it covers. The far
  * wing sorts by depth, so it hides behind the dome.
  * Slot: `head`. Roles: `metal`, `trim` (optional: the band, the bosses and the leading feathers' edge).
  */
-export const wingedHelm: Part<WingedHelmOptions> = (ctx, { size = 1, wings = true, wingSize = 1, ridge = true }) => {
+export const wingedHelm: Part<WingedHelmOptions> = (ctx, { size = 1, wings = true, wingSize = 1, ridge = true, rise = 0 }) => {
   const { object: o, kit, materials, host } = ctx;
   const { head } = headFrame(ctx);
   const cam = kit.camera;
@@ -71,7 +77,7 @@ export const wingedHelm: Part<WingedHelmOptions> = (ctx, { size = 1, wings = tru
   const lift = { bias: 3.5 * k, ...(host ? { on: host } : {}) };
   const axisUp = norm3(add3(scale3(head.up, Math.cos(DOME_TILT)), scale3(head.forward, -Math.sin(DOME_TILT))));
   const axisFwd = norm3(add3(scale3(head.forward, Math.cos(DOME_TILT)), scale3(head.up, Math.sin(DOME_TILT))));
-  const frame = partFrame(head.at(-0.9 * k, 0, 2.9 * k), axisFwd, axisUp);
+  const frame = partFrame(head.at(-0.9 * k, 0, (2.9 + 1.6 * rise) * k), axisFwd, axisUp);
   const dome = Round.loft(DOME.map(([h, rx, ry]) => ({ center: frame.at(0, 0, h * k), rx: rx * k, ry: ry * k, axes: [frame.forward, frame.right] as [Vec3, Vec3] })));
   o.add(dome, metal, lift);
   // The band round the rim: the half that faces the camera.

@@ -20,12 +20,15 @@
  * and squints; once the body lies (`lie`, or `extra.dead` raised by a death) the eyes close and the
  * mouth slackens; in an idle clip (`clip.kind === 'idle'`) the eyes blink once a loop. The head's
  * own options set the resting face a channel moves from: a `smile`, arched brows (`arch`) and a
- * lash line (`lashes`).
+ * lash line (`lashes`); others set how the face is made, for a face that must read at a few
+ * pixels: small eyes without whites, thin brows, a soft nose, no ears, an oval jaw (see
+ * `FleshHeadOptions`).
  *
  * Materials by role:
  * - `skin`: the living body (head, neck, torso, arms, hands, legs, feet);
  * - `hair`: brows and the hair parts (no hair part: the brows only);
- * - `hollow`: the mouth's inside, the eyes' dark.
+ * - `hollow`: the mouth's inside, the eyes' dark;
+ * - `lips` (optional): the closed mouth, a band of the lips' tone instead of a dark line.
  */
 
 import { Polygon } from '@core/draw';
@@ -72,7 +75,10 @@ const quad = (a: { x: number; y: number }, b: { x: number; y: number }, width: n
   ];
 };
 
-/** Options of `fleshHead`: the resting face, which the expression channels move from. */
+/**
+ * Options of `fleshHead`: the resting face, which the expression channels move from, and how the
+ * face is made. Every default keeps the plain face.
+ */
 export interface FleshHeadOptions {
   /** A resting smile: the mouth's corners lift (0 a straight line .. 1 a clear smile). Default 0. */
   smile?: number;
@@ -87,7 +93,41 @@ export interface FleshHeadOptions {
    * 3/4 silhouette. Default 0.
    */
   turn?: number;
+  /**
+   * Size of the eyes against the default (1). The brows come down and shorten with smaller eyes, so
+   * the gap over each eye stays. Default 1.
+   */
+  eyeSize?: number;
+  /** How far apart the eyes and the brows over them sit, against the default (1). Default 1. */
+  eyeSpacing?: number;
+  /** The whites of the eyes. Off, each eye is its dark alone with no crease over it, which reads cleaner at a few pixels. Default true. */
+  whites?: boolean;
+  /** Thickness of the brows against the default (1). Default 1. */
+  browWidth?: number;
+  /**
+   * How the nose is drawn: `'line'`, an outlined bump with a dark shadow under it, or `'soft'`, the
+   * bump's own shading with a small shadow of the skin on its unlit side and no line. Default 'line'.
+   */
+  nose?: 'line' | 'soft';
+  /** Width of the mouth against the default (1). Default 1. */
+  mouthWidth?: number;
+  /** The ears. Off for hair worn over them. Default true. */
+  ears?: boolean;
+  /** An oval face: the jaw narrows and the chin drops (0 the round default .. 1 a long oval). Default 0. */
+  oval?: number;
 }
+
+/** A mouth line in a decal's 2D space: `w` half-wide, its middle `lift` below the corners, `thick` at the middle, thinning to the corners. */
+const mouthLine = (w: number, lift: number, thick: number, k: number) => {
+  const n = 7;
+  const at = (i: number) => {
+    const u = (i / (n - 1)) * 2 - 1;
+    return { x: u * w, c: lift * (0.35 - u * u), t: thick * (1 - 0.6 * u * u) };
+  };
+  const top = Array.from({ length: n }, (_, i) => at(i)).map(p => ({ x: p.x * k, y: (p.c - p.t / 2) * k }));
+  const bottom = Array.from({ length: n }, (_, i) => at(n - 1 - i)).map(p => ({ x: p.x * k, y: (p.c + p.t / 2) * k }));
+  return Polygon.fromPoints([...top, ...bottom]);
+};
 
 /**
  * A living head: cranium, jaw and ears as one mass, a neck down to the collar, and a face — two
@@ -96,12 +136,18 @@ export interface FleshHeadOptions {
  * dominates (through the 3/4 facings, so a facing never shows more than two eyes), and only near
  * the profile facings does the turned side carry its single eye, brow and mouth edge. The brows
  * take the `hair` role, so they match whatever the hair parts wear.
- * Slot: `head`. Roles: `skin`, `hair`, `hollow`. Channels: `extra.brow`, `extra.mouth`,
- * `extra.eyes` (plus `extra.hurt` and `extra.dead`, which the face reads on its own).
- * Options (`FleshHeadOptions`): `smile`, `arch`, `lashes`, the resting face, and `turn`, how far the
- * face turns to the camera in the 3/4 views; at their defaults the face is the plain one.
+ * Slot: `head`. Roles: `skin`, `hair`, `hollow`, and `lips` (optional: the closed mouth's tone;
+ * without it the mouth is the hollow's dark). Channels: `extra.brow`, `extra.mouth`, `extra.eyes`
+ * (plus `extra.hurt` and `extra.dead`, which the face reads on its own).
+ * Options (`FleshHeadOptions`): `smile`, `arch`, `lashes`, the resting face; `turn`, how far the
+ * face turns to the camera in the 3/4 views; and the face's make, for a face that must read at a
+ * few pixels: `eyeSize`, `eyeSpacing`, `whites`, `browWidth`, `nose`, `mouthWidth`, `ears` and
+ * `oval`. At their defaults the face is the plain one.
  */
-export const fleshHead: Part<FleshHeadOptions> = (ctx, { smile = 0, arch = 0, lashes = false, turn = 0 } = {}) => {
+export const fleshHead: Part<FleshHeadOptions> = (
+  ctx,
+  { smile = 0, arch = 0, lashes = false, turn = 0, eyeSize = 1, eyeSpacing = 1, whites = true, browWidth = 1, nose = 'line', mouthWidth = 1, ears = true, oval = 0 } = {},
+) => {
   const { object: o, pose, kit, materials } = ctx;
   const { head, faceFwd, up, lie } = headFrame(ctx);
   const k = scaleOf(ctx);
@@ -109,6 +155,12 @@ export const fleshHead: Part<FleshHeadOptions> = (ctx, { smile = 0, arch = 0, la
   const tone = skin.ramp;
   const hair = role(materials, 'hair');
   const hollow = tones(materials, 'hollow');
+  // The closed mouth's tone: the lips when the outfit gives them, else the hollow's dark.
+  const lips = materials.lips?.ramp;
+  const lipTone = lips ? lips.base : hollow.dark;
+  // The closed mouth's thickness: a thin dark line, or the fuller band of the lips' tone (a band as
+  // thin as the line would fade into the skin).
+  const rest = lips ? 0.75 : 0.22;
 
   // The expression channels, with the face's own reactions on top (see the file's doc).
   const hurt = pose.extra.hurt ?? 0;
@@ -121,6 +173,13 @@ export const fleshHead: Part<FleshHeadOptions> = (ctx, { smile = 0, arch = 0, la
   const furrow = Math.max(0, -brow);
   // A smile fades as the face hurts or goes slack.
   const grin = clamp01(smile) * (1 - hurt) * (1 - dead);
+  // The face's make: eye size and spacing, and how far the brows come down with smaller eyes.
+  const es = eyeSize;
+  const ey = 1.75 * eyeSpacing;
+  const lower = (1 - es) * 1.3;
+  const chin = clamp01(oval);
+  // A longer face carries its mouth a little lower.
+  const mouthZ = (-2.4 - 0.5 * chin) * k;
 
   // Which side of the head turns to the camera. The marks draw only on the face they belong to:
   // the front while the face dominates or ties (S through the 3/4 facings, so a facing never shows
@@ -139,70 +198,82 @@ export const fleshHead: Part<FleshHeadOptions> = (ctx, { smile = 0, arch = 0, la
     face = partFrame(head.origin, norm3(add3(scale3(head.forward, Math.cos(swing)), scale3(head.right, Math.sin(swing)))), head.up);
   }
 
-  // Cranium and the jaw/cheek mass under it, merged so the head reads as one volume.
+  // Cranium and the jaw/cheek mass under it, merged so the head reads as one volume. An oval face
+  // narrows the head and the jaw more, and drops the chin, so the cheeks taper to it.
+  const narrow = 0.6 * chin;
   const skull = new Blob([
-    Round.ellipsoid(head.moved(-0.4 * k, 0, 0.7 * k), 4.6 * k, 4.25 * k, 4.55 * k),
-    Round.ellipsoid(partFrame(head.at(2.3 * k, 0, -2.7 * k), faceFwd, up), 2.9 * k, 3.3 * k, 2.3 * k),
+    Round.ellipsoid(head.moved(-0.4 * k, 0, 0.7 * k), 4.6 * k, (4.25 - narrow) * k, 4.55 * k),
+    Round.ellipsoid(partFrame(head.at(2.3 * k, 0, (-2.7 - 1.4 * chin) * k), faceFwd, up), 2.9 * k, (3.3 - 0.7 * chin) * k, (2.3 + 0.8 * chin) * k),
   ]);
   o.add(skull, skin);
   // Ears stay on the head's sides in every facing; the ear on the far side hides once the head
   // turns enough for it to read as a stray oval instead of an ear.
-  for (const s of [-1, 1]) if (s * aside > -0.4) o.add(Round.ellipsoid(head.moved(-0.6 * k, s * 4.05 * k, -0.9 * k), 0.8 * k, 0.45 * k, 0.95 * k), skin, { on: skull });
+  if (ears) for (const s of [-1, 1]) if (s * aside > -0.4) o.add(Round.ellipsoid(head.moved(-0.6 * k, s * (4.05 - narrow) * k, -0.9 * k), 0.8 * k, 0.45 * k, 0.95 * k), skin, { on: skull });
   // The nose reads in profile: a small bump on the face's front. Only while the face carries
-  // marks — at rear facings it would poke out of the silhouette as a stray lump.
-  if (frontOn || sideOn !== 0) o.add(Round.ellipsoid(partFrame(face.at(4.1 * k, 0, -1 * k), face === head ? faceFwd : face.forward, up), 0.55 * k, 0.5 * k, 0.7 * k), skin, { on: skull });
+  // marks — at rear facings it would poke out of the silhouette as a stray lump. A soft nose has no
+  // line of its own: at a few pixels the line round the bump reads as a dark dot.
+  const soft = nose === 'soft';
+  const noseBump = frontOn || sideOn !== 0 ? Round.ellipsoid(partFrame(face.at(4.1 * k, 0, -1 * k), face === head ? faceFwd : face.forward, up), 0.55 * k, 0.5 * k, 0.7 * k) : undefined;
+  if (noseBump) o.add(noseBump, soft ? { ...skin, stroke: undefined } : skin, { on: skull });
 
   if (frontOn) {
     for (const s of [-1, 1]) {
       // Eye: the white (skin's lightest tone), the iris, the upper lid's crease; the lid closes by
       // flattening the white and the iris until only the crease reads. The iris rests on the white:
-      // it sits a hair lower, so by depth alone the white would paint over it.
-      const white = Decal.onFace(face, 'front', vec3(3.95 * k, s * 1.75 * k, -0.15 * k), Polygon.ellipse(1.25 * k, (0.9 * eyes + 0.1) * k));
-      o.add(white, { fill: tone.lit }, { on: skull });
-      o.add(Decal.onFace(face, 'front', vec3(3.97 * k, s * 1.75 * k, -0.2 * k), Polygon.ellipse(0.7 * k, (0.74 * eyes + 0.06) * k)), { fill: hollow.dark }, { on: white });
+      // it sits a hair lower, so by depth alone the white would paint over it. Without whites the
+      // iris is the whole eye, with no crease over it (at a few pixels the crease and the iris merge
+      // into a closed eye's line); it closes to a thin dark line of its own.
+      const white = whites ? Decal.onFace(face, 'front', vec3(3.95 * k, s * ey * k, -0.15 * k), Polygon.ellipse(1.25 * es * k, (0.9 * eyes + 0.1) * es * k)) : undefined;
+      if (white) o.add(white, { fill: tone.lit }, { on: skull });
+      const iris = Polygon.ellipse(0.7 * es * k, (white ? 0.74 * eyes + 0.06 : 0.6 * eyes + 0.2) * es * k);
+      o.add(Decal.onFace(face, 'front', vec3(3.97 * k, s * ey * k, -0.2 * k), iris), { fill: hollow.dark }, { on: white ?? skull });
       if (lashes) {
         // The lash line rides the top of the white as the lid closes, over the upper lid only, and
         // flicks out at the outer corner, level, not up: a flick that climbs meets the brow's tail and
         // closes a ring round the eye in the 3/4 views (decal space: x runs towards the character's
         // left, so the outer corner is at -s).
-        const lid = -0.15 + (0.9 * eyes + 0.1) * 0.95;
+        const lid = -0.15 + (0.9 * eyes + 0.1) * 0.95 * es;
         const line = [
           { x: s * 1.05, y: 0.12 }, { x: s * 0.3, y: -0.1 }, { x: -s * 0.5, y: -0.08 }, { x: -s * 1.2, y: 0.02 }, { x: -s * 1.5, y: -0.1 },
           { x: -s * 1.15, y: 0.36 }, { x: -s * 0.45, y: 0.26 }, { x: s * 0.35, y: 0.24 }, { x: s * 1.05, y: 0.36 },
-        ].map(p => ({ x: p.x * k, y: p.y * k }));
-        o.add(Decal.onFace(face, 'front', vec3(3.97 * k, s * 1.75 * k, lid * k), Polygon.fromPoints(line)), { fill: hollow.dark }, { on: white });
-      } else {
-        o.add(Decal.onFace(face, 'front', vec3(3.95 * k, s * 1.75 * k, 0.78 * k), Polygon.rect(1.6 * k, 0.4 * k)), { fill: tone.dark }, { on: skull });
+        ].map(p => ({ x: p.x * es * k, y: p.y * es * k }));
+        o.add(Decal.onFace(face, 'front', vec3(3.97 * k, s * ey * k, lid * k), Polygon.fromPoints(line)), { fill: hollow.dark }, { on: white ?? skull });
+      } else if (white) {
+        o.add(Decal.onFace(face, 'front', vec3(3.95 * k, s * ey * k, (0.78 - (1 - es) * 0.93) * k), Polygon.rect(1.6 * es * k, 0.4 * es * k)), { fill: tone.dark }, { on: skull });
       }
       // Brow: a hair run over the eye, drawn on the face's plane (decal space: x runs towards the
       // character's left, y downwards); the inner end drops when the face furrows, lifts when it
       // raises. Arched, it rises to a peak over the eye and thins towards the temple, its tail kept
       // high and short of the eye's outer corner, so it never curls down round the eye.
-      const browAt = (side: number, up2: number) => ({ x: -s * side * k, y: -up2 * k });
-      const outer = 1.45 + 0.35 * raise;
-      const inner = 1.9 + 0.5 * raise - 0.95 * furrow;
+      const browAt = (side: number, up2: number) => ({ x: -s * (side + (side - 1.75) * (es - 1)) * eyeSpacing * k, y: -up2 * k });
+      const outer = 1.45 + 0.35 * raise - lower;
+      const inner = 1.9 + 0.5 * raise - 0.95 * furrow - lower;
       const run = arch > 0
-        ? strip([browAt(2.8, outer + 0.3 * arch), browAt(1.95, (outer + inner) / 2 + 0.75 * arch), browAt(0.75, inner + 0.1 * arch)], [0.5 * k, 0.8 * k, 0.78 * k])
-        : quad(browAt(2.9, outer), browAt(0.75, inner), 0.75 * k);
+        ? strip([browAt(2.8, outer + 0.3 * arch), browAt(1.95, (outer + inner) / 2 + 0.75 * arch), browAt(0.75, inner + 0.1 * arch)], [0.5 * browWidth * k, 0.8 * browWidth * k, 0.78 * browWidth * k])
+        : quad(browAt(2.9, outer), browAt(0.75, inner), 0.75 * browWidth * k);
       o.add(Decal.onFace(face, 'front', vec3(4.5 * k, 0, 0), Polygon.fromPoints(run)), { fill: hair.ramp.base }, { on: skull });
     }
     // Nose shadow and mouth on the face's front; the mouth is a thin line at rest that opens into an
-    // oval, and with a smile its corners lift into a soft crescent.
-    o.add(Decal.onFace(face, 'front', vec3(4.45 * k, 0, -1.45 * k), Polygon.triangle(1.2 * k, 1.3 * k)), { fill: tone.dark }, { on: skull });
-    if (grin > 0) {
-      const w = 1.15 + 0.4 * mouth + 0.15 * grin;
-      const lift = 0.55 * grin;
-      const thick = 0.22 + 0.75 * mouth;
-      const n = 7;
-      const at = (i: number) => {
-        const u = (i / (n - 1)) * 2 - 1;
-        return { x: u * w, c: lift * (0.35 - u * u), t: thick * (1 - 0.6 * u * u) };
-      };
-      const top = Array.from({ length: n }, (_, i) => at(i)).map(p => ({ x: p.x * k, y: (p.c - p.t / 2) * k }));
-      const bottom = Array.from({ length: n }, (_, i) => at(n - 1 - i)).map(p => ({ x: p.x * k, y: (p.c + p.t / 2) * k }));
-      o.add(Decal.onFace(face, 'front', vec3(5 * k, 0, -2.4 * k), Polygon.fromPoints([...top, ...bottom])), { fill: hollow.dark }, { on: skull });
+    // oval, and with a smile its corners lift into a soft crescent. A soft nose casts a small shadow
+    // of the skin on the side away from the light instead of the dark wedge under it.
+    if (soft) {
+      const away = dot3(kit.camera.lightDir, face.right) >= 0 ? 1 : -1;
+      o.add(Decal.onFace(face, 'front', vec3(4.5 * k, 0, -1.55 * k), Polygon.ellipse(0.55 * k, 0.3 * k).translate(away * 0.3 * k, 0)), { fill: tone.dark }, { on: noseBump ?? skull });
     } else {
-      o.add(Decal.onFace(face, 'front', vec3(5 * k, 0, -2.4 * k), Polygon.ellipse((1.15 + 0.4 * mouth) * k, (0.22 + 0.75 * mouth) * k)), { fill: hollow.dark }, { on: skull });
+      o.add(Decal.onFace(face, 'front', vec3(4.45 * k, 0, -1.45 * k), Polygon.triangle(1.2 * k, 1.3 * k)), { fill: tone.dark }, { on: skull });
+    }
+    if (grin > 0) {
+      const w = (1.15 + 0.4 * mouth + 0.15 * grin) * mouthWidth;
+      const lift = 0.55 * grin;
+      const thick = rest + 0.75 * mouth;
+      const lipLine = Decal.onFace(face, 'front', vec3(5 * k, 0, mouthZ), mouthLine(w, lift, thick, k));
+      o.add(lipLine, { fill: lipTone }, { on: skull });
+      // With lips, an open mouth shows its dark inside between them.
+      if (lips && mouth > 0) o.add(Decal.onFace(face, 'front', vec3(5.02 * k, 0, mouthZ), mouthLine(0.8 * w, lift, 0.7 * mouth, k)), { fill: hollow.dark }, { on: lipLine });
+    } else {
+      const lipLine = Decal.onFace(face, 'front', vec3(5 * k, 0, mouthZ), Polygon.ellipse((1.15 + 0.4 * mouth) * mouthWidth * k, (rest + 0.75 * mouth) * k));
+      o.add(lipLine, { fill: lipTone }, { on: skull });
+      if (lips && mouth > 0) o.add(Decal.onFace(face, 'front', vec3(5.02 * k, 0, mouthZ), Polygon.ellipse(0.8 * (1.15 + 0.4 * mouth) * mouthWidth * k, 0.7 * mouth * k)), { fill: hollow.dark }, { on: lipLine });
     }
   }
   if (sideOn) {
@@ -210,9 +281,9 @@ export const fleshHead: Part<FleshHeadOptions> = (ctx, { smile = 0, arch = 0, la
     // and the mouth's near corner (the nose's bump is a mass, and already reads).
     const side = sideOn > 0 ? 'right' : 'left';
     const y = sideOn * 4.25 * k;
-    o.add(Decal.onFace(head, side, vec3(2.9 * k, y, -0.05 * k), Polygon.ellipse(0.7 * k, (0.75 * eyes + 0.07) * k)), { fill: hollow.dark }, { on: skull });
-    o.add(Decal.onFace(head, side, vec3(2.85 * k, y, (1.55 + 0.35 * raise - 0.5 * furrow) * k), Polygon.rect(1.6 * k, 0.65 * k)), { fill: hair.ramp.base }, { on: skull });
-    o.add(Decal.onFace(head, side, vec3(4.1 * k, sideOn * 4.1 * k, -2.15 * k), Polygon.rect(1.1 * k, (0.22 + 0.45 * mouth) * k)), { fill: hollow.dark }, { on: skull });
+    o.add(Decal.onFace(head, side, vec3(2.9 * k, y, -0.05 * k), Polygon.ellipse(0.7 * es * k, (0.75 * eyes + 0.07) * es * k)), { fill: hollow.dark }, { on: skull });
+    o.add(Decal.onFace(head, side, vec3(2.85 * k, y, (1.55 + 0.35 * raise - 0.5 * furrow - lower) * k), Polygon.rect(1.6 * k, 0.65 * browWidth * k)), { fill: hair.ramp.base }, { on: skull });
+    o.add(Decal.onFace(head, side, vec3(4.1 * k, sideOn * 4.1 * k, -2.15 * k), Polygon.rect(1.1 * k, (rest + 0.45 * mouth) * k)), { fill: lipTone }, { on: skull });
   }
   return skull;
 };
@@ -304,20 +375,27 @@ export interface HairWavesOptions {
   length?: number;
   /** How far the hair stands out at the sides of the face (1 = full, 0.6 = close). Default 1. */
   volume?: number;
+  /**
+   * How high the fringe sweeps over the forehead (0 low, just over the brows .. 1 up and back to
+   * the temples, the forehead clear and the hair framing it). Default 0.
+   */
+  hairline?: number;
 }
 
 /**
  * Long wavy hair worn loose to the shoulders: a cap over the crown with a parting, a fringe that
  * sweeps from the parting across the forehead to the temples (above the brows, so they read), full
  * masses at the sides of the face that hide the ears, and waving locks that fall from under the
- * cap to the shoulders at the sides and down the nape at the back, each ending in a curl. A helm
- * can rest on it (give the helm `on: '<hair id>'`), and the locks then fall from under its rim.
+ * cap to the shoulders at the sides and down the nape at the back, each ending in a curl. A
+ * `hairline` sweeps the fringe up off the forehead and drops a lock from each temple past the side
+ * of the face, so the hair frames it. A helm can rest on it (give the helm `on: '<hair id>'`), and
+ * the locks then fall from under its rim.
  * The locks sort by their own depth, not `on` the head, so from the front they stay behind the
  * face and from behind they cover the nape; they shorten a little once the head lies.
  * Rests on the head (`on: '<head id>'`, `requires` the flesh head). Returns the cap.
  * Slot: `head`. Roles: `hair`.
  */
-export const hairWaves: Part<HairWavesOptions> = (ctx, { parting = 0.3, length = 1, volume = 1 }) => {
+export const hairWaves: Part<HairWavesOptions> = (ctx, { parting = 0.3, length = 1, volume = 1, hairline = 0 }) => {
   const { object: o, kit, materials, host } = ctx;
   const { head, lie } = headFrame(ctx);
   const k = scaleOf(ctx);
@@ -341,12 +419,20 @@ export const hairWaves: Part<HairWavesOptions> = (ctx, { parting = 0.3, length =
   // the short side to the near one, high enough to leave the brows clear.
   // A point on the skull's surface (the head's cranium ellipsoid), `lift` out from it.
   const onSkull = (y: number, z: number, lift: number) => H(-0.4 + 4.6 * Math.sqrt(Math.max(0, 1 - (y / 4.25) ** 2 - ((z - 0.7) / 4.55) ** 2)) + lift, y, z);
+  // A higher hairline lifts the sweep's middle most, so the fringe arcs from the parting out to the temples.
+  const hl = clamp01(hairline);
   const sweep = (to: number, reach: number) => {
     const t = Math.sign(to);
-    return new Tube([onSkull(py, 4.75, 0.35), onSkull(py + t * reach * 0.45, 4.05, 0.45), onSkull(t * 3, 3.35, 0.45), onSkull(t * 3.95, 1.9, 0.45)], { start: 1.2 * k, end: 0.55 * k });
+    return new Tube(
+      [onSkull(py, 4.75 + 0.5 * hl, 0.35), onSkull(py + t * reach * (0.45 + 0.2 * hl), 4.05 + 1.3 * hl, 0.45), onSkull(t * (3 + 0.6 * hl), 3.35 + 1 * hl, 0.45), onSkull(t * 3.95, 1.9 + 0.4 * hl, 0.45)],
+      { start: 1.2 * k, end: 0.55 * k },
+    );
   };
   o.add(sweep(py >= 0 ? -1 : 1, Math.abs(py) + 2.4), hair, on);
   o.add(sweep(py >= 0 ? 1 : -1, 3.2 - Math.abs(py)), hair, on);
+  // With the fringe swept up, a lock falls from each temple past the side of the face to the cheek,
+  // so the hair frames the forehead in an arch instead of ending in a straight edge.
+  if (hl > 0) for (const s of [-1, 1]) o.add(new Tube([H(2.6, s * 2.2, 3.5), H(2.1, s * 2.95, 2.3), H(0.8, s * 3.55, 0.6), H(0, s * 3.95, -1.6)], { start: 1.5 * hl * k, end: 0.6 * k }), hair, on);
   // A lock: a run that swings in and out as it falls, `amp` across, its end flipping out in a curl.
   const lock = (x: number, y: number, side: number, out: number, amp: number, width: number, phase = 0) => {
     const pts: Vec3[] = [];

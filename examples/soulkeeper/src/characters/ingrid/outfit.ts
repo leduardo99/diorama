@@ -3,9 +3,12 @@
  * `humanoid(1.18)`) in plate — a winged helm over long dark wavy hair, a cuirass, plate pauldrons,
  * bracers, tassets over an olive skirt, plate greaves over boots — a crimson cape, the round shield
  * on her left forearm, a spear in her right hand, and spirit wings of soul fire folded on her back.
- * Her face is warm golden-brown with arched brows, a lash line and a calm half-smile at rest (the
- * flesh head's `smile`, `arch` and `lashes`), turned a little to the camera in the 3/4 views (`turn`),
- * so both eyes read there.
+ * Her face is made to read at its real size, about 14 pixels across: an oval face of warm
+ * golden-brown (`oval`, no `ears` under the hair), small dark eyes without whites (`eyeSize`,
+ * `eyeSpacing`, `whites`), thin arched brows (`arch`, `browWidth`), a soft nose with no line
+ * (`nose`), rose lips in a calm half-smile (`smile`, `mouthWidth`, the `lips` role), turned a little
+ * to the camera in the 3/4 views (`turn`), so both eyes read there. The helm's rim rides up the
+ * forehead (`rise`) and the hair sweeps off it and frames the face from the temples (`hairline`).
  *
  * It is `OutfitData` like the guard's (`../guard/outfit.ts`): part ids and material names of the
  * catalog, so the viewer's customizer edits exactly what the game exports. `character.ts` draws it
@@ -20,7 +23,7 @@
  * skill (silhouette); secondary = the hair falling from under the helm, the cuirass, the pauldrons,
  * the tassets, the greaves, the folded wings; tertiary = the gilded edges (helm band, wing feathers,
  * neckline and waist, pauldron rims, tasset hems, greave bands, the spear's bands), the cuirass's
- * keel, the spear's lugs and ridge, the face (lash line, smile).
+ * keel, the spear's lugs and ridge, the face (brows, eyes, lips).
  */
 
 import type { OutfitData } from '@core/rig';
@@ -28,14 +31,16 @@ import type { OutfitData } from '@core/rig';
 export const OUTFIT: OutfitData = {
   base: 'flesh-legs',
   // Which theme material plays each role of the gear kit for Ingrid: warm golden-brown skin and
-  // near-black hair, polished steel plate with brass edges, an olive skirt (`moss`) under the tassets,
-  // a crimson cape with a lighter edge, leather boots, dark wood for the shield's painted planks and
-  // the spear's shaft (darker than her skin, so the shaft never merges with the forearm beside it),
-  // the kit's pale blade for the spear's head, and the soul fire for the wings.
+  // near-black hair, her eyes (`hollow`) in the hair's warm near-black rather than the ink of a
+  // skull's sockets, rose lips, polished steel plate with brass edges, an olive skirt (`moss`) under
+  // the tassets, a crimson cape with a lighter edge, leather boots, dark wood for the shield's painted
+  // planks and the spear's shaft (darker than her skin, so the shaft never merges with the forearm
+  // beside it), the kit's pale blade for the spear's head, and the soul fire for the wings.
   materials: {
     skin: 'skinWarm',
     hair: 'hair',
-    hollow: 'hollow',
+    hollow: 'hair',
+    lips: 'lips',
     metal: 'steel',
     trim: 'brass',
     cloth: 'moss',
@@ -66,9 +71,12 @@ export const OUTFIT: OutfitData = {
     { part: 'flesh-hand', slot: 'hand', side: -1 },
     { part: 'flesh-hand', slot: 'hand', side: 1 },
     { part: 'round-shield', slot: 'forearm', side: -1, on: 'armL', options: { radius: 7.6 } },
-    { part: 'flesh-head', slot: 'head', id: 'head', options: { smile: 0.5, arch: 0.7, lashes: true, turn: 0.4 } },
-    { part: 'hair-waves', slot: 'head', on: 'head', id: 'hair' },
-    { part: 'winged-helm', slot: 'head', on: 'hair' },
+    {
+      part: 'flesh-head', slot: 'head', id: 'head',
+      options: { smile: 0.8, arch: 0.7, lashes: false, turn: 0.4, eyeSize: 0.65, eyeSpacing: 0.8, whites: false, browWidth: 0.6, nose: 'soft', mouthWidth: 0.9, ears: false, oval: 1 },
+    },
+    { part: 'hair-waves', slot: 'head', on: 'head', id: 'hair', options: { hairline: 0.8, volume: 0.8 } },
+    { part: 'winged-helm', slot: 'head', on: 'hair', options: { rise: 0.35 } },
     { part: 'spear', slot: 'hand', side: 1, id: 'spear' },
   ],
 };

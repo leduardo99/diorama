@@ -35,14 +35,19 @@ export const PALETTES = {
   skinLit: '#e3bfa3',
   skin: '#b08d79',
   skinDark: '#5e443c',
-  // Warm golden-brown skin: a step deeper and warmer than `skin`, still muted for the dusk palette.
-  skinWarmLit: '#dcab82',
-  skinWarm: '#a2714f',
-  skinWarmDark: '#52342a',
+  // Warm golden-brown skin: deeper and warmer than `skin`, its shadow a warm brown, never grey.
+  skinWarmLit: '#e0a074',
+  skinWarm: '#c47f55',
+  skinWarmDark: '#8f553a',
+  // Lips: a muted rose-brown, between the warm skin's shadow and a red, so a closed mouth reads as
+  // lips, not a dark line.
+  lipsLit: '#b65e4a',
+  lips: '#963f33',
+  lipsDark: '#6a2a24',
   // Dark brown hair, almost black: a warm near-black with a lit step that still reads as brown.
-  hairLit: '#5a4034',
-  hair: '#2e211c',
-  hairDark: '#140e0c',
+  hairLit: '#3b2a20',
+  hair: '#231812',
+  hairDark: '#120b08',
   woodLit: '#715749',
   wood: '#47362e',
   woodDark: '#2a1f1b',
@@ -136,6 +141,7 @@ export const RAMPS = {
   flesh: { lit: PALETTES.fleshLit, base: PALETTES.flesh, dark: PALETTES.fleshDark },
   skin: { lit: PALETTES.skinLit, base: PALETTES.skin, dark: PALETTES.skinDark },
   skinWarm: { lit: PALETTES.skinWarmLit, base: PALETTES.skinWarm, dark: PALETTES.skinWarmDark },
+  lips: { lit: PALETTES.lipsLit, base: PALETTES.lips, dark: PALETTES.lipsDark },
   hair: { lit: PALETTES.hairLit, base: PALETTES.hair, dark: PALETTES.hairDark },
   wood: { lit: PALETTES.woodLit, base: PALETTES.wood, dark: PALETTES.woodDark },
   iron: { lit: PALETTES.ironLit, base: PALETTES.iron, dark: PALETTES.ironDark },
@@ -283,8 +289,11 @@ export const VOLUMES = {
   flesh: { ramp: RAMPS.flesh, stroke: inner(RAMPS.flesh), edge, form: { highlight: { ratio: 0.14, min: 0.5, max: 1.4 } } },
   // Skin for living people: the same matte treatment as the flesh volume, on the warm skin ramp.
   skin: { ramp: RAMPS.skin, stroke: inner(RAMPS.skin), edge, form: { highlight: { ratio: 0.14, min: 0.5, max: 1.4 } } },
-  // Warm golden-brown skin, the same matte treatment on a deeper, warmer ramp.
-  skinWarm: { ramp: RAMPS.skinWarm, stroke: inner(RAMPS.skinWarm), edge, form: { highlight: { ratio: 0.14, min: 0.5, max: 1.4 } } },
+  // Warm golden-brown skin, the same matte treatment on a deeper, warmer ramp, with a broader
+  // highlight so a face a few pixels across still shows its modelling past the hair over its sides.
+  skinWarm: { ramp: RAMPS.skinWarm, stroke: inner(RAMPS.skinWarm), edge, form: { highlight: { ratio: 0.2, min: 0.6, max: 2 } } },
+  // Lips, laid flat on a face: no shading of their own.
+  lips: { ramp: RAMPS.lips, form: { highlight: false } },
   // Dark hair: a soft sheen on the lit side, inner lines a shade darker than the hair so the locks separate.
   hair: { ramp: RAMPS.hair, stroke: inner(RAMPS.hair, 0.8), edge: inner(RAMPS.hair, 0.6), form: { highlight: { ratio: 0.12, min: 0.4, max: 1 } } },
   // Matte cloth: no highlight, a wider core shadow.

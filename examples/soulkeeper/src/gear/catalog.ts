@@ -89,14 +89,27 @@ const PARTS: PartInfo[] = [
   { id: 'bone-skull', label: 'Skull', group: 'head', kind: 'body', part: boneSkull, slots: ['head'], roles: ['bone', 'hollow', 'glow'] },
   { id: 'skull-sutures', label: 'Skull sutures', group: 'head', kind: 'body', part: skullSutures, slots: ['head'], roles: ['boneGroove', 'hollow'], requires: 'bone-skull' },
   {
-    id: 'flesh-head', label: 'Flesh head', group: 'head', kind: 'body', part: fleshHead, slots: ['head'], roles: ['skin', 'hair', 'hollow'],
-    options: [num('smile', 'Resting smile', 0, 0, 1), num('arch', 'Brow arch', 0, 0, 1), flag('lashes', 'Lash line', false), num('turn', 'Face turned to the camera', 0, 0, 1)],
+    id: 'flesh-head', label: 'Flesh head', group: 'head', kind: 'body', part: fleshHead, slots: ['head'], roles: ['skin', 'hair', 'hollow', 'lips'],
+    options: [
+      num('smile', 'Resting smile', 0, 0, 1),
+      num('arch', 'Brow arch', 0, 0, 1),
+      flag('lashes', 'Lash line', false),
+      num('turn', 'Face turned to the camera', 0, 0, 1),
+      num('eyeSize', 'Eye size', 1, 0.4, 1.2),
+      num('eyeSpacing', 'Eye spacing', 1, 0.6, 1.2),
+      flag('whites', 'Eye whites'),
+      num('browWidth', 'Brow thickness', 1, 0.4, 1.4),
+      { key: 'nose', label: 'Nose', type: 'select', default: 'line', choices: [{ value: 'line', label: 'Drawn' }, { value: 'soft', label: 'Soft' }] },
+      num('mouthWidth', 'Mouth width', 1, 0.5, 1.4),
+      flag('ears', 'Ears'),
+      num('oval', 'Oval face', 0, 0, 1),
+    ],
   },
   { id: 'hair-crop', label: 'Hair, cropped', group: 'head', kind: 'body', part: hairCrop, slots: ['head'], roles: ['hair'], requires: 'flesh-head' },
   { id: 'hair-tail', label: 'Hair, tied tail', group: 'head', kind: 'body', part: hairTail, slots: ['head'], roles: ['hair'], requires: 'flesh-head' },
   {
     id: 'hair-waves', label: 'Hair, long waves', group: 'head', kind: 'body', part: hairWaves, slots: ['head'], roles: ['hair'], requires: 'flesh-head',
-    options: [num('parting', 'Parting (left to right)', 0.3, -1, 1), num('length', 'Length', 1, 0.6, 1.4), num('volume', 'Volume at the sides', 1, 0.5, 1.4)],
+    options: [num('parting', 'Parting (left to right)', 0.3, -1, 1), num('length', 'Length', 1, 0.6, 1.4), num('volume', 'Volume at the sides', 1, 0.5, 1.4), num('hairline', 'Hairline up the forehead', 0, 0, 1)],
   },
   {
     id: 'horned-helm', label: 'Horned helm', group: 'head', equip: 'helm', part: hornedHelm, slots: ['head'], roles: ['metal', 'bone'], requires: 'bone-skull',
@@ -122,7 +135,7 @@ const PARTS: PartInfo[] = [
   },
   {
     id: 'winged-helm', label: 'Winged helm', group: 'head', equip: 'helm', part: wingedHelm, slots: ['head'], roles: ['metal', 'trim'],
-    options: [size(1, 0.85, 1.25, 0.01), flag('wings', 'Wings'), num('wingSize', 'Wing size', 1, 0.5, 1.5), flag('ridge', 'Ridge')],
+    options: [size(1, 0.85, 1.25, 0.01), flag('wings', 'Wings'), num('wingSize', 'Wing size', 1, 0.5, 1.5), flag('ridge', 'Ridge'), num('rise', 'Rim up the forehead', 0, 0, 1)],
   },
   {
     id: 'hood', label: 'Hood', group: 'head', equip: 'helm', part: hood, slots: ['head'], roles: ['cloth', 'clothAccent'],
