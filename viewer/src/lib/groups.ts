@@ -60,6 +60,20 @@ export function clipsOf(allAssets: AssetFileMeta[], asset: AssetFileMeta): Asset
 }
 
 /**
+ * What [ and ] step through in the Details window: a character's other clips when it has more than one (round and round),
+ * else the assets of the list the window was opened from, in its order (stopping at either end). `stepsClips` tells the
+ * footer and the buttons which of the two they say.
+ */
+export function peersOf(asset: AssetFileMeta, clips: AssetFileMeta[], visibleAssets: AssetFileMeta[]) {
+  const stepsClips = clips.length > 1;
+  const peers = stepsClips ? clips : visibleAssets;
+  const position = peers.findIndex((p) => p.subpath === asset.subpath);
+  /** The peer `offset` places away, or undefined past either end of the list. */
+  const at = (offset: number): AssetFileMeta | undefined => (stepsClips ? peers[(position + offset + peers.length) % peers.length] : peers[position + offset]);
+  return { peers, position, stepsClips, at };
+}
+
+/**
  * Collapses a character's clips into one entry, placed where the first of them was.
  * `all` is the whole project: filters may hide some clips, but the group must stay complete.
  */

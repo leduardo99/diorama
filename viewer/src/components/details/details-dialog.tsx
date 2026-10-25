@@ -8,6 +8,7 @@ import { useT } from '@/i18n';
 import { basename, stripExtension } from '@/lib/format';
 import { clipsOf } from '@/lib/groups';
 import { isTyping, useWindowKeydown } from '@/lib/hotkeys';
+import { digitRow, keyedAxis, stepRow } from '@/lib/rows';
 import type { AssetFileMeta } from '@/lib/types';
 import { IconDetails } from './icon-details';
 import { Inspector } from './inspector';
@@ -101,14 +102,16 @@ function PlayerBody({ asset, clips, projectAssets, peers, directionIndex, onDire
   const player = usePlayer(asset, directionIndex);
   const { t, plural } = useT();
   const [highlight, setHighlight] = useState<string | null>(null);
-  const { directions, frames } = player;
+  const { rows, frames } = player;
+  // ↑ ↓ and the digits turn the facings, or step through a scenery clip's variants or a wall's heights when the rows are those.
+  const keyed = keyedAxis(rows);
   // An effect shows its reach and, for a projectile, flies at its own speed.
   const vfx = useVfx(player, directionIndex);
   const { go } = peers;
 
   useWindowKeydown((e) => {
     if (e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target)) return;
-    const turn = (offset: number) => directions.length > 1 && onDirection((directionIndex + offset + directions.length) % directions.length);
+    const turn = (offset: number) => keyed && onDirection(stepRow(rows, directionIndex, offset));
     switch (e.key) {
       case ' ': player.setPlaying(!player.playing); break;
       case 'ArrowRight': player.seek(player.index + 1); break;
@@ -124,9 +127,9 @@ function PlayerBody({ asset, clips, projectAssets, peers, directionIndex, onDire
       case '-': player.stepZoom(-1); break;
       case '0': player.setZoom('fit'); break;
       default: {
-        const n = Number(e.key);
-        if (n >= 1 && n <= directions.length) onDirection(n - 1);
-        else return;
+        const row = /^[1-9]$/.test(e.key) ? digitRow(rows, directionIndex, Number(e.key)) : null;
+        if (row === null) return;
+        onDirection(row);
       }
     }
     e.preventDefault();
@@ -171,8 +174,8 @@ function PlayerBody({ asset, clips, projectAssets, peers, directionIndex, onDire
       <footer className="flex items-center gap-4 border-t px-4 py-1.5 text-xs text-muted-foreground">
         <span><Kbd>{t('keys.space')}</Kbd> {t('details.footer.play')}</span>
         <span><Kbd>←</Kbd> <Kbd>→</Kbd> {t('details.footer.frame')}</span>
-        {directions.length > 1 && <span><Kbd>↑</Kbd> <Kbd>↓</Kbd> {t('details.footer.direction')}</span>}
-        <span><Kbd>[</Kbd> <Kbd>]</Kbd> {clips.length > 1 ? t('details.footer.animation') : t('details.footer.asset')}</span>
+        {keyed && <span><Kbd>↑</Kbd> <Kbd>↓</Kbd> {keyed === 'step' && rows.axis ? t(`details.footer.${rows.axis}`) : t('details.footer.direction')}</span>}
+        <span><Kbd>[</Kbd> <Kbd>]</Kbd> {peers.stepsClips ? t('details.footer.animation') : t('details.footer.asset')}</span>
         <span><Kbd>B</Kbd> {t('details.footer.background')}</span>
         <span><Kbd>+</Kbd> <Kbd>−</Kbd> <Kbd>0</Kbd> {t('details.footer.zoom')}</span>
         <span className="ml-auto tabular-nums">{plural('counts.frames', frames.length)}</span>

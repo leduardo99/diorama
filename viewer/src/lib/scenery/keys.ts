@@ -25,6 +25,15 @@ export type PainterCommand = keyof typeof PAINTER_KEYS;
 /** True when the key, in lower case, does that. */
 export const isPainterKey = (command: PainterCommand, key: string) => (PAINTER_KEYS[command] as readonly string[]).includes(key);
 
+/** Open dialogs, menus and lists own the keyboard; the popovers do not (the selection's stays open while the painter is used). */
+const OPEN_LAYER = '[role="dialog"]:not([data-slot="popover-content"]), [role="alertdialog"], [role="menu"], [role="listbox"]';
+
+/**
+ * True while a dialog (the shortcuts window, a save), a menu or a list is open: it owns the keyboard, and neither the
+ * painter's keys (`scenery-view.tsx`) nor Space held to pan (`scene-canvas.tsx`) act, so Space presses the dialog's button.
+ */
+export const isLayerOpen = () => document.querySelector(OPEN_LAYER) !== null;
+
 /** With ⌘ or Ctrl: D duplicates the selected prop. */
 export const PAINTER_COMMAND_KEYS = { duplicate: 'd' } as const;
 

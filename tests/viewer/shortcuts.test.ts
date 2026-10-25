@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import { createTranslator, stringsOf } from '../../viewer/src/i18n/core';
 import { APP_KEYS, historyCommand } from '../../viewer/src/lib/hotkeys';
+import { controlRows, placeHintVars, switchCaps } from '../../viewer/src/lib/playground/controls';
 import { actionIndexOf, inputOf, keyOf, PLAYGROUND_KEYS, SEARCH_KEYS } from '../../viewer/src/lib/playground/keys';
 import { NUDGE_KEYS, PAINTER_COMMAND_KEYS, PAINTER_KEYS, TOOL_OF_KEY } from '../../viewer/src/lib/scenery/keys';
 import { TOOLS, TOOL_KEYS } from '../../viewer/src/lib/scenery/labels';
 import { SECTION_PATHS, sectionOf } from '../../viewer/src/lib/sections';
-import { ANYWHERE, keyLabel, SHORTCUT_TABS, SHORTCUTS, WORD_KEYS, type Shortcut, type ShortcutSection } from '../../viewer/src/lib/shortcuts';
+import { ANYWHERE, capsFor, keyLabel, SHORTCUT_TABS, SHORTCUTS, WORD_KEYS, type Shortcut, type ShortcutSection } from '../../viewer/src/lib/shortcuts';
 
 console.log('🧪 Checking the shortcut lists (one tab per section, every key the handlers read is listed, both languages)...\n');
 
@@ -122,8 +123,46 @@ const customize = rowsOf(SHORTCUTS.customize);
 assert.equal(customize.length, history.length, 'the Customize tab has undo and redo only');
 for (const { caps, does } of history) assert.equal(customize.find((row) => same(row.keys, caps))?.what, `customize.${does}`, `the Customize tab shows ${caps.join('')} (${does})`);
 
+// 3b. The palette shows the controlled character's keys (palette.tsx) with the window's caps: ⇧ and not "Shift", the arrows
+//     beside W A S D, E; [ and ] in the picker's label, the scene's keys in the "Place in the scene" hint.
+const en = createTranslator('en').t;
+const pt = createTranslator('pt-BR').t;
+const clip = (key: string, kind = key, hold = false) => ({ key, kind, hold }) as Parameters<typeof controlRows>[0]['actions'][number];
+const captain = { locomotion: [clip('walk'), clip('run')], actions: [clip('slash', 'attack'), clip('block', 'block', true), clip('kick', 'attack')], hit: clip('hit'), death: clip('death') };
+const controls = controlRows(captain, en);
+assert.deepEqual(controls.map((row) => [row.keys.join(' '), row.label]), [
+  ['W A S D ↑ ← ↓ →', 'walk'], ['⇧', 'run'], ['space', 'slash'], ['2', 'block'], ['3', 'kick'], ['H', 'hit'], ['K', 'death'], ['R', 'restart'], ['E', 'use'],
+]);
+assert.deepEqual(controls[0].keys, move?.keys, 'the palette moves with the window\'s caps');
+for (const row of controls) for (const key of row.keys) assert.ok(playground.has(key) || (PLAYGROUND_KEYS.actions as readonly string[]).includes(key), `the palette's ${key} is a cap of the Playground tab`);
+assert.ok(controls.every((row) => !row.keys.includes('Shift')), 'no "Shift" cap');
+assert.deepEqual(controls.map((row) => keyLabel(pt, row.keys[0])).slice(1, 3), ['⇧', 'Espaço'], 'a word key in the language of the screen');
+assert.deepEqual(controlRows(captain, pt).slice(-2).map((row) => row.label), ['reiniciar', 'usar']);
+// A character with one gait, no death and no held pose: no ⇧, no R. Past the ninth action, no key.
+const many = controlRows({ locomotion: [clip('walk')], actions: Array.from({ length: 11 }, (_, i) => clip(`a${i}`)), hit: null, death: null }, en);
+assert.deepEqual(many.map((row) => row.keys.join(' ')), ['W A S D ↑ ← ↓ →', 'space', '2', '3', '4', '5', '6', '7', '8', '9', 'E']);
+assert.equal(controlRows({ locomotion: [], actions: [], hit: null, death: null }, pt)[0].label, 'mover', 'a character with no gait still moves');
+assert.deepEqual(switchCaps(), ['[', ']']);
+// The hint says the right button the way the window does ("Botão direito", never "Clique direito"), with ⌫, Esc and /.
+assert.deepEqual(placeHintVars(pt), { rightButton: 'Botão direito', remove: '⌫', escape: 'Esc', search: '/' });
+assert.equal(placeHintVars(en).rightButton, keyLabel(en, 'rightButton'));
+for (const t of [en, pt]) {
+  const hint = t('playground.palette.placeHint', placeHintVars(t));
+  for (const cap of [keyLabel(t, 'rightButton'), '⌫', 'Esc', '/']) assert.ok(hint.includes(`<kbd>${cap}</kbd>`), `the hint shows ${cap}: ${hint}`);
+}
+assert.doesNotMatch(pt('playground.palette.placeHint', placeHintVars(pt)), /clique direito/i);
+assert.throws(() => capsFor('customize', 'modals.shortcuts.playground.move'), /No shortcut row/, 'a row asked of the wrong tab is a mistake');
+
 // 6. The asset list and the Details window, as their handlers read them (use-asset-selection.ts, details-dialog.tsx, details-shell.tsx).
 assert.deepEqual(rowsOf(SHORTCUTS.assets).map((row) => row.keys.join(' ')), ['/', '↑ ↓ ← →', 'Home End', '↵', '⌫', 'Esc', 'space', '← →', '↑ ↓ 1–8', '[ ]', '+ − 0', 'B', 'P G']);
+// [ and ] go through a character's animations, or through the list for any other asset (`peersOf`): the row says both.
+const step = rowsOf(SHORTCUTS.assets).find((row) => row.keys.join(' ') === '[ ]')!;
+assert.match(en(step.what), /animation.*asset/);
+assert.match(pt(step.what), /Animação.*asset/);
+// ↑ ↓ and the digits turn the facings, or step through a clip's variants or a wall's heights on a sheet that does not turn (`lib/rows.ts: keyedAxis`).
+const turn = rowsOf(SHORTCUTS.assets).find((row) => row.keys.join(' ') === '↑ ↓ 1–8')!;
+assert.match(en(turn.what), /direction.*variation.*height/);
+assert.match(pt(turn.what), /direção.*variação.*altura/);
 
 // 7. Every heading, every row and every key that is a word is in both dictionaries (not through t(), which falls back to English).
 const all = [ANYWHERE, ...SHORTCUT_TABS.flatMap((tab) => SHORTCUTS[tab])];
@@ -143,8 +182,6 @@ for (const list of all) {
 }
 
 // 8. A key that is a word is said in the interface's language; every other one is shown as it is written.
-const en = createTranslator('en').t;
-const pt = createTranslator('pt-BR').t;
 assert.equal(keyLabel(pt, 'space'), 'Espaço');
 assert.equal(keyLabel(en, 'rightButton'), 'Right button');
 assert.equal(keyLabel(pt, 'rightButton'), 'Botão direito');

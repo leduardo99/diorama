@@ -114,9 +114,10 @@ function characterOf(meta: Record<string, any>): AtlasInfo['character'] {
 /**
  * How many directions a sheet's rows face. An interface piece's rows are its states (normal, hover...), a wall or fence in
  * several heights has a row per height (`data.rows: 'heights'`) and a scenery clip sheet says the facing and the variant of
- * each row (`data.rows: [{ row, dir, variant }]`); any other sheet has a row per facing.
+ * each row (`data.rows: [{ row, dir, variant }]`); any other sheet has a row per facing. The Details window tells the rows
+ * apart by the same rule (`src/lib/rows.ts: sheetRows`): `tests/viewer/details.test.ts` holds the two together.
  */
-function facingsOf(meta: Record<string, any>): number {
+export function facingsOf(meta: Record<string, any>): number {
   const rows = meta.data?.rows;
   if (meta.data?.role === 'ui' || rows === 'heights') return 1;
   if (Array.isArray(rows)) return new Set(rows.map((row) => row?.dir)).size;

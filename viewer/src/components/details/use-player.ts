@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { atlasQuery } from '@/lib/queries';
 import { clipFrames, clipNames, eventsByFrame, playbackKind, type Rect } from '@/lib/atlas';
+import { sheetRows } from '@/lib/rows';
 import { useImage } from '@/lib/use-image';
 import { usePref } from '@/lib/use-pref';
 import type { AssetFileMeta } from '@/lib/types';
@@ -18,6 +19,8 @@ export function usePlayer(asset: AssetFileMeta, directionIndex: number) {
   const { image, failed } = useImage(`${asset.url}?t=${asset.mtime}`);
 
   const directions = atlas?.meta.directions ?? [];
+  // What the rows are: facings, or a scenery clip's variants, a wall's heights (`lib/rows.ts`).
+  const rows = useMemo(() => sheetRows(atlas?.meta), [atlas]);
   const clips = useMemo(() => (atlas ? clipNames(atlas) : []), [atlas]);
   const events = useMemo(() => eventsByFrame(atlas), [atlas]);
 
@@ -88,7 +91,7 @@ export function usePlayer(asset: AssetFileMeta, directionIndex: number) {
   };
 
   return {
-    atlas, atlasError: atlasResult.error, kind, image, failed, directions, clips, clip, events,
+    atlas, atlasError: atlasResult.error, kind, image, failed, directions, rows, clips, clip, events,
     frames, index, current, fps, atlasFps, scale, stageRef,
     playing, setPlaying, fpsOverride, setFpsOverride, seek,
     selectClip: (name: string) => {

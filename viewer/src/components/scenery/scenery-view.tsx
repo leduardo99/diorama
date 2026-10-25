@@ -13,7 +13,7 @@ import { projectsQuery } from '@/lib/queries';
 import { sceneryRoute } from '@/lib/routes';
 import { savedScenesQuery, sceneryQuery } from '@/lib/scenery/catalog';
 import { canFlip, countCells, duplicateProp, emptyScene, nudgeSelected, pieceOf, removeSelected, rotateProp, validSelection, type EraseLayer, type Layer, type Picked, type Selection } from '@/lib/scenery/edit';
-import { NUDGE_KEYS, PAINTER_COMMAND_KEYS, TOOL_OF_KEY, isPainterKey } from '@/lib/scenery/keys';
+import { NUDGE_KEYS, PAINTER_COMMAND_KEYS, TOOL_OF_KEY, isLayerOpen, isPainterKey } from '@/lib/scenery/keys';
 import { brushOf, type PieceGroup, type Tool } from '@/lib/scenery/labels';
 import { fitZoom, geometryOf, stepZoom, ZOOMS, type Zoom } from '@/lib/scenery/render';
 import { createCanvasStatus } from '@/lib/scenery/status';
@@ -34,9 +34,6 @@ const DEFAULT_SIZE = { cols: 16, rows: 12 };
 
 /** Unsaved scenes survive leaving the tab, but not a reload. */
 const drafts = new Map<string, SceneData>();
-
-/** Open menus and dialogs own the keyboard; the popovers do not (the selection's stays open while the painter is used). */
-const OPEN_LAYER = '[role="dialog"]:not([data-slot="popover-content"]), [role="alertdialog"], [role="menu"], [role="listbox"]';
 
 /** Paint a scene of the project's scenery kit and see it drawn by the engine; save it as a scene of the project. */
 export function SceneryView() {
@@ -187,7 +184,7 @@ function Painter({ project, catalog, fixture, sceneNames }: { project: string; c
   );
 
   useWindowKeydown((e) => {
-    if (isTyping(e.target) || document.querySelector(OPEN_LAYER)) return;
+    if (isTyping(e.target) || isLayerOpen()) return;
     const key = e.key.toLowerCase();
     // Tab hides the piece panel as in the painting programs, but only from the page itself: on a control it keeps moving the focus.
     if (isPainterKey('panel', key) && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey && (e.target === document.body || e.target instanceof HTMLCanvasElement)) {

@@ -11,6 +11,7 @@ import { Rich, useT } from '@/i18n';
 import { copyText } from '@/lib/clipboard';
 import { COMPASS, eventsOf, type Atlas } from '@/lib/atlas';
 import { projectFile } from '@/lib/project-paths';
+import { axisLabel, framesLabel, keyedAxis, rowWith, stepLabel, type SheetRows } from '@/lib/rows';
 import type { AssetFileMeta } from '@/lib/types';
 import { ZOOMS, type Backdrop, type Player, type Zoom } from './use-player';
 
@@ -38,12 +39,21 @@ interface Props {
   top?: ReactNode;
 }
 
-/** Whether every row is named by a compass point: the compass can pick them; sixteen facings, or numbered ones, are picked by a slider. */
-const onCompass = (directions: string[]) => directions.every((name) => COMPASS.flat().includes(name));
+/** Whether every facing is named by a compass point: the compass can pick them; sixteen facings, or numbered ones, are picked by a slider. */
+const onCompass = (facings: string[]) => facings.every((name) => COMPASS.flat().includes(name));
 
+/**
+ * The rows of a sheet are picked by what they are (`lib/rows.ts`): its facings with the compass (or a slider), and a
+ * scenery clip's variants, a wall's heights or an interface piece's states with a control named after them. `directionIndex`
+ * is the row shown.
+ */
 export function Inspector({ player, asset, directionIndex, onDirection, onHighlight, top }: Props) {
-  const { atlas, kind, directions, frames, fps, atlasFps, fpsOverride, setFpsOverride, index, seek } = player;
+  const { atlas, kind, rows, frames, fps, atlasFps, fpsOverride, setFpsOverride, index, seek } = player;
   const { t, number } = useT();
+  const row = Math.min(directionIndex, Math.max(0, rows.rows.length - 1));
+  const { facing, step } = rows.rows[row] ?? { facing: 0, step: 0 };
+  const { facings, axis, steps } = rows;
+  const keyed = keyedAxis(rows);
   const eventList = eventsOf(atlas);
   const sheetFrames = kind === 'sheet' && atlas ? Object.entries(atlas.frames) : [];
 
@@ -74,32 +84,29 @@ export function Inspector({ player, asset, directionIndex, onDirection, onHighli
         </Section>
       )}
 
-      {directions.length > 1 && !onCompass(directions) && (
+      {facings.length > 1 && !onCompass(facings) && (
         <Section title={t('details.inspector.direction')}>
-          <Slider min={0} max={directions.length - 1} step={1} value={[Math.min(directionIndex, directions.length - 1)]} aria-label={t('details.inspector.direction')} onValueChange={([value]) => onDirection(value)} />
+          <Slider min={0} max={facings.length - 1} step={1} value={[facing]} aria-label={t('details.inspector.direction')} onValueChange={([value]) => onDirection(rowWith(rows, row, { facing: value }))} />
           <FieldDescription>
-            <Rich
-              id="details.inspector.directionSlider"
-              vars={{ name: directions[Math.min(directionIndex, directions.length - 1)], index: Math.min(directionIndex, directions.length - 1) + 1, total: directions.length }}
-            />
+            <Rich id="details.inspector.directionSlider" vars={{ name: facings[facing], index: facing + 1, total: facings.length }} />
           </FieldDescription>
         </Section>
       )}
 
-      {directions.length > 1 && onCompass(directions) && (
+      {facings.length > 1 && onCompass(facings) && (
         <Section title={t('details.inspector.direction')}>
           <ToggleGroup
             type="single"
             variant="outline"
             aria-label={t('details.inspector.direction')}
-            value={String(directionIndex)}
-            onValueChange={(value) => value && onDirection(Number(value))}
+            value={String(facing)}
+            onValueChange={(value) => value && onDirection(rowWith(rows, row, { facing: Number(value) }))}
             className="grid w-fit grid-cols-3 gap-1 self-center"
           >
             {COMPASS.flat().map((name, i) => {
               // The middle of the compass stays empty: the highlighted point already names the direction.
               if (!name) return <span key={i} aria-hidden />;
-              const at = directions.indexOf(name);
+              const at = facings.indexOf(name);
               return (
                 <ToggleGroupItem key={name} value={at < 0 ? `missing-${name}` : String(at)} disabled={at < 0} className="w-11 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground" title={at < 0 ? t('details.inspector.directionMissing', { name }) : `${name} · ${at + 1}`}>
                   {name}
@@ -108,7 +115,33 @@ export function Inspector({ player, asset, directionIndex, onDirection, onHighli
             })}
           </ToggleGroup>
           <FieldDescription>
-            <Rich id="details.inspector.compassHint" vars={{ count: directions.length }} />
+            <Rich id="details.inspector.compassHint" vars={{ count: facings.length }} />
+          </FieldDescription>
+        </Section>
+      )}
+
+      {axis && steps.length > 1 && (
+        <Section title={axisLabel(t, axis)}>
+          {/* A variant has no name in a clip sheet: its number is the button, "Variation 2" its label. The row shown is marked as the compass marks it. */}
+          <ToggleGroup
+            type="single"
+            variant="outline"
+            size="sm"
+            spacing={0}
+            aria-label={axisLabel(t, axis)}
+            value={String(step)}
+            onValueChange={(value) => value && onDirection(rowWith(rows, row, { step: Number(value) }))}
+            className="w-fit flex-wrap"
+          >
+            {steps.map((_, i) => (
+              <ToggleGroupItem key={i} value={String(i)} aria-label={stepLabel(t, rows, i)} className="min-w-9 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                {axis === 'variant' ? i + 1 : stepLabel(t, rows, i)}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+          <FieldDescription>
+            <span className="text-foreground">{stepLabel(t, rows, step)}</span>
+            {keyed === 'step' && <> · <Rich id="details.rows.keysHint" vars={{ count: steps.length }} /></>}
           </FieldDescription>
         </Section>
       )}
@@ -182,13 +215,13 @@ export function Inspector({ player, asset, directionIndex, onDirection, onHighli
       )}
 
       <Section title={t('details.inspector.data')}>
-        <Info atlas={atlas} asset={asset} frameCount={frames.length} />
+        <Info atlas={atlas} asset={asset} rows={rows} frameCount={frames.length} />
       </Section>
     </div>
   );
 }
 
-function Info({ atlas, asset, frameCount }: { atlas: Atlas | undefined; asset: AssetFileMeta; frameCount: number }) {
+function Info({ atlas, asset, rows, frameCount }: { atlas: Atlas | undefined; asset: AssetFileMeta; rows: SheetRows; frameCount: number }) {
   const { t, number, date } = useT();
   const meta = atlas?.meta;
   const exportedPath = projectFile(asset.project, `assets/${asset.subpath}`);
@@ -196,10 +229,11 @@ function Info({ atlas, asset, frameCount }: { atlas: Atlas | undefined; asset: A
   // A piece's clip sheet names its clip with an object (frames, fps, from, to): show its name. JSON can hold null there.
   const written = meta?.data?.clip;
   const clip = typeof written === 'object' && written !== null ? written.name : written;
-  const rows: Array<[string, string | undefined]> = [
+  const lines: Array<[string, string | undefined]> = [
     [t('details.data.sheet'), meta?.width && meta.height ? `${meta.width}×${meta.height}` : asset.width && asset.height ? `${asset.width}×${asset.height}` : undefined],
     [t('details.data.frame'), meta?.frameWidth ? `${meta.frameWidth}×${meta.frameHeight}` : undefined],
-    [t('details.data.frames'), meta?.frameCount ? (meta.directions?.length ? t('details.data.framesWithDirections', { frames: meta.frameCount, directions: meta.directions.length }) : String(meta.frameCount)) : frameCount > 1 ? String(frameCount) : undefined],
+    // Directions only when the rows are facings, as the asset cards count them; a clip's variants and a wall's heights are counted as what they are.
+    [t('details.data.frames'), meta?.frameCount ? framesLabel(t, rows, meta.frameCount) : frameCount > 1 ? String(frameCount) : undefined],
     [t('details.data.scale'), meta?.scale ? t('units.times', { value: number(meta.scale) }) : undefined],
     [t('details.data.fps'), meta?.fps ? number(meta.fps, { maximumFractionDigits: 2 }) : undefined],
     [t('details.data.duration'), meta?.data?.seconds ? t('units.seconds', { value: number(meta.data.seconds, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }) : undefined],
@@ -213,7 +247,7 @@ function Info({ atlas, asset, frameCount }: { atlas: Atlas | undefined; asset: A
   return (
     <>
       <dl className="flex flex-col gap-1.5">
-        {rows.filter((r): r is [string, string] => r[1] !== undefined).map(([key, value]) => (
+        {lines.filter((r): r is [string, string] => r[1] !== undefined).map(([key, value]) => (
           <div key={key} className="flex justify-between gap-3">
             <dt className="text-muted-foreground">{key}</dt>
             <dd className="text-right tabular-nums">{value}</dd>

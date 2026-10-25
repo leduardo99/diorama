@@ -30,6 +30,16 @@ const isWordKey = (key: string): key is WordKey => (WORD_KEYS as readonly string
 /** The text of a key's cap. */
 export const keyLabel = (t: TFn, key: string) => (isWordKey(key) ? t(`keys.${key}`) : key);
 
+/**
+ * The caps of the row of a tab that does `what`: a page that shows some of its keys itself (the Playground's palette)
+ * shows them as the window does. A row that is not there is a mistake in the code, not something to show.
+ */
+export function capsFor(tab: Section, what: Key): readonly string[] {
+  const row = SHORTCUTS[tab].flatMap((list) => list.items).find((item) => item.what === what);
+  if (!row) throw new Error(`No shortcut row does ${what} in the ${tab} tab`);
+  return row.keys;
+}
+
 /** The keys of every page, over the tabs. */
 export const ANYWHERE: ShortcutSection = {
   title: 'modals.shortcuts.anywhere',
@@ -69,7 +79,8 @@ export const SHORTCUTS: Readonly<Record<Section, readonly ShortcutSection[]>> = 
         { keys: ['space'], what: 'modals.shortcuts.playPause' },
         { keys: ['←', '→'], what: 'modals.shortcuts.frame' },
         { keys: ['↑', '↓', '1–8'], what: 'modals.shortcuts.direction' },
-        { keys: ['[', ']'], what: 'modals.shortcuts.animation' },
+        // A character's clips, else the list the window was opened from (`lib/groups.ts: peersOf`).
+        { keys: ['[', ']'], what: 'modals.shortcuts.animationOrAsset' },
         { keys: ['+', '−', '0'], what: 'modals.shortcuts.zoom' },
         { keys: ['B'], what: 'modals.shortcuts.background' },
         { keys: ['P', 'G'], what: 'modals.shortcuts.guides' },
