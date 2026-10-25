@@ -4,7 +4,8 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { buildAssetCatalog, buildProjectCatalog } from '../../viewer/server/catalog';
 import { roleOf } from '../../viewer/src/lib/asset-role';
-import { exportTarget, isStale, pendingExports } from '../../viewer/src/lib/export-state';
+import { exportTarget, isStale, pendingExports, projectTotals } from '../../viewer/src/lib/export-state';
+import { createTranslator } from '../../viewer/src/i18n/core';
 
 console.log('🧪 Checking the viewer catalog (projects/ only, export state, engines, kits, scenes and games)...\n');
 
@@ -81,6 +82,16 @@ try {
   assert.deepEqual(pending.stale.map((a) => a.subpath), ['a.png']);
   assert.deepEqual(pending.missing, ['b.ts', 'sub/e.ts']);
   assert.deepEqual(pendingExports(assets, undefined).missing, []);
+
+  // The project bar's totals count the assets (one per exported sheet) and their size, then what is not exported yet,
+  // while there is any: the sheets are not a second total.
+  const mb = 2.5 * 1024 * 1024;
+  const [english, portuguese] = [createTranslator('en'), createTranslator('pt-BR')];
+  assert.equal(projectTotals({ ...meta, totalSize: mb }, 4, english), '4 assets · 2.50 MB · 2 not exported', 'sheets show only as what is not exported yet');
+  assert.equal(projectTotals({ ...meta, pendingSheets: [], totalSize: 1536 }, 1, english), '1 asset · 1.5 kB', 'all exported: one count and the size');
+  assert.equal(projectTotals({ ...meta, totalSize: mb }, 4, portuguese), '4 assets · 2,50 MB · 2 sem export');
+  assert.equal(projectTotals({ ...meta, pendingSheets: ['a.ts'], totalSize: 0 }, 0, portuguese), '0 asset · 0 B · 1 sem export', 'Portuguese counts zero as one');
+  assert.doesNotMatch(projectTotals(meta, assets.length, english), /sheet/, 'assets and sheets are not two totals');
 
   // 4. What export.ts takes for a sheet is its path under sheets/ without the extension.
   assert.equal(exportTarget('characters/wolf/bite.ts'), 'characters/wolf/bite');
