@@ -125,7 +125,7 @@ npm run view
 
 `npm run view` serves the viewer at `http://localhost:5173`. It lists your projects, the folders of `projects/`, with their sources and their exported assets; the samples in `examples/` are not listed until `npm run example` (or "Try the sample", when there is no project yet) copies one in. Each project has four tabs (the interface is in English or Brazilian Portuguese, from the language switch in the header):
 
-- **Assets.** Every exported sheet, filterable by kind (characters, items, scenery, props, effects, icons, interface), with a preview that plays animations. A banner says when a source is newer than its export, and exports it.
+- **Assets.** Every exported sheet, filterable by kind (characters, items, scenery, props, effects, icons, interface), with a Details window that plays animations. A banner says when a source is newer than its export, and exports it.
 - **Playground.** Characters and props play from their exported atlases: WASD moves, Shift runs, 1 to 9 trigger actions, H is a hit and K a death. Effects start at their sockets, and a chosen scene becomes the world, with walls, doors and props that react and sort against the characters.
 - **Customize.** Dress a character with the project's gear kit by slot, swap and remove pieces, and save the outfit as a new character.
 - **Scenery.** Paint scenes with the project's scenery kit: floors, walls, fences, doors, props and scale figures, with the navigation overlay, saved as scenes.

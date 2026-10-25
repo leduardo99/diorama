@@ -90,7 +90,7 @@ For example, a helm exports its dome geometry, so a crest can rest on it without
     - `equip`: the equipment slot the part takes alone (`helm`, `weapon`, `shield`, `pauldron`). Two parts with the same `equip` on one side replace each other. Parts without one are layers that stack: a tunic under a tabard, a pouch beside a belt. A slot is a place on the body, not an exclusive spot: the guard's pelvis carries a tunic, a tabard, a belt and a pouch;
   - `bases`;
   - `materials` (the theme's `VOLUMES`).
-- **`CHARACTERS: OutfitCharacterInfo[]`:** the characters an outfit can be put on, each with skeleton, clips, cell, pivot, sockets and its default outfit.
+- **`CHARACTERS: OutfitCharacterInfo[]`:** the characters an outfit can be put on, each with skeleton, clips, cell, pivot, sockets and its default outfit. Its `label` is the name the customizer shows: keep it in the rig spec that `defineCharacter` spreads too (`label` in `characters/<name>/spec.ts`, as the sample does), so the customizer and the exported manifest say the same name.
 
 Editors read this. Whenever you add or change a part, update its `PartInfo` in the same change: an option missing from the catalog cannot be edited, and a wrong default changes saved outfits.
 

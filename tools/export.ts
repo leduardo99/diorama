@@ -1165,7 +1165,9 @@ async function main() {
     await server.stop();
   }
 
-  if (tasks.length > 1 && !isSheetExport) {
+  // The tip is for a person at a terminal: a program that reads the output through a pipe (the viewer, whose New dialog
+  // has its own Output select) never shows it.
+  if (tasks.length > 1 && !isSheetExport && process.stdout.isTTY) {
     console.log(
       pc.dim(`  Tip: Combine into an atlas/sheet using --grid or --compact (e.g. npm run export -- ${args.project}${args.subpath ? ` ${args.subpath}` : ''} --grid --gap=8)`)
     );

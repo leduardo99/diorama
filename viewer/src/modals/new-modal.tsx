@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Kbd } from '@/components/ui/kbd';
@@ -175,6 +175,13 @@ export const NewModal = NiceModal.create(({ tab: initialTab = 'new-asset', proje
       <DialogContent {...contentProps} className="sm:max-w-lg" aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle>{t('modals.new.title')}</DialogTitle>
+          {/* Only the Export tab says what it does (the project bar's Export says the same). Radix links a description
+              while one is mounted, so the other tabs stay without one. */}
+          {tab === 'export' && (
+            <DialogDescription>
+              <Rich id="modals.new.exportDescription" />
+            </DialogDescription>
+          )}
         </DialogHeader>
         <Tabs
           value={tab}

@@ -1009,7 +1009,10 @@ Every sheet of a character repeats this: reading any one of them describes them 
 
 ```ts
 interface CharacterManifest {
+  /** The character's id ('ossuary-guard'). */
   name: string;
+  /** The name to show ('Ossuary Guard'). Older atlases have none: show `name`. */
+  label?: string;
   skeleton?: string;
   /** The cell's logical size and the pivot in it. */
   cell?: { width: number; height: number; };
@@ -1397,7 +1400,10 @@ A character: its clips and the bindings of its controls, its camera and the effe
 ```ts
 interface Character<A extends SheetRef = SheetRef> {
   id: string;
+  /** The manifest's `name`, the character's id ('ossuary-guard'); without a manifest, the folder's last segment. */
   name: string;
+  /** The name people read: the manifest's `label` ('Ossuary Guard'), else `name` (atlases exported before labels). */
+  label: string;
   folder: string;
   clips: Clip<A>[];
   idle: Clip<A> | null;

@@ -1387,8 +1387,10 @@ from the object literal, so `CharacterOptions` alone (`K` = `string`) is every c
 
 ```ts
 interface CharacterOptions<K extends string = string> {
-  /** Character name for players and the viewer (e.g. 'ossuary-guard'). */
+  /** The character's id for players and the viewer (e.g. 'ossuary-guard'). */
   name: string;
+  /** The name people read. Default: the name in words ('ossuary-guard' is 'Ossuary guard'). */
+  label?: string;
   /** How the character is drawn; with `outfit` and no skin, `outfitFromData(outfit.data, outfit.catalog)`. */
   skin?: Skin;
   /** The outfit it wears, as data. With it the character holds what the outfit holds: the held items' sockets (a blade's `tip`) replace sockets of the same name, the clips made for something else are marked unusable and left out of `controls`, and `warnings` says what does not match (`checkWield`). */
@@ -1462,7 +1464,10 @@ ends); when an action ends the character returns to idle, except `hold` clips (d
 
 ```ts
 interface CharacterManifest {
+  /** The character's id, as `defineCharacter` was given it ('ossuary-guard'). */
   name: string;
+  /** The name people read, for a game's menus, the viewer and the test bench ('Ossuary Guard'). */
+  label: string;
   skeleton: string;
   cell: { width: number; height: number; };
   scale: number;
@@ -1740,6 +1745,7 @@ outfit it wears by default. The kit's `src/gear/catalog.ts` exports a list of th
 ```ts
 interface OutfitCharacterInfo {
   id: string;
+  /** The name editors show: the same as the character's `defineCharacter` label when one rig object gives both. */
   label: string;
   skeleton: SkeletonSpec;
   clips: Record<string, CharacterClip>;

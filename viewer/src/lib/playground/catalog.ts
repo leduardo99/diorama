@@ -1,7 +1,7 @@
 import { basename, dirname, stripExtension } from '../format';
 import type { Translator } from '../../i18n/core';
 import type { AssetFileMeta } from '../types';
-import type { Armed, Library } from './library';
+import type { Armed, Character, Library } from './library';
 
 /** Everything the palette can offer, flattened so it can be searched, grouped and virtualized. */
 export type EntryKind = 'character' | 'animated' | 'still';
@@ -35,9 +35,16 @@ export function entrySubtitle(detail: EntryDetail, { plural, t }: Pick<Translato
   return [detail.frames > 1 ? plural('playground.entry.frames', detail.frames) : t('playground.entry.still'), detail.facings > 1 ? t('playground.entry.directions', { count: detail.facings }) : ''].filter(Boolean).join(' · ');
 }
 
+/**
+ * The clip that pictures a character: its idle, else its first move or action, else whatever clip it has. While its atlases
+ * load, a character can be its hit or death clip alone for a moment (the runtime binds neither as an action), and the scene
+ * starts it the same way.
+ */
+export const coverClip = (character: Character) => character.idle ?? character.locomotion[0] ?? character.actions[0] ?? character.clips[0];
+
 export function listEntries(library: Library): Entry[] {
   const characters = library.characters.map<Entry>((character) => {
-    const first = character.idle ?? character.locomotion[0] ?? character.actions[0];
+    const first = coverClip(character);
     return {
       key: `character:${character.id}`,
       kind: 'character',
@@ -110,6 +117,10 @@ export function buildRows(entries: Entry[], { query, filter, collapsed, recent }
 }
 
 export const RECENT_LIMIT = 6;
+
+/** The scene the playground plays: the one a link names when the project has it, else the one chosen last time, else none. */
+export const sceneToPlay = (scenes: readonly string[], linked: string | undefined, remembered: string): string =>
+  linked !== undefined && scenes.includes(linked) ? linked : scenes.includes(remembered) ? remembered : '';
 
 /** Puts a key first, drops repeats and keeps the list short. */
 export function pushRecent(recent: readonly string[], key: string): string[] {

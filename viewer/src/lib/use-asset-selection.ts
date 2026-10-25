@@ -9,7 +9,7 @@ interface Options {
   view: 'grid' | 'table';
   /** Cards per row of the grid; the list itself scrolls the active entry into view. */
   columns: number;
-  /** True while something else (a preview, a modal) owns the keyboard. */
+  /** True while something else (the Details window, a modal) owns the keyboard. */
   paused: boolean;
   onOpen: (key: string) => void;
   onDelete: (key: string) => void;

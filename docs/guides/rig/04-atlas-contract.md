@@ -45,7 +45,8 @@ Every sheet's JSON repeats the whole character manifest, so reading any one shee
 
 ## 4. The manifest (`meta.data.character`)
 
-- `name`, `skeleton`, `cell` (logical size), `scale`, `pivot`, `directions`, `camera` (`tilt`, `heightBoost`) and `sockets` (names).
+- `name` (the character's id) and `label` (the name to show; atlases exported before labels have none: show `name`).
+- `skeleton`, `cell` (logical size), `scale`, `pivot`, `directions`, `camera` (`tilt`, `heightBoost`) and `sockets` (names).
 - `clips`: one entry per clip, with `key`, `name`, `kind`, `category`, `tags`, `loop`, `hold`, `seconds`, `frames`, `fps`, `groundSpeed`, `events` and `travel`.
 - `controls`: default bindings.
   - `idle`: the idle key.
@@ -89,10 +90,11 @@ Every sheet's JSON repeats the whole character manifest, so reading any one shee
 
 ## 6. Older or partial files
 
-Fields were added over time: older atlases may lack `action`, `sockets`, `travel` or `character`. Fall back to:
+Fields were added over time: older atlases may lack `action`, `sockets`, `travel` or `character`, and an older manifest its `label`. Fall back to:
 - `clipKind`;
 - `groundSpeed > 0` for locomotion, `loop` for idle, anything else as an action;
 - grouping clips by folder, skeleton and pivot;
+- showing the manifest's `name` where it has no `label`;
 - for effects on a clip without `sockets`, a start 60 px of the sheet above the feet;
 - for a projectile whose `travel` has no `range`, a flight of 150 world units.
 

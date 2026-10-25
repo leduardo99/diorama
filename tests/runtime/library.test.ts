@@ -67,6 +67,8 @@ const library = buildLibrary(characterSheets('characters/mage', specs, manifest)
 assert.equal(library.characters.length, 1);
 const mage = library.characters[0];
 assert.equal(mage.name, 'mage');
+assert.equal(mage.label, 'mage', 'a manifest without a label (exported before labels) is shown by its name');
+assert.equal(buildLibrary(characterSheets('characters/mage', specs, { ...manifest, label: 'Battle Mage' })).characters[0].label, 'Battle Mage');
 assert.equal(mage.id, 'characters/mage|mage');
 assert.equal(mage.folder, 'characters/mage');
 assert.equal(mage.idle?.key, 'idle');
@@ -135,6 +137,7 @@ assert.deepEqual(legacy.actions.map((c) => c.key), ['slash']);
 assert.equal(legacy.hit, null);
 assert.equal(legacy.tilt, 48, 'without a manifest the tilt is 48');
 assert.equal(legacy.id, 'characters/mage|humanoid');
+assert.deepEqual([legacy.name, legacy.label], ['mage', 'mage'], 'without a manifest, the folder names it');
 // Without clipKind either: locomotion moves, idle loops, the rest acts.
 const bare = specs.slice(0, 4).map((c) => {
   const atlas = clipSheet(c);
@@ -182,6 +185,7 @@ assert.deepEqual([stone.key, stone.frameCount, stone.rects(0), stone.atlas.meta.
 const real = buildLibrary(fixtureSheets('characters', 'vfx'));
 const byName = (name: string) => real.characters.find((c) => c.name === name)!;
 assert.deepEqual(real.characters.map((c) => c.name), ['ossuary-guard', 'malvek', 'ghoul-wolf']);
+assert.deepEqual(real.characters.map((c) => c.label), ['Ossuary Guard', 'Malvek Ravenlight', 'Ghoul Wolf'], 'the labels the sample gives');
 const guard = byName('ossuary-guard');
 assert.deepEqual(guard.locomotion.map((c) => c.key), ['walk', 'run']);
 // The slash fixture keeps the cells its export wrote: each row is its facing's cells, by name.

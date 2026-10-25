@@ -10,7 +10,7 @@ export const ZOOMS = [1, 2, 3, 4, 6, 8] as const;
 export type Zoom = 'fit' | (typeof ZOOMS)[number];
 export type Backdrop = 'checker' | 'dark' | 'light';
 
-/** Everything the preview shows is derived from the exported atlas and image of one asset. */
+/** Everything the Details window shows is derived from the exported atlas and image of one asset. */
 export function usePlayer(asset: AssetFileMeta, directionIndex: number) {
   const atlasResult = useQuery(atlasQuery(asset));
   const atlas = atlasResult.data;
@@ -27,10 +27,10 @@ export function usePlayer(asset: AssetFileMeta, directionIndex: number) {
   const [playing, setPlaying] = useState(true);
   const [fpsOverride, setFpsOverride] = useState<number | null>(null);
 
-  const [zoom, setZoom] = usePref<Zoom>('preview.zoom', 'fit');
-  const [backdrop, setBackdrop] = usePref<Backdrop>('preview.backdrop', 'checker');
-  const [showPivot, setShowPivot] = usePref<boolean>('preview.pivot', true);
-  const [showBounds, setShowBounds] = usePref<boolean>('preview.bounds', false);
+  const [zoom, setZoom] = usePref<Zoom>('details.zoom', 'fit');
+  const [backdrop, setBackdrop] = usePref<Backdrop>('details.backdrop', 'checker');
+  const [showPivot, setShowPivot] = usePref<boolean>('details.pivot', true);
+  const [showBounds, setShowBounds] = usePref<boolean>('details.bounds', false);
 
   const frames = useMemo<Rect[]>(() => {
     if (kind === 'animated' && atlas && clip) return clipFrames(atlas, clip, Math.min(directionIndex, Math.max(0, directions.length - 1)));

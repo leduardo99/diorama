@@ -57,15 +57,17 @@ const base = { skeleton: h, skin: () => {}, camera: new Camera(), width: 8, heig
 // 2. A rig spec typed with `satisfies` keeps its keys through the spread (the sample's guard, Malvek and captain).
 {
   const SPEC = {
+    label: 'Spec Warden',
     skeleton: h,
     camera: new Camera(),
     width: 8,
     height: 8,
     pivot: { x: 4, y: 8 },
     clips: { idle: idle(h), slash: { clip: slash(h), frames: 12 } },
-  } satisfies Omit<OutfitCharacterInfo, 'id' | 'label' | 'outfit'>;
+  } satisfies Omit<OutfitCharacterInfo, 'id' | 'outfit'>;
   const character = defineCharacter({ ...SPEC, name: 'spec', skin: () => {} });
   type Declared = Expect<Equal<ClipKey<typeof character>, 'idle' | 'slash'>>;
+  assert.equal(character.manifest.label, 'Spec Warden', 'the spec\'s label is the manifest\'s, so the kit and the exports name it alike');
   assert.equal(character.sheet('slash').width, 8);
   // @ts-expect-error not declared in the spec
   assert.throws(() => character.sheet('walk'), /no clip "walk"/);

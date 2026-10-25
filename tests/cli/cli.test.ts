@@ -878,6 +878,11 @@ export default defineAsset({
   for (const [rel, bytes] of oneLane.files) assert.ok(threeLanes.files.get(rel)!.equals(bytes), `assets/${rel} is the same byte for byte with --jobs 3 and --jobs 1`);
   assert.deepEqual(threeLanes.summary.outputs.map((o: { asset: string }) => o.asset), oneLane.summary.outputs.map((o: { asset: string }) => o.asset), 'and the summary is in the same order');
   assert.deepEqual(oneLane.summary.outputs.map((o: { asset: string }) => o.asset), kitSheets);
+  // The tip to combine sheets with --grid is for a person at a terminal: a program reading the output through a pipe (the
+  // viewer) never gets it.
+  const piped = spawnSync(process.execPath, [resolve('node_modules', 'tsx', 'dist', 'cli.mjs'), resolve('tools', 'export.ts'), kitsProject, 'icons/', 'scenery/'], { encoding: 'utf8', env: { ...process.env, NO_COLOR: '1', FORCE_COLOR: undefined } });
+  assert.ok(piped.status === 0 && piped.stdout.includes('Summary: 2 outputs'), `a piped export of two sheets works: ${piped.stdout} ${piped.stderr}`);
+  assert.ok(!`${piped.stdout}${piped.stderr}`.includes('Tip:'), `through a pipe the export prints no tip about --grid: ${piped.stdout}`);
   // Without a space profile the scenery catalog takes the theme's camera and a grid of its own.
   assert.equal(run(`npm run --silent new-project -- ${bareKitsProject}`).code, 0);
   for (const kit of ['scenery', 'vfx']) assert.equal(run(`npm run --silent new-kit -- ${bareKitsProject} ${kit}`).code, 0);

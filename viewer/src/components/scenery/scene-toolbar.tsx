@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { EyeIcon, EyeOffIcon, GridIcon, KeyboardIcon, MinusIcon, RouteIcon, PanelRightCloseIcon, PanelRightOpenIcon, PlusIcon, Redo2Icon, SaveIcon, Undo2Icon } from 'lucide-react';
+import { EyeIcon, EyeOffIcon, GridIcon, KeyboardIcon, MinusIcon, RouteIcon, PanelRightCloseIcon, PanelRightOpenIcon, PlusIcon, Redo2Icon, SaveIcon, ScanIcon, Undo2Icon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup, ButtonGroupText } from '@/components/ui/button-group';
 import { Kbd, KbdGroup } from '@/components/ui/kbd';
@@ -11,17 +11,20 @@ import { Rich, useT } from '@/i18n';
 import type { Key } from '@/i18n';
 import type { Layer } from '@/lib/scenery/edit';
 import { TOOLS, TOOL_KEYS } from '@/lib/scenery/labels';
+import { stepZoom, type Zoom } from '@/lib/scenery/render';
 
 const LAYERS: Layer[] = ['floor', 'walls', 'props'];
-const ZOOMS = [1, 2, 3, 4];
 
 interface Props {
   /** The scene menu: what is open comes first on the bar. */
   leading: ReactNode;
   visible: Record<Layer, boolean>;
   onVisible: (layer: Layer, on: boolean) => void;
+  /** The zoom on screen, Fit's included. */
   zoom: number;
-  onZoom: (zoom: number) => void;
+  /** Fit is chosen: the zoom follows the canvas box. */
+  fit: boolean;
+  onZoom: (zoom: Zoom) => void;
   grid: boolean;
   onGrid: (on: boolean) => void;
   /** Shows where characters can go (the scene's navigation) over the drawing. */
@@ -48,14 +51,15 @@ const SHORTCUTS: { keys: string[]; what: Key }[] = [
   { keys: ['G'], what: 'scenery.toolbar.keys.grid' },
   { keys: ['Tab'], what: 'scenery.toolbar.keys.tab' },
   { keys: ['−', '+'], what: 'scenery.toolbar.keys.zoom' },
+  { keys: ['0'], what: 'scenery.toolbar.keys.fit' },
   { keys: ['space'], what: 'scenery.toolbar.keys.pan' },
   { keys: ['⇧'], what: 'scenery.toolbar.keys.shift' },
   { keys: ['⌥'], what: 'scenery.toolbar.keys.alt' },
 ];
 
-/** The scene, undo, which layers are shown, zoom, grid, the piece panel, the shortcut list and save. The tools themselves are in the rail. A single line of a fixed height: the canvas below never moves. When the bar is narrow the layers and save lose their words, and what still does not fit scrolls. */
+/** The scene, undo, which layers are shown, zoom (with Fit), grid, the piece panel, the shortcut list and save. The tools themselves are in the rail. A single line of a fixed height: the canvas below never moves. When the bar is narrow the layers, Fit and save lose their words, and what still does not fit scrolls. */
 export function SceneToolbar(p: Props) {
-  const { t } = useT();
+  const { t, number } = useT();
   return (
     <div className="@container flex h-12 shrink-0 items-center gap-3 overflow-x-auto border-b px-3 [scrollbar-width:none]">
       <div className="shrink-0">{p.leading}</div>
@@ -94,14 +98,24 @@ export function SceneToolbar(p: Props) {
 
       <div className="ml-auto flex shrink-0 items-center gap-2">
         <ButtonGroup aria-label={t('scenery.toolbar.zoom')}>
-          <Button variant="outline" size="icon-sm" aria-label={t('scenery.toolbar.zoomOut')} disabled={p.zoom <= ZOOMS[0]} onClick={() => p.onZoom(p.zoom - 1)}><MinusIcon /></Button>
+          <Button variant="outline" size="icon-sm" aria-label={t('scenery.toolbar.zoomOut')} disabled={stepZoom(p.zoom, -1) === p.zoom} onClick={() => p.onZoom(stepZoom(p.zoom, -1))}><MinusIcon /></Button>
           <Tooltip>
             <TooltipTrigger asChild>
-              <ButtonGroupText className="min-w-9 justify-center tabular-nums">{t('units.times', { value: p.zoom })}</ButtonGroupText>
+              {/* Wide enough for "0.75×" (about 55 px with its padding): the buttons beside it do not move when Fit changes the value. */}
+              <ButtonGroupText className="min-w-15 justify-center tabular-nums">{t('units.times', { value: number(p.zoom, { maximumFractionDigits: 2 }) })}</ButtonGroupText>
             </TooltipTrigger>
             <TooltipContent><Rich id="scenery.toolbar.zoomHint" /></TooltipContent>
           </Tooltip>
-          <Button variant="outline" size="icon-sm" aria-label={t('scenery.toolbar.zoomIn')} disabled={p.zoom >= ZOOMS.at(-1)!} onClick={() => p.onZoom(p.zoom + 1)}><PlusIcon /></Button>
+          <Button variant="outline" size="icon-sm" aria-label={t('scenery.toolbar.zoomIn')} disabled={stepZoom(p.zoom, 1) === p.zoom} onClick={() => p.onZoom(stepZoom(p.zoom, 1))}><PlusIcon /></Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Toggle variant="outline" size="sm" pressed={p.fit} onPressedChange={() => p.onZoom('fit')} aria-label={t('scenery.toolbar.keys.fit')}>
+                <ScanIcon data-icon="inline-start" />
+                <span className="hidden @3xl:inline">{t('scenery.toolbar.fit')}</span>
+              </Toggle>
+            </TooltipTrigger>
+            <TooltipContent>{t('scenery.toolbar.keys.fit')} <Kbd>0</Kbd></TooltipContent>
+          </Tooltip>
         </ButtonGroup>
 
         <Tooltip>

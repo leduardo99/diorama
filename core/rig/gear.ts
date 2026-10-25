@@ -530,6 +530,7 @@ export function outfitFromData(data: OutfitData, catalog: GearCatalog): Skin {
  */
 export interface OutfitCharacterInfo {
   id: string;
+  /** The name editors show: the same as the character's `defineCharacter` label when one rig object gives both. */
   label: string;
   skeleton: SkeletonSpec;
   clips: Record<string, CharacterClip>;

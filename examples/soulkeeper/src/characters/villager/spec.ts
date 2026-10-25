@@ -18,6 +18,8 @@ const skeleton = humanoid();
 const PIVOT = { x: 54, y: 124 };
 
 export const VILLAGER_RIG = {
+  // The name people read, in the exported manifest (`defineCharacter`) and in the customizer (`CHARACTERS`).
+  label: 'Villager',
   skeleton,
   camera: CAMERA,
   width: 108,
@@ -29,4 +31,4 @@ export const VILLAGER_RIG = {
     walk: { clip: locomotion(skeleton, 'walk'), frames: 12 },
     run: { clip: locomotion(skeleton, 'run'), frames: 12 },
   },
-} satisfies Omit<OutfitCharacterInfo, 'id' | 'label' | 'outfit'>;
+} satisfies Omit<OutfitCharacterInfo, 'id' | 'outfit'>;

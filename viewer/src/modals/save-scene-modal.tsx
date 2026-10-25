@@ -3,7 +3,7 @@ import NiceModal from '@ebay/nice-modal-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import type { SceneData } from '@core/volume';
-import { CheckIcon, SaveIcon } from 'lucide-react';
+import { CheckIcon, PlayIcon, SaveIcon } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -24,6 +24,11 @@ interface Props {
   defaultName: string;
   /** Called once the scene is on disk, to add it to the list of saved scenes. */
   onSaved: (name: string) => void;
+  /**
+   * The painter used the built-in kit (`?fixture=true`): the scene is saved into the project, but its pieces are the
+   * fixture's, which the project's own kit does not have, so the Playground could not play it.
+   */
+  fixture?: boolean;
 }
 
 interface Saved {
@@ -34,7 +39,7 @@ interface Saved {
 }
 
 /** Saves the scene as `src/scenes/<name>.ts` (with its sheet in `sheets/scenes/`) and exports its reference image. */
-export const SaveSceneModal = NiceModal.create(({ project, scene, defaultName, onSaved }: Props) => {
+export const SaveSceneModal = NiceModal.create(({ project, scene, defaultName, onSaved, fixture = false }: Props) => {
   const { modal, rootProps, contentProps } = useModalDialog();
   const { t } = useT();
   const queryClient = useQueryClient();
@@ -52,7 +57,12 @@ export const SaveSceneModal = NiceModal.create(({ project, scene, defaultName, o
       return { name, output: [created.output, exported.ok ? exported.output : exportFailureText(exported.output, t('toasts.fixTypeErrors'))].filter(Boolean).join('\n\n'), exported: exported.ok };
     },
     // The catalog changed under the viewer whether or not the export worked.
-    onSettled: () => Promise.all([queryClient.invalidateQueries({ queryKey: ['assets'] }), queryClient.invalidateQueries({ queryKey: ['projects'] })]),
+    onSettled: (saved) => {
+      // Polish, not a fix: the file change already marks a played world stale, but the Playground would show the old one
+      // until it is drawn again. Dropped, a scene saved over plays as saved from the first frame.
+      if (saved) queryClient.removeQueries({ queryKey: ['scene-world', project, saved.name] });
+      return Promise.all([queryClient.invalidateQueries({ queryKey: ['assets'] }), queryClient.invalidateQueries({ queryKey: ['projects'] })]);
+    },
   });
   const saved = save.data;
 
@@ -107,9 +117,18 @@ export const SaveSceneModal = NiceModal.create(({ project, scene, defaultName, o
           {saved ? (
             <>
               <Button variant="outline" onClick={() => modal.hide()}>{t('common.close')}</Button>
-              <Button asChild onClick={() => modal.hide()}>
+              <Button variant="outline" asChild onClick={() => modal.hide()}>
                 <Link to="/p/$project" params={{ project }} search={{ folder: 'scenes' }}>{t('modals.saveScene.seeAssets')}</Link>
               </Button>
+              {/* Offered even when the export failed: the Playground plays the scene from its source, not from the export. */}
+              {!fixture && (
+                <Button asChild onClick={() => modal.hide()}>
+                  <Link to="/p/$project/playground" params={{ project }} search={{ scene: saved.name }}>
+                    <PlayIcon data-icon="inline-start" />
+                    {t('modals.saveScene.play')}
+                  </Link>
+                </Button>
+              )}
             </>
           ) : (
             <>

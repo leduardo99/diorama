@@ -26,6 +26,7 @@ const effects: Record<string, EffectCue[]> = {
 
 export const character = defineCharacter({
   name: 'ghoul-wolf',
+  label: 'Ghoul Wolf',
   skeleton,
   skin: ghoulWolf,
   camera: CAMERA,

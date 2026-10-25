@@ -367,6 +367,8 @@ function spider(knee: (side: -1 | 1) => LegSpec['knee'], gait: Partial<GaitSpec>
   const data = sheet.data as Record<string, any>;
   assert.equal(data.action, 'attack');
   assert.equal(data.character.name, 'test-guard');
+  assert.equal(m.label, 'Test guard', 'without a label, the manifest names the character in words');
+  assert.equal(data.character.label, m.label, 'every sheet carries the label');
   assert.equal(data.key, 'slash');
   assert.equal(Object.keys(data.sockets.frames).length, 4 * 12, 'one socket row per direction and frame');
   const [hx, hy, hd] = data.sockets.frames.S_0[data.sockets.names.indexOf('head')];
@@ -375,6 +377,9 @@ function spider(knee: (side: -1 | 1) => LegSpec['knee'], gait: Partial<GaitSpec>
   assert.throws(() => defineCharacter({ ...({} as any), name: 'bad', skeleton: h, skin: () => {}, camera: new Camera(), width: 8, height: 8, pivot: { x: 4, y: 8 }, clips: { 'Walk Fast': locomotion(h, 'walk') } }), /lowercase/);
   const loose = defineCharacter({ name: 'loose', skeleton: h, skin: () => {}, camera: new Camera(), width: 8, height: 8, pivot: { x: 4, y: 8 }, clips: { zap: defineClip({ name: 'zap', kind: 'skill', seconds: 0.3, events: [{ t: 0.2, name: spawnEvent('wand') }], drive: () => ({}) }) } });
   assert.ok(loose.manifest.warnings.some(w => w.includes('no idle')) && loose.manifest.warnings.some(w => w.includes('unknown socket')), 'missing idle and unknown sockets are reported');
+  const warden = defineCharacter({ name: 'gate_warden', label: 'Gate Warden', skeleton: h, skin: () => {}, camera: new Camera(), width: 8, height: 8, pivot: { x: 4, y: 8 }, clips: { idle: idle(h) } });
+  assert.equal((warden.sheet('idle').data as any).character.label, 'Gate Warden', 'a label is kept as written');
+  assert.equal(defineCharacter({ name: 'gate_warden', skeleton: h, skin: () => {}, camera: new Camera(), width: 8, height: 8, pivot: { x: 4, y: 8 }, clips: { idle: idle(h) } }).manifest.label, 'Gate warden', 'underscores and dashes become spaces');
   // Effect cues: played on clip events, carried in the manifest, checked against events and sockets.
   const caster = defineCharacter({
     name: 'caster', skeleton: h, skin: () => {}, camera: new Camera(), width: 8, height: 8, pivot: { x: 4, y: 8 }, sockets: { hand: p => p.joints['armR.hand'] },

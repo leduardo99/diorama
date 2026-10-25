@@ -12,7 +12,7 @@ const groups: Array<{ title: Key; items: Array<[keys: string[], label: Key]> }> 
     items: [
       [['/'], 'modals.shortcuts.search'],
       [['↑', '↓', '←', '→'], 'modals.shortcuts.moveSelection'],
-      [['↵'], 'modals.shortcuts.openPreview'],
+      [['↵'], 'modals.shortcuts.openDetails'],
       [['⌫'], 'modals.shortcuts.delete'],
       [['Esc'], 'modals.shortcuts.clear'],
       [['N'], 'modals.shortcuts.newThing'],
@@ -20,7 +20,7 @@ const groups: Array<{ title: Key; items: Array<[keys: string[], label: Key]> }> 
     ],
   },
   {
-    title: 'modals.shortcuts.preview',
+    title: 'modals.shortcuts.details',
     items: [
       [['space'], 'modals.shortcuts.playPause'],
       [['←', '→'], 'modals.shortcuts.frame'],

@@ -72,8 +72,8 @@ The `diorama-volume` skill lists the readability checks (silhouette, value contr
 - **Living scenery.** A transition clip starts on the `from` state's still and ends on the `to` state's (guide 05); compare the clip's first and last frames with the state sheets. Try it in the Playground: pick the scene, walk to the piece and press E.
 - **Characters.** The `motion` and `character` blocks, every row and frame of each clip, then the Playground. For attacks check the beat in the strip (anticipation, hold, strike over 2 to 3 frames, one smear, extreme hold, settle); for deaths, that the last frame lies flat in every row; for skills, that the effect starts at `release` from its socket.
 - **Gear and outfits.** The Customize tab dresses a character with the kit and previews it live; swap each slot, and check that a piece does not show through the body when it turns. The kit's parts are the generated sheets in `sheets/gear/`, exported to `assets/gear/`.
-- **Effects.** The effect's preview in the Assets tab (its size ring, and the flight of a projectile), then the character that cues it in the Playground.
-- **Item icons and HUD.** The preview of an icon is an inventory: every icon fills its square the same way and reads at 1×. A nine-slice stretches cleanly (try three sizes), a bar reads at every value with its cap, and the font sets "1234" and "-56" evenly.
+- **Effects.** The effect's Details window in the Assets tab (its size ring, and the flight of a projectile), then the character that cues it in the Playground.
+- **Item icons and HUD.** The Details window of an icon is an inventory: every icon fills its square the same way and reads at 1×. A nine-slice stretches cleanly (try three sizes), a bar reads at every value with its cap, and the font sets "1234" and "-56" evenly.
 
 ## The viewer
 
@@ -81,8 +81,8 @@ The `diorama-volume` skill lists the readability checks (silhouette, value contr
 
 Each project page has four tabs:
 
-- **Assets.** Every exported sheet, filterable by kind (characters, items, scenery, props, effects, icons, interface) with a preview that plays animations, and a banner when a source is newer than its export.
-- **Playground.** Characters and props play from their exported atlases. WASD moves, Shift runs, 1 to 9 trigger the character's actions in order, H is a hit, K a death and R resets. Effects start at their sockets on the clip's events, and a chosen scene becomes the world: the character slides along walls, stops at shut doors, and E uses the nearest door, lever or chest. The toolbar has a time scale (1×, ¼×, ⅒×, Pause) to read frames and events; a badge shows when it is not 1×.
+- **Assets.** Every exported sheet, filterable by kind (characters, items, scenery, props, effects, icons, interface) with a Details window that plays animations, and a banner when a source is newer than its export.
+- **Playground.** Characters and props play from their exported atlases. WASD moves, Shift runs, 1 to 9 trigger the character's actions in order, H is a hit, K a death and R resets. Effects start at their sockets on the clip's events, and a chosen scene becomes the world: the character slides along walls, stops at shut doors, and E uses the nearest door, lever or chest. The toolbar has a time scale (1×, ¼×, ⅒×, Pause) to read frames and events; a badge shows when it is not 1×. A chosen scene opens fitted (Fit: all of it in view), and the HUD, "Now playing", names the strides (`step:<leg>`) only with the toolbar's "Step events" on.
 - **Customize.** The gear kit's customizer: dress a character by slot, swap and remove pieces, undo, and save the outfit as a new character (`new-outfit-character`).
 - **Scenery.** The scene painter for the project's scenery kit: floors, walls, fences, doors, props and scale figures, with the navigation overlay, saved as scenes (`new-scene`).
 

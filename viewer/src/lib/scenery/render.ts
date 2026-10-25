@@ -91,6 +91,29 @@ export function fitScale(geo: Geometry, wanted: number): number {
   return Math.min(wanted, MAX_SIDE / geo.width, MAX_SIDE / geo.height, Math.sqrt(MAX_AREA / (geo.width * geo.height)));
 }
 
+/**
+ * The painter's zooms, a quarter to four times: − / + and Ctrl+wheel step through them, and Fit takes one of them.
+ * Few steps on purpose: a new drawing scale empties the renderer's cache, so a Fit that followed every pixel of a resize
+ * would draw every frame again each time; between steps a resize draws nothing.
+ */
+export const ZOOMS = [0.25, 0.5, 0.75, 1, 2, 3, 4] as const;
+
+/** A zoom of the painter, or Fit: the largest step at which the whole drawing fits the canvas box. */
+export type Zoom = number | 'fit';
+
+/** CSS px left round a fitted drawing. */
+const FIT_MARGIN = 16;
+
+/** The largest zoom step at which the whole drawing (the scene and the room for tall pieces) fits a box of CSS px; the smallest when none does. */
+export function fitZoom(geo: Pick<Geometry, 'width' | 'height'>, box: { width: number; height: number }): number {
+  return ZOOMS.filter((z) => geo.width * z <= box.width - FIT_MARGIN * 2 && geo.height * z <= box.height - FIT_MARGIN * 2).at(-1) ?? ZOOMS[0];
+}
+
+/** The next zoom step in or out from the one on screen (Fit's included); the same at either end. */
+export function stepZoom(zoom: number, delta: 1 | -1): number {
+  return (delta > 0 ? ZOOMS.find((z) => z > zoom) : ZOOMS.filter((z) => z < zoom).at(-1)) ?? zoom;
+}
+
 /** Sizes a canvas to the drawing at a scale. Only when it differs: assigning a size clears the canvas. */
 export function sizeCanvas(canvas: HTMLCanvasElement, geo: Geometry, scale: number) {
   const width = Math.round(geo.width * scale);

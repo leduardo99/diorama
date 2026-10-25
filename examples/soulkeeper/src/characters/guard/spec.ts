@@ -1,9 +1,9 @@
 /**
  * Ossuary guard rig: everything about the character except what it wears (the outfit is
- * `outfit.ts`): the skeleton (humanoid), the clips with their frame counts, the camera, the cell,
- * the pivot, the shadow and the sockets. `character.ts` defines the exportable character from it
- * and the gear catalog (`../../gear/catalog.ts`) lists it in `CHARACTERS`, so the viewer's
- * customizer and `new-outfit-character` dress the same body with the same clips.
+ * `outfit.ts`): its label, the skeleton (humanoid), the clips with their frame counts, the camera,
+ * the cell, the pivot, the shadow and the sockets. `character.ts` defines the exportable character
+ * from it and the gear catalog (`../../gear/catalog.ts`) lists it in `CHARACTERS`, so the viewer's
+ * customizer and `new-outfit-character` dress the same body with the same clips, under the same name.
  *
  * Controls (read from the manifest): idle, walk and run for movement; `slash` is the attack
  * (damage at its `hit` event); `cleave` is the skill, Soul Cleave (charged overhead cut: `cast`
@@ -37,6 +37,8 @@ const skeleton = humanoid();
 const PIVOT = { x: 54, y: 124 };
 
 export const GUARD_RIG = {
+  // The name people read, in the exported manifest (`defineCharacter`) and in the customizer (`CHARACTERS`).
+  label: 'Ossuary Guard',
   skeleton,
   camera: CAMERA,
   width: 108,
@@ -65,4 +67,4 @@ export const GUARD_RIG = {
     backstep: { clip: guardDodge(skeleton, 'backstep'), frames: 10 },
     jump: { clip: guardJump(skeleton, { distance: 0.4 * skeleton.height, seconds: 0.75, frames: 12 }), frames: 12 },
   },
-} satisfies Omit<OutfitCharacterInfo, 'id' | 'label' | 'outfit'>;
+} satisfies Omit<OutfitCharacterInfo, 'id' | 'outfit'>;

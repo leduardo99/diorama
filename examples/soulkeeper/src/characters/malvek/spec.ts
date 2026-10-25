@@ -40,6 +40,7 @@ const skeleton = malvekSkeleton();
 const PIVOT = { x: 104, y: 148 };
 
 export const MALVEK_RIG = {
+  label: 'Malvek Ravenlight',
   skeleton,
   camera: CAMERA,
   width: 208,
@@ -63,4 +64,4 @@ export const MALVEK_RIG = {
     // The dodge: 10 frames in 0.45 s (22 fps), root motion backwards.
     backstep: { clip: malvekBackstep(skeleton), frames: 10 },
   },
-} satisfies Omit<OutfitCharacterInfo, 'id' | 'label' | 'outfit'>;
+} satisfies Omit<OutfitCharacterInfo, 'id' | 'outfit'>;
