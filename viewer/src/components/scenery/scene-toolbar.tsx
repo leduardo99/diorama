@@ -101,8 +101,8 @@ export function SceneToolbar(p: Props) {
           <Button variant="outline" size="icon-sm" aria-label={t('scenery.toolbar.zoomOut')} disabled={stepZoom(p.zoom, -1) === p.zoom} onClick={() => p.onZoom(stepZoom(p.zoom, -1))}><MinusIcon /></Button>
           <Tooltip>
             <TooltipTrigger asChild>
-              {/* Wide enough for "0.75×": the buttons beside it do not move when Fit changes the value. */}
-              <ButtonGroupText className="min-w-12 justify-center tabular-nums">{t('units.times', { value: number(p.zoom, { maximumFractionDigits: 2 }) })}</ButtonGroupText>
+              {/* Wide enough for "0.75×" (about 55 px with its padding): the buttons beside it do not move when Fit changes the value. */}
+              <ButtonGroupText className="min-w-15 justify-center tabular-nums">{t('units.times', { value: number(p.zoom, { maximumFractionDigits: 2 }) })}</ButtonGroupText>
             </TooltipTrigger>
             <TooltipContent><Rich id="scenery.toolbar.zoomHint" /></TooltipContent>
           </Tooltip>

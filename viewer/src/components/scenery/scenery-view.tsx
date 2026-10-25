@@ -225,10 +225,10 @@ function Painter({ project, catalog, fixture, sceneNames }: { project: string; c
       setSelection(null);
     } else if (key === 'g') {
       setGrid(!grid);
-    } else if (key === '=' || key === '+') {
-      setZoom(stepZoom(zoom, 1));
-    } else if (key === '-') {
-      setZoom(stepZoom(zoom, -1));
+    } else if (key === '=' || key === '+' || key === '-') {
+      // As the disabled buttons and the wheel: a step past either end changes nothing, so it does not leave Fit either.
+      const next = stepZoom(zoom, key === '-' ? -1 : 1);
+      if (next !== zoom) setZoom(next);
     } else if (key === '0') {
       setZoom('fit');
     } else if (ARROWS[key] && (selected?.kind === 'prop' || selected?.kind === 'figure' || selected?.kind === 'wall')) {
