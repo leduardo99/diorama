@@ -32,3 +32,13 @@ export const customizeSearchSchema = z.object({
 export const scenerySearchSchema = z.object({
   fixture: z.boolean().optional().catch(undefined),
 });
+
+/**
+ * URL state of the playground. `scene` opens it on a saved scene of the project (Save scene's "Play it in the
+ * Playground"), which then becomes the chosen one and leaves the address; `fixture` stands the built-in kit's scene
+ * behind the actors (development).
+ */
+export const playgroundSearchSchema = z.object({
+  fixture: z.boolean().optional().catch(undefined),
+  scene: z.string().optional().catch(undefined),
+});

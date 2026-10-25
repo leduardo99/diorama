@@ -357,6 +357,7 @@ export const ptBR: Shape<typeof en> = {
       saved: 'Cena {name} salva e exportada',
       savedExportFailed: 'Cena {name} salva, mas o export falhou',
       seeAssets: 'Ver nos assets',
+      play: 'Jogar no Playground',
     },
     addPiece: {
       title: 'Adicionar peça',
@@ -855,6 +856,7 @@ export const ptBR: Shape<typeof en> = {
       zoomOut: 'Diminuir o zoom',
       zoomIn: 'Aumentar o zoom',
       zoomHint: 'Zoom · <kbd>Ctrl</kbd> + roda',
+      fit: 'Ajustar',
       grid: 'Grade',
       navigation: 'Navegação',
       navigationHint: 'Navegação: onde os personagens andam (vermelho bloqueia, âmbar é lento)',
@@ -875,6 +877,7 @@ export const ptBR: Shape<typeof en> = {
         grid: 'Mostrar ou esconder a grade',
         tab: 'Mostrar ou esconder o painel de peças',
         zoom: 'Zoom',
+        fit: 'Ajustar a cena à tela',
         pan: 'Segure e arraste para mover a vista',
         shift: 'Com o pincel: linha reta desde o último ponto',
         alt: 'Com qualquer ferramenta: conta-gotas',

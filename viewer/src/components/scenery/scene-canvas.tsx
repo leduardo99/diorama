@@ -15,12 +15,10 @@ import type { Tool } from '@/lib/scenery/labels';
 import { navigationOf } from '@/lib/scenery/navigation';
 import { framesOf, warm } from '@/lib/scenery/warm';
 import { drawOverlay, footprintOfProp, propBox, type Ghost, type Mark } from '@/lib/scenery/overlay';
-import { cellBox, cellFromPoint, edgeFromPoint, fitScale, geometryOf, paintScene, renderScale, vertexFromPoint } from '@/lib/scenery/render';
+import { cellBox, cellFromPoint, edgeFromPoint, fitScale, geometryOf, paintScene, renderScale, stepZoom, vertexFromPoint } from '@/lib/scenery/render';
 import type { CanvasStatusStore } from '@/lib/scenery/status';
 import { cn } from '@/lib/utils';
 import { SelectionPopover, type UseBrush } from './selection-popover';
-
-const ZOOMS = [1, 2, 3, 4];
 
 /** What a frame has to redraw. */
 const MAIN = 1;
@@ -56,6 +54,7 @@ interface Props {
   catalog: SceneryCatalog;
   scene: SceneData;
   visible: Record<Layer, boolean>;
+  /** The zoom on screen, Fit already worked out (from the box this canvas reports as `view`). */
   zoom: number;
   grid: boolean;
   tool: Tool;
@@ -126,8 +125,8 @@ export const SceneCanvas = memo(function SceneCanvas(props: Props) {
   const lastSample = useRef<{ x: number; y: number } | null>(null);
   // The pictures of the props and walls on screen, to pick them by what is drawn and not by the cells they stand in.
   const sprites = useRef<{ scene: SceneData; scale: number; renderer: typeof renderer; geo: typeof geo; list: Sprite[] } | null>(null);
-  // The box of the selected prop's picture, measured once per prop, scale and renderer.
-  const measured = useRef<{ prop: SceneData['props'][number]; scale: number; zoom: number; renderer: typeof renderer; box: ReturnType<typeof propBox> } | null>(null);
+  // The box of the selected prop's picture, measured once per prop, scale, zoom and renderer (`ready`: from the drawing at that scale).
+  const measured = useRef<{ prop: SceneData['props'][number]; scale: number; zoom: number; renderer: typeof renderer; ready: boolean; box: ReturnType<typeof propBox> } | null>(null);
   // When the pointer last did something on the canvas: warming waits for it to be quiet.
   const touched = useRef(0);
   const stroke = useRef<Stroke | null>(null);
@@ -231,8 +230,14 @@ export const SceneCanvas = memo(function SceneCanvas(props: Props) {
         const prop = live.props[target.index];
         if (!prop) return null;
         let measure = measured.current;
-        if (!measure || measure.prop !== prop || measure.scale !== scale || measure.zoom !== zoom || measure.renderer !== renderer) {
-          measure = { prop, scale, zoom, renderer, box: drawn.current?.scale === scale ? propBox(view, zoom, prop) : null };
+        // The picture is read from the renderer's cache, so only once the main canvas is drawn at this scale. A zoom moves the
+        // anchor before that drawing: until it is made, the box measured at the zoom before is scaled, and measured again after.
+        const ready = drawn.current?.scale === scale;
+        if (!measure || measure.prop !== prop || measure.scale !== scale || measure.zoom !== zoom || measure.renderer !== renderer || (ready && !measure.ready)) {
+          const before = measure?.prop === prop && measure.renderer === renderer ? measure.box : null;
+          const r = measure ? zoom / measure.zoom : 1;
+          const box = ready ? propBox(view, zoom, prop) : before && { x: before.x * r, y: before.y * r, width: before.width * r, height: before.height * r };
+          measure = { prop, scale, zoom, renderer, ready, box };
           measured.current = measure;
         }
         const foot = footprintOfProp(catalog, prop);
@@ -327,7 +332,8 @@ export const SceneCanvas = memo(function SceneCanvas(props: Props) {
     if (!stroke.current) shown.current = scene;
     schedule(MAIN | OVERLAY);
   }, [scene, visible, geo, scale, renderer, blocked, schedule]);
-  useLayoutEffect(() => schedule(OVERLAY), [grid, tool, eraseLayer, brush.prop, brush.wall, brush.door, wallHeight, propDir, propVariant, placeState, doorFlip, navigation, selection, schedule]);
+  // A zoom that keeps the drawing scale redraws nothing, but the selection's popover must follow it.
+  useLayoutEffect(() => schedule(OVERLAY), [grid, tool, eraseLayer, brush.prop, brush.wall, brush.door, wallHeight, propDir, propVariant, placeState, doorFlip, navigation, selection, zoom, schedule]);
   // The pieces the brushes hold are drawn into the renderer's cache in idle time, so the first stroke does not pay for their frames.
   useEffect(() => {
     if (blocked) return;
@@ -343,10 +349,10 @@ export const SceneCanvas = memo(function SceneCanvas(props: Props) {
       () => performance.now() - touched.current > 600,
     );
   }, [renderer, scale, catalog, blocked, brush.floor, brush.wall, brush.prop]);
-  // The popover opens in this commit: its anchor must already be over what is selected, not at the corner for a frame.
+  // The popover opens in this commit: its anchor must already be over what is selected, not at the corner for a frame (nor at the old place after a zoom).
   useLayoutEffect(() => {
     if (selection) flush.current(OVERLAY);
-  }, [selection, scene.props, scene.walls, scene.figures]);
+  }, [selection, scene.props, scene.walls, scene.figures, zoom]);
 
   // Space held pans with the pointer: a data attribute, not state, so holding it re-renders nothing.
   useEffect(() => {
@@ -375,7 +381,7 @@ export const SceneCanvas = memo(function SceneCanvas(props: Props) {
   const zoomBy = useEffectEvent((e: WheelEvent) => {
     if (!e.ctrlKey && !e.metaKey) return;
     e.preventDefault();
-    const next = ZOOMS[Math.max(0, Math.min(ZOOMS.length - 1, ZOOMS.indexOf(zoom) + (e.deltaY < 0 ? 1 : -1)))];
+    const next = stepZoom(zoom, e.deltaY < 0 ? 1 : -1);
     if (next !== zoom) onZoom(next);
   });
   useEffect(() => {
@@ -385,6 +391,23 @@ export const SceneCanvas = memo(function SceneCanvas(props: Props) {
     element.addEventListener('wheel', listener, { passive: false });
     return () => element.removeEventListener('wheel', listener);
   }, []);
+
+  // The box goes to the status, where Fit reads it. Measured in a layout effect, before the first drawing (a ResizeObserver
+  // alone reports after the frame is drawn, which would draw it once at the wrong scale), and with the scrollbars in
+  // (`offset*`, not `client*`): a scrollbar that comes or goes with the zoom must not change what Fit fits.
+  useLayoutEffect(() => {
+    const element = box.current;
+    if (!element) return;
+    const report = () => {
+      const width = element.offsetWidth;
+      const height = element.offsetHeight;
+      status.setState((s) => (s.view?.width === width && s.view.height === height ? s : { ...s, view: { width, height } }));
+    };
+    report();
+    const observer = new ResizeObserver(report);
+    observer.observe(element, { box: 'border-box' });
+    return () => observer.disconnect();
+  }, [status]);
 
   // Synthetic pointers (tests, remote desktops) have nothing to capture.
   const capture = (e: React.PointerEvent, on: boolean) => {
@@ -626,8 +649,9 @@ export const SceneCanvas = memo(function SceneCanvas(props: Props) {
 
   return (
     <div className="relative min-h-0 flex-1">
-      <div ref={box} className="group absolute inset-0 overflow-auto bg-muted/30">
-        <div className="relative m-auto" style={{ width: geo.width * zoom, height: geo.height * zoom }}>
+      {/* A flex box, so the drawing is centred both ways while it fits and scrolls from its corner when it is larger (auto margins fall to 0; it never shrinks). */}
+      <div ref={box} className="group absolute inset-0 flex overflow-auto bg-muted/30">
+        <div className="relative m-auto shrink-0" style={{ width: geo.width * zoom, height: geo.height * zoom }}>
           <div aria-hidden className="checker absolute rounded-xs shadow-lg ring-1 ring-foreground/15" style={stage} />
           <canvas ref={main} className="pixelated absolute inset-0" style={{ width: geo.width * zoom, height: geo.height * zoom }} aria-label={t('scenery.sceneLabel')} />
           <canvas

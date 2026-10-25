@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { buildRows, listEntries, matches, pushRecent, RECENT_LIMIT, type Entry } from '../../viewer/src/lib/playground/catalog';
+import { buildRows, listEntries, matches, pushRecent, RECENT_LIMIT, sceneToPlay, type Entry } from '../../viewer/src/lib/playground/catalog';
 import { shownFrame, type Atlas, type CharacterManifest } from '@diorama/runtime';
 import { advance, currentFrame, newActor, startClip, stepPlayer, type ClipEvent } from '../../viewer/src/lib/playground/actor';
 import { socketPoint, spawnFromEvent, stepEffects, type Effect } from '../../viewer/src/lib/playground/effects';
@@ -51,6 +51,13 @@ assert.ok(!labels(buildRows(entries, { ...base, recent: ['s:tomb'], filter: 'cha
 // Recents: newest first, no repeats, bounded.
 assert.deepEqual(pushRecent(['b', 'a', 'c'], 'a'), ['a', 'b', 'c']);
 assert.equal(pushRecent(Array.from({ length: 20 }, (_, i) => `k${i}`), 'new').length, RECENT_LIMIT);
+
+// The scene to play: the one a link names (Save scene's "Play it in the Playground") when the project has it, else the one chosen last time.
+assert.equal(sceneToPlay(['crypt', 'yard'], 'yard', 'crypt'), 'yard', 'a link wins over the remembered scene');
+assert.equal(sceneToPlay(['crypt', 'yard'], undefined, 'crypt'), 'crypt');
+assert.equal(sceneToPlay(['crypt', 'yard'], 'gone', 'crypt'), 'crypt', 'a stale link falls back');
+assert.equal(sceneToPlay(['crypt'], undefined, 'gone'), '', 'a remembered scene that is gone plays none');
+assert.equal(sceneToPlay([], 'yard', 'yard'), '', 'a project without a scenery kit plays none');
 
 // ---- The runtime's library and actors in the view (the rules themselves are tested in tests/runtime/) ----
 
