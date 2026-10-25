@@ -16,7 +16,8 @@ import { ZOOMS, type Backdrop, type Player, type Zoom } from './use-player';
 
 /**
  * A section of a right-hand panel. A fieldset is as wide as its widest line by default (`min-inline-size: min-content`),
- * so a long path would push the values out of the column: `min-w-0` keeps every line inside it, and cut with an ellipsis.
+ * so a long path would push the values out of the column: `min-w-0` keeps every line inside it, and a path that does not
+ * fit ends in an ellipsis.
  */
 export function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
