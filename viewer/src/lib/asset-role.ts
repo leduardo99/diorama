@@ -1,6 +1,6 @@
 import type { TFn } from '../i18n/core';
 import { groupLabel } from './outfit/labels';
-import { basename, stripExtension } from './format';
+import { basename, dirname, stripExtension } from './format';
 import type { AssetFileMeta } from './types';
 
 /** What an exported sheet is, as the viewer sorts it: its atlas says (`meta.data.role`), anything else is "other". */
@@ -20,6 +20,16 @@ export const isRoleId = (value: string): value is RoleId => (roleIds as readonly
 
 /** The name shown for an asset: a gear item's own label ("Elmo"), otherwise its file name. */
 export const assetTitle = (asset: AssetFileMeta) => asset.atlasInfo?.label ?? basename(stripExtension(asset.subpath));
+
+/**
+ * The name the Details window carries. A character's clip is titled by its character, not by the clip: for now the folder
+ * its clips live in ("captain" for characters/captain/idle.png), as its group card is. Anything else carries its own title,
+ * its label or else its file name, even a scenery piece whose folder holds other animated sheets.
+ */
+export function detailsTitle(asset: AssetFileMeta): string {
+  const folder = dirname(asset.subpath);
+  return roleOf(asset) === 'character' && folder ? basename(folder) : assetTitle(asset);
+}
 
 /** The group of a gear item ("Head"), or null for anything else. */
 export const gearGroup = (asset: AssetFileMeta, t: TFn) => (roleOf(asset) === 'gear' && asset.atlasInfo?.group ? groupLabel(t, asset.atlasInfo.group) : null);

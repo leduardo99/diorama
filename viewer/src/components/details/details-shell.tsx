@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { DialogClose, DialogTitle } from '@/components/ui/dialog';
 import { Kbd } from '@/components/ui/kbd';
 import { Spinner } from '@/components/ui/spinner';
+import { detailsTitle } from '@/lib/asset-role';
 import { isStale } from '@/lib/export-state';
 import { useT } from '@/i18n';
 import { basename, dirname, stripExtension } from '@/lib/format';
@@ -28,19 +29,27 @@ export function usePeers(asset: AssetFileMeta, clips: AssetFileMeta[], visibleAs
 
 export type Peers = ReturnType<typeof usePeers>;
 
-/** The top of every Details window: where the asset is, its size and export state, stepping through its peers, exporting again, closing. */
+/**
+ * The top of every Details window: the asset's name, where it is, its size and export state, stepping through its peers,
+ * exporting again, closing. The name is the character's for a clip (`detailsTitle`); the file, the clip of a character,
+ * comes last in the path, unless it is the name already.
+ */
 export function DetailsHeader({ asset, peers }: { asset: AssetFileMeta; peers: Peers }) {
   const reexport = useReexport();
   const { t, bytes } = useT();
+  const title = detailsTitle(asset);
   const folder = dirname(asset.subpath);
+  const file = basename(stripExtension(asset.subpath));
   const { position, go, stepsClips } = peers;
   return (
     <header className="flex items-center justify-between gap-4 border-b py-2 pr-3 pl-4">
       <div className="flex min-w-0 items-center gap-2 whitespace-nowrap">
-        <span className="truncate text-muted-foreground">{asset.project}</span>
-        {folder && <><span className="text-muted-foreground/60">/</span><span className="truncate text-muted-foreground">{folder}</span></>}
-        <span className="text-muted-foreground/60">/</span>
-        <DialogTitle className="text-sm">{basename(stripExtension(asset.subpath))}</DialogTitle>
+        <DialogTitle className="truncate">{title}</DialogTitle>
+        <span className="flex min-w-0 shrink-[4] items-center gap-2 text-muted-foreground">
+          <span className="truncate">{asset.project}</span>
+          {folder && <><span className="text-muted-foreground/60">/</span><span className="truncate">{folder}</span></>}
+          {file !== title && <><span className="text-muted-foreground/60">/</span><span className="truncate">{file}</span></>}
+        </span>
         {asset.engine && <EngineBadge engine={asset.engine} />}
         {asset.width && asset.height && <Badge variant="secondary" className="tabular-nums">{asset.width}×{asset.height}</Badge>}
         <Badge variant="secondary" className="tabular-nums">{bytes(asset.size)}</Badge>
