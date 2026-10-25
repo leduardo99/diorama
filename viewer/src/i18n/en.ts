@@ -340,7 +340,7 @@ export const en = {
       playPause: 'Play / pause',
       frame: 'Previous / next frame',
       direction: 'Change direction; on an asset that does not turn, its variation or height',
-      animationOrAsset: 'Previous / next animation of a character; for any other asset, the previous / next in the list',
+      animationOrAsset: 'Previous / next animation of a character, or previous / next asset in the list',
       zoom: 'Zoom / fit',
       background: 'Toggle background',
       guides: 'Pivot / frame edges',

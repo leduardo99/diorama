@@ -338,7 +338,7 @@ export const ptBR: Shape<typeof en> = {
       playPause: 'Reproduzir / pausar',
       frame: 'Frame anterior / próximo',
       direction: 'Trocar de direção; num asset que não gira, a variação ou a altura',
-      animationOrAsset: 'Animação anterior / próxima de um personagem; nos outros assets, o anterior / próximo da lista',
+      animationOrAsset: 'Animação anterior / próxima de um personagem, ou asset anterior / próximo da lista',
       zoom: 'Zoom / ajustar',
       background: 'Alternar fundo',
       guides: 'Pivô / bordas do frame',
