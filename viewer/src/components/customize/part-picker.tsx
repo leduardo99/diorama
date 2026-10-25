@@ -50,7 +50,7 @@ function Choices({ catalog, outfit, place, replacing, thumbs, paired, both, head
   const { t } = useT();
   const { similar, others } = candidatesFor(catalog, outfit, place, replacing);
   // Equipping offers add-ons apart from the parts that stand alone: they are for the piece they rest on.
-  const first = replacing === undefined ? t('customize.picker.parts') : t('customize.picker.similar');
+  const first = replacing === undefined ? t('customize.picker.gear') : t('customize.picker.similar');
   const second = replacing === undefined ? t('customize.picker.addOns') : t('customize.picker.others');
   const choose = (candidate: Candidate) => {
     if (candidate.blocked || candidate.taken || candidate.current) return;

@@ -1,21 +1,32 @@
+import { characterLabel } from './asset-role';
 import { basename, dirname } from './format';
-import type { AssetFileMeta } from './types';
+import type { AssetFileMeta, AtlasInfo } from './types';
 
-/** The animations that make up one character (or any animated thing) living in the same folder. */
+/** The clips of one character, shown as one entry. */
 export interface AssetGroup {
   id: string;
+  /** The name people read: the character's label, or its folder's name for an older sheet without a manifest. */
   name: string;
   folder: string;
+  /** The character's manifest, its id and label; null for older sheets without one. */
+  character: AtlasInfo['character'];
   assets: AssetFileMeta[];
 }
 
 export type AssetEntry = { type: 'asset'; asset: AssetFileMeta } | { type: 'group'; group: AssetGroup };
 
-/** Effects, item icons and interface pieces live in folders of their own (`vfx/`, `icons/`, `ui/`) but are not clips of one thing: each is shown alone. */
-const STANDS_ALONE = new Set(['vfx', 'icon', 'ui']);
-
-const isAnimation = ({ atlasInfo }: AssetFileMeta) =>
-  atlasInfo !== null && !STANDS_ALONE.has(atlasInfo.role ?? '') && (atlasInfo.mode === 'strip' || atlasInfo.mode === 'directions') && atlasInfo.frameCount > 1;
+/**
+ * The character a sheet is a clip of, as the runtime groups them (`packages/runtime/src/library.ts`): its manifest in its
+ * folder, or for an older character sheet without a manifest its folder alone. Null for anything else: only a character's
+ * clips are one thing. A scenery folder's animated sheets (a door's `--closing`, a candle's `--flicker`), effects, item icons
+ * and interface pieces are each an asset of their own, whatever else their folder holds.
+ */
+function characterKey({ subpath, atlasInfo }: AssetFileMeta): string | null {
+  const folder = dirname(subpath);
+  if (!folder || !atlasInfo || (atlasInfo.mode !== 'strip' && atlasInfo.mode !== 'directions')) return null;
+  if (atlasInfo.character) return `${folder}|${atlasInfo.character.name}`;
+  return atlasInfo.role === 'character' ? `${folder}|` : null;
+}
 
 /** Idle first, then alphabetical: the order animations are shown in. */
 function byClip(a: AssetFileMeta, b: AssetFileMeta) {
@@ -23,46 +34,57 @@ function byClip(a: AssetFileMeta, b: AssetFileMeta) {
   return rank(a) - rank(b) || a.subpath.localeCompare(b.subpath, undefined, { numeric: true });
 }
 
-function animationsByFolder(assets: AssetFileMeta[]): Map<string, AssetFileMeta[]> {
-  const byFolder = new Map<string, AssetFileMeta[]>();
+/** The project's characters by `characterKey`, each with its clips. A character with a single clip is one too. */
+function charactersOf(assets: AssetFileMeta[]): Map<string, AssetGroup> {
+  const groups = new Map<string, AssetGroup>();
   for (const asset of assets) {
-    const folder = dirname(asset.subpath);
-    if (folder && isAnimation(asset)) byFolder.set(folder, [...(byFolder.get(folder) ?? []), asset]);
+    const key = characterKey(asset);
+    if (key === null) continue;
+    const group = groups.get(key);
+    if (group) group.assets.push(asset);
+    else groups.set(key, { id: key, name: '', folder: dirname(asset.subpath), character: null, assets: [asset] });
   }
-  for (const [folder, members] of byFolder) {
-    if (members.length < 2) byFolder.delete(folder);
-    else members.sort(byClip);
+  for (const group of groups.values()) {
+    group.assets.sort(byClip);
+    const [first] = group.assets;
+    group.character = first.atlasInfo?.character ?? null;
+    group.name = characterLabel(first) ?? basename(group.folder);
   }
-  return byFolder;
+  return groups;
 }
 
-/** The other animations of the same character, or just the asset itself when it stands alone. */
+/** The other animations of the same character, or just the asset itself when it is not a character's. */
 export function clipsOf(allAssets: AssetFileMeta[], asset: AssetFileMeta): AssetFileMeta[] {
-  return animationsByFolder(allAssets).get(dirname(asset.subpath)) ?? [asset];
+  const key = characterKey(asset);
+  return (key !== null && charactersOf(allAssets).get(key)?.assets) || [asset];
 }
 
 /**
- * Collapses sibling animations into one entry, placed where the first of them was.
+ * Collapses a character's clips into one entry, placed where the first of them was.
  * `all` is the whole project: filters may hide some clips, but the group must stay complete.
  */
 export function groupAnimations(visible: AssetFileMeta[], all: AssetFileMeta[]): AssetEntry[] {
-  const groups = animationsByFolder(all);
+  const groups = charactersOf(all);
   const placed = new Set<string>();
   const entries: AssetEntry[] = [];
   for (const asset of visible) {
-    const folder = dirname(asset.subpath);
-    const members = groups.get(folder);
-    if (!members || !isAnimation(asset)) {
+    const key = characterKey(asset);
+    const group = key === null ? undefined : groups.get(key);
+    if (!group) {
       entries.push({ type: 'asset', asset });
-    } else if (!placed.has(folder)) {
-      placed.add(folder);
-      entries.push({ type: 'group', group: { id: folder, name: basename(folder), folder, assets: members } });
+    } else if (!placed.has(group.id)) {
+      placed.add(group.id);
+      entries.push({ type: 'group', group });
     }
   }
   return entries;
 }
 
 export const entryKey = (entry: AssetEntry) => (entry.type === 'asset' ? entry.asset.subpath : `group:${entry.group.id}`);
+
+/** The entry an asset is shown in: its own, or its character's. */
+export const entryOf = (entries: AssetEntry[], asset: AssetFileMeta): AssetEntry | undefined =>
+  entries.find((entry) => (entry.type === 'asset' ? entry.asset.subpath === asset.subpath : entry.group.assets.some((a) => a.subpath === asset.subpath)));
 
 /** What opens when an entry is clicked: the asset itself, or the first animation of a group. */
 export const entryCover = (entry: AssetEntry): AssetFileMeta => (entry.type === 'asset' ? entry.asset : entry.group.assets[0]);

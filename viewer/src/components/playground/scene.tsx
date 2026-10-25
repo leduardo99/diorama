@@ -527,7 +527,7 @@ function describe(actor: Actor, isPlayer: boolean, busy: boolean): Selection {
   const base = actor.clip;
   return {
     id: actor.id,
-    name: actor.character?.name ?? base.name,
+    name: actor.character?.label ?? base.name,
     isPlayer,
     isCharacter: actor.character !== null,
     directions: base.atlas.meta.directions && base.atlas.meta.directions.length > 1 ? base.atlas.meta.directions : [],

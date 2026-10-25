@@ -27,12 +27,6 @@ const arena: Floor = {
   }),
 };
 
-/** A name as a person reads it: `ossuary-guard` is "Ossuary guard". */
-export function readable(name: string): string {
-  const words = name.split(/[-_\s]+/).filter(Boolean).join(' ');
-  return words.charAt(0).toUpperCase() + words.slice(1);
-}
-
 export interface BenchOptions {
   /** The character's folder in the exports: `characters/guard`. */
   folder: string;
@@ -73,7 +67,7 @@ export class BenchScene extends Phaser.Scene {
     const keys = KeyboardControls.legend(this.character).map(([key, clip]) => `${key} ${clip}`).join('  ');
     if (this.diorama.library.ui.has(PANEL)) this.diorama.add.nineSlice(16, 16, PANEL, 600, 132).setScrollFactor(0).setDepth(HUD_DEPTH);
     else this.add.rectangle(16, 16, 600, 132, 0x1d1a24, 0.92).setOrigin(0).setStrokeStyle(1, 0x3a3546).setScrollFactor(0).setDepth(HUD_DEPTH);
-    this.add.text(44, 38, [readable(found.name), 'WASD walk, Shift run', keys].join('\n'), { fontFamily: 'monospace', fontSize: '15px', color: '#f5f3fa', lineSpacing: 4 })
+    this.add.text(44, 38, [`${found.label} · ${found.folder}`, 'WASD walk, Shift run', keys].join('\n'), { fontFamily: 'monospace', fontSize: '15px', color: '#f5f3fa', lineSpacing: 4 })
       .setScrollFactor(0).setDepth(HUD_DEPTH + 1);
     this.readout = this.add.text(44, 108, '', { fontFamily: 'monospace', fontSize: '13px', color: '#e6a15c' }).setScrollFactor(0).setDepth(HUD_DEPTH + 1);
 

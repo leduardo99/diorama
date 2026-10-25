@@ -4,9 +4,9 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { buildAssetCatalog, buildProjectCatalog } from '../../viewer/server/catalog';
 import { createTranslator } from '../../viewer/src/i18n/core';
-import { detailsTitle, roleDetail, roleOf } from '../../viewer/src/lib/asset-role';
+import { characterLabel, detailsTitle, roleDetail, roleOf } from '../../viewer/src/lib/asset-role';
 import { exportTarget, isStale, pendingExports, projectTotals } from '../../viewer/src/lib/export-state';
-import { clipsOf } from '../../viewer/src/lib/groups';
+import { clipsOf, groupAnimations } from '../../viewer/src/lib/groups';
 import type { AssetFileMeta, AtlasInfo } from '../../viewer/src/lib/types';
 
 console.log('🧪 Checking the viewer catalog (projects/ only, export state, engines, kits, scenes and games)...\n');
@@ -43,7 +43,7 @@ try {
   // An atlas says what a sheet is: a gear item carries its part id, label and group.
   put('sheets', 'gear/helm.ts', 900);
   put('assets', 'gear/helm.png', 1000);
-  put('assets', 'gear/helm.json', 1000, JSON.stringify({ meta: { mode: 'directions', frameCount: 1, data: { role: 'gear', part: 'helm', label: 'Elmo', group: 'head' } } }));
+  put('assets', 'gear/helm.json', 1000, JSON.stringify({ meta: { mode: 'directions', frameCount: 1, data: { role: 'gear', part: 'helm', label: 'Elmo', group: 'head', character: 'guard' } } }));
   put('assets', 'gear/plain.png', 1000);
   put('assets', 'gear/plain.json', 1000, JSON.stringify({ meta: { mode: 'sheet', data: { role: 5 } } }));
   // A sheet's rows are not always facings, in the shapes the sample exports: an interface piece's rows are its states, a
@@ -59,6 +59,15 @@ try {
     put('assets', `rows/${name}.png`, 1000);
     put('assets', `rows/${name}.json`, 1000, JSON.stringify({ meta }));
   }
+  // A character's clips carry its manifest (`meta.data.character`), with the name people read since labels exist; the
+  // spider's atlas was exported before them.
+  const clipAtlas = (frameCount: number, character: object) => JSON.stringify({ meta: { mode: 'directions', frameCount, directions: ['S', 'SW', 'W', 'NW', 'N', 'NE', 'E', 'SE'], data: { role: 'character', character } } });
+  for (const [clip, frames] of [['idle', 16], ['walk', 12]] as const) {
+    put('assets', `characters/guard/${clip}.png`, 1000);
+    put('assets', `characters/guard/${clip}.json`, 1000, clipAtlas(frames, { name: 'ossuary-guard', label: 'Ossuary Guard', skeleton: 'humanoid' }));
+  }
+  put('assets', 'characters/spider/idle.png', 1000);
+  put('assets', 'characters/spider/idle.json', 1000, clipAtlas(8, { name: 'bone-spider', skeleton: 'spider' }));
 
   const assets = await buildAssetCatalog(root);
   const byPath = (subpath: string) => assets.find((a) => a.subpath === subpath)!;
@@ -77,6 +86,20 @@ try {
   const helm = byPath('gear/helm.png').atlasInfo;
   assert.deepEqual([helm?.role, helm?.part, helm?.label, helm?.group], ['gear', 'helm', 'Elmo', 'head']);
   assert.equal(byPath('gear/plain.png').atlasInfo?.role, null, 'a role that is not text is ignored');
+  // A character's clip names its character, its manifest's id and label, and its id alone for an atlas exported before
+  // labels. A gear sheet names its wearer as text: that is no character, and the label stays the gear's own.
+  assert.deepEqual(byPath('characters/guard/idle.png').atlasInfo?.character, { name: 'ossuary-guard', label: 'Ossuary Guard' });
+  assert.deepEqual(byPath('characters/spider/idle.png').atlasInfo?.character, { name: 'bone-spider', label: 'bone-spider' });
+  assert.deepEqual([helm?.character, helm?.label], [null, 'Elmo']);
+  assert.equal(byPath('rows/captain-idle.png').atlasInfo?.character, null, 'a character sheet without a manifest has none');
+  assert.equal(byPath('characters/guard/walk.png').atlasInfo?.label, null, 'the character is not the clip\'s label: the table titles clips by their file');
+  assert.deepEqual([characterLabel(byPath('characters/guard/walk.png')), characterLabel(byPath('gear/helm.png'))], ['Ossuary Guard', null]);
+  // The catalog's characters as the grid shows them: one card each, by its label, with its folder.
+  const cards = groupAnimations(assets, assets).flatMap((e) => (e.type === 'group' && e.group.folder.startsWith('characters/') ? [[e.group.name, e.group.folder, e.group.assets.map((a) => a.subpath)]] : []));
+  assert.deepEqual(cards, [
+    ['Ossuary Guard', 'characters/guard', ['characters/guard/idle.png', 'characters/guard/walk.png']],
+    ['bone-spider', 'characters/spider', ['characters/spider/idle.png']],
+  ]);
   assert.equal(byPath('a.png').atlasInfo, null, 'no atlas, no role');
   // A card's "8d" counts the directions a sheet faces, not its rows.
   assert.deepEqual(rowSheets.map(([name]) => byPath(`rows/${name}.png`).atlasInfo?.facings), rowSheets.map(([, , facings]) => facings));
@@ -88,31 +111,62 @@ try {
   assert.deepEqual([null, 'unknown'].map(roleFor), ['other', 'other']);
 
   // The Details window is titled by what the asset is, in the shapes the sample exports: a character's clip by the
-  // character (its folder, as its group card), anything else by its own title (its label, else its file name).
+  // character (its label, as its group card; an older sheet without a manifest, its folder), anything else by its own title
+  // (its label, else its file name).
   const sheet = (subpath: string, info: Partial<AtlasInfo>) =>
-    ({ subpath, atlasInfo: { mode: 'directions', frameCount: 1, directions: ['S', 'W', 'N', 'E'], role: null, label: null, ...info } }) as AssetFileMeta;
+    ({ subpath, atlasInfo: { mode: 'directions', frameCount: 1, directions: ['S', 'W', 'N', 'E'], role: null, label: null, character: null, ...info } }) as AssetFileMeta;
   const EIGHT = ['S', 'SW', 'W', 'NW', 'N', 'NE', 'E', 'SE'];
+  const captain = { name: 'ossuary-captain', label: 'Ossuary Captain' };
   const sample = [
-    sheet('characters/captain/idle.png', { role: 'character', frameCount: 16, directions: EIGHT }),
-    sheet('characters/captain/walk.png', { role: 'character', frameCount: 12, directions: EIGHT }),
-    sheet('characters/bat/fly.png', { role: 'character', frameCount: 6, directions: EIGHT }),
+    sheet('characters/captain/walk.png', { role: 'character', frameCount: 12, directions: EIGHT, character: captain }),
+    sheet('characters/captain/idle.png', { role: 'character', frameCount: 16, directions: EIGHT, character: captain }),
+    // A character `new-asset --engine rig` makes has its idle alone, and its name in words.
+    sheet('characters/bat/idle.png', { role: 'character', frameCount: 8, directions: EIGHT, character: { name: 'bat', label: 'Bat' } }),
+    sheet('characters/old/idle.png', { role: 'character', frameCount: 16, directions: EIGHT }),
+    sheet('characters/old/walk.png', { role: 'character', frameCount: 12, directions: EIGHT }),
     sheet('hero.png', { role: 'character', frameCount: 4 }),
     sheet('gear/horned-helm.png', { role: 'gear', label: 'Horned helm', kind: 'gear', directions: EIGHT }),
     sheet('scenery/coffin.png', { role: 'prop', label: 'Coffin', frameCount: 2 }),
     sheet('scenery/crypt-door--closing.png', { role: 'door', label: 'Crypt door', frameCount: 8 }),
     sheet('scenery/crypt-archway.png', { role: 'door', label: 'Crypt archway' }),
+    sheet('scenery/candle-cluster--flicker.png', { role: 'prop', label: 'Soul candles', frameCount: 6, directions: ['D0', 'D1', 'D2'] }),
+    sheet('vfx/soul-bolt.png', { role: 'vfx', kind: 'projectile', frameCount: 6, directions: EIGHT }),
     sheet('ui/button.png', { role: 'ui', kind: 'button' }),
   ];
-  const titleOf = (subpath: string) => detailsTitle(sample.find((a) => a.subpath === subpath)!);
-  assert.deepEqual(['characters/captain/idle.png', 'characters/captain/walk.png'].map(titleOf), ['captain', 'captain'], 'a clip is titled by its character');
-  assert.equal(titleOf('characters/bat/fly.png'), 'bat', 'even a character with a single clip');
+  const find = (subpath: string) => sample.find((a) => a.subpath === subpath)!;
+  const titleOf = (subpath: string) => detailsTitle(find(subpath));
+  assert.deepEqual(['characters/captain/idle.png', 'characters/captain/walk.png'].map(titleOf), ['Ossuary Captain', 'Ossuary Captain'], 'a clip is titled by its character');
+  assert.equal(titleOf('characters/bat/idle.png'), 'Bat', 'even a character with a single clip');
+  assert.equal(titleOf('characters/old/walk.png'), 'old', 'an older sheet without a manifest: its folder');
   assert.equal(titleOf('hero.png'), 'hero', 'a character with no folder: its file name');
-  assert.equal(titleOf('gear/horned-helm.png'), 'Horned helm', 'a gear item by its label, as its card');
+  assert.equal(titleOf('gear/horned-helm.png'), 'Horned helm', 'a gear sheet by its label, as its card');
   assert.equal(titleOf('ui/button.png'), 'button', 'an interface piece with no label: its file name');
-  // The animated sheets of scenery/ are grouped as one set of clips (and a still sheet beside them gets that set too),
-  // yet each is titled by its own label, never by the folder.
-  assert.ok(clipsOf(sample, sample.find((a) => a.subpath === 'scenery/crypt-archway.png')!).length > 1);
   assert.deepEqual(['scenery/coffin.png', 'scenery/crypt-door--closing.png', 'scenery/crypt-archway.png'].map(titleOf), ['Coffin', 'Crypt door', 'Crypt archway']);
+  assert.deepEqual(sample.map(characterLabel).filter(Boolean), ['Ossuary Captain', 'Ossuary Captain', 'Bat'], 'only a clip of a character with a manifest has a label');
+
+  // Only a character's clips are one entry in the grid (and one set of clips in its Details window), whatever else a folder
+  // holds: the animated sheets of scenery/ (a door's --closing, the candles' --flicker) are each an asset, as the still
+  // ones beside them, the effects and the interface pieces are. A character with a single clip is still that character,
+  // by its label, and an older one without a manifest is grouped by its folder.
+  const entries = groupAnimations(sample, sample).map((e) => (e.type === 'group' ? `${e.group.name} (${e.group.folder}): ${e.group.assets.map((a) => a.subpath.split('/').pop()).join(' ')}` : e.asset.subpath));
+  assert.deepEqual(entries, [
+    'Ossuary Captain (characters/captain): idle.png walk.png',
+    'Bat (characters/bat): idle.png',
+    'old (characters/old): idle.png walk.png',
+    'hero.png',
+    'gear/horned-helm.png',
+    'scenery/coffin.png',
+    'scenery/crypt-door--closing.png',
+    'scenery/crypt-archway.png',
+    'scenery/candle-cluster--flicker.png',
+    'vfx/soul-bolt.png',
+    'ui/button.png',
+  ]);
+  assert.deepEqual(['scenery/crypt-door--closing.png', 'scenery/crypt-archway.png', 'vfx/soul-bolt.png'].map((subpath) => clipsOf(sample, find(subpath)).length), [1, 1, 1]);
+  assert.deepEqual(clipsOf(sample, find('characters/captain/walk.png')).map((a) => a.subpath), ['characters/captain/idle.png', 'characters/captain/walk.png'], 'idle first');
+  // Two characters in one folder are two, by their manifests, as the runtime has them.
+  const pair = [sheet('characters/duo/a.png', { role: 'character', frameCount: 4, character: { name: 'a', label: 'A' } }), sheet('characters/duo/b.png', { role: 'character', frameCount: 4, character: { name: 'b', label: 'B' } })];
+  assert.deepEqual(groupAnimations(pair, pair).map((e) => (e.type === 'group' ? e.group.name : '')), ['A', 'B']);
 
   // A badge names an effect's kind in the language of the screen, as the Details window does; a kind the interface has no
   // word for, and an interface piece's kind, are shown as the atlas writes them.
