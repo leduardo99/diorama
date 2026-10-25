@@ -340,17 +340,68 @@ export const SPEAR_REST_YAW = Math.atan2(SPEAR_REST[1], SPEAR_REST[0]);
 export const SPEAR_REST_PITCH = Math.asin(SPEAR_REST[2] / Math.hypot(...SPEAR_REST));
 
 /**
+ * How far past the wrist the spear's grip sits, along the forearm, on the 80-unit scale (it follows
+ * the skeleton's scale): in the palm of a closed hand, so the shaft runs through the fist
+ * (`spearFist`) and not through the wrist joint the arm ends at.
+ */
+export const SPEAR_PALM = 1.8;
+
+/**
  * Grip, direction, tip and butt of a spear in the hand of `side` (-1 left, 1 right, default the
- * right): upright at rest, laid along the clip's `weaponYaw` / `weaponPitch` (the off hand's
- * channels in the left hand), resting on the floor in a death, its butt shortened where it would
- * go below the floor. The catalog's `wield.sockets.tip` calls it with the piece's options, so a
- * character's `tip` follows the spear it holds.
+ * right): the grip in the palm (`SPEAR_PALM` past the wrist), upright at rest, laid along the clip's
+ * `weaponYaw` / `weaponPitch` (the off hand's channels in the left hand), resting on the floor in a
+ * death, its butt shortened where it would go below the floor. The catalog's `wield.sockets.tip`
+ * calls it with the piece's options, so a character's `tip` follows the spear it holds, and the
+ * fist on the shaft calls it too, so the hand closes where the shaft is.
  */
 export function spearHeld(pose: Pose, skeleton: SkeletonSpec, side: -1 | 1 = 1, reach = SPEAR.reach, butt = SPEAR.butt): Held {
   const arm = (skeleton.arms ?? []).find(a => a.side === side);
   if (!arm) throw new Error(`gear: skeleton "${skeleton.name}" has no ${side < 0 ? 'left' : 'right'} arm to hold a spear`);
-  return held(pose, skeleton, arm.name, { length: reach, butt, floor: 1.2, rest: SPEAR_REST, channel: weaponChannel(side) });
+  // `held` grips at the arm's end, the wrist; the shaft goes through the palm, a little further on.
+  const key = `${arm.name}.hand`;
+  const [, elbow, wrist] = pose.chains[arm.name];
+  const palm = add3(wrist, scale3(norm3(sub3(wrist, elbow)), SPEAR_PALM * (skeleton.height / 80)));
+  const inPalm: Pose = { ...pose, joints: { ...pose.joints, [key]: palm } };
+  return held(inPalm, skeleton, arm.name, { length: reach, butt, floor: 1.2, rest: SPEAR_REST, channel: weaponChannel(side) });
 }
+
+/**
+ * A hand closed on the spear's shaft: a fist round the grip, three finger bands wrapped across the
+ * shaft and a thumb over them, with a cuff at the wrist, drawn over the spear whatever the facing,
+ * so the shaft reads as running through the hand. It stands in for the hand (or glove) on that side
+ * and closes where `spearHeld` puts the grip, in the palm. Gloved when the outfit has `leather`,
+ * bare `skin` otherwise. Follows the skeleton's scale. Rests on the spear (give it as the host).
+ * Slot: `hand` (side 1 right, -1 left). Roles: `leather` (falls back to `skin`).
+ */
+export const spearFist: Part<NoOptions> = ctx => {
+  const { object: o, pose, kit, at, materials, host } = ctx;
+  const side = at.side === 0 ? 1 : at.side;
+  const arm = (kit.skeleton.arms ?? []).find(a => a.side === side);
+  if (!arm) throw new Error(`gear: skeleton "${kit.skeleton.name}" has no ${side < 0 ? 'left' : 'right'} arm for a fist`);
+  const g = spearHeld(pose, kit.skeleton, side);
+  const k = kit.skeleton.height / 80;
+  const hand = role(materials, 'leather', 'skin');
+  // The bias lifts the hand over the end of the sleeve or vambrace it comes out of, which sorts by
+  // the middle of the forearm: from behind, the fist would otherwise hide under the wrist.
+  const on = { bias: 5 * k, ...(host ? { on: host } : {}) };
+  const [, elbow, wrist] = pose.chains[arm.name];
+  const fore = norm3(sub3(wrist, elbow));
+  // The cuff round the wrist, where the hand leaves the sleeve or the vambrace.
+  o.add(new Tube([sub3(wrist, scale3(fore, 0.5 * k)), add3(wrist, scale3(fore, 0.8 * k))], 3.1 * k), hand, on);
+  // Forward is where the knuckles are: the forearm's way, across the shaft.
+  const f = axisFrame(g.grip, g.dir, fore);
+  const fist = Round.ellipsoid(f.moved(0.45 * k, 0, 0), 2.05 * k, 1.75 * k, 2.15 * k);
+  o.add(fist, hand, on);
+  // The fingers: bands across the shaft on the side that faces the camera.
+  for (const d of [-1.35, 0, 1.35]) {
+    const band = visibleArc(kit.camera, add3(f.at(0.45 * k, 0, 0), scale3(g.dir, d * k)), f.forward, f.right, 2.1 * k, 1.8 * k);
+    if (band.length > 1) o.add(new Tube(band, 0.7 * k), hand, { on: fist, bias: 5 * k });
+  }
+  // The thumb, over the top of the fist from the palm's side to the knuckles.
+  const inner = -side;
+  o.add(new Tube([f.at(-0.9 * k, inner * 1.1 * k, 1.7 * k), f.at(0.3 * k, inner * 1.0 * k, 2.35 * k), f.at(1.3 * k, inner * 0.5 * k, 2.1 * k)], { start: 1.3 * k, end: 0.85 * k }), hand, { on: fist, bias: 5 * k });
+  return fist;
+};
 
 /** Options of `spear`. */
 export interface SpearOptions {

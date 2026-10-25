@@ -28,8 +28,8 @@
  *   gilded edges for the flesh body;
  * - `shields.ts`: `roundShield` (forearm), `shieldDisc`;
  * - `weapons.ts`: `notchedSword` (hand), `swordHeld`; `reaperScythe`, `scytheFist` and `soulLantern`
- *   (hand), `scytheHeld` and the `SCYTHE_REST_*` constants; `spear` (hand), `spearHeld`, `SPEAR` and
- *   the `SPEAR_REST_*` constants;
+ *   (hand), `scytheHeld` and the `SCYTHE_REST_*` constants; `spear` and `spearFist` (hand),
+ *   `spearHeld`, `SPEAR`, `SPEAR_PALM` and the `SPEAR_REST_*` constants;
  * - `effects.ts`: `weaponSmear`, `chargedEdge`, `groundShockwave` (hand, resting on the blade),
  *   `scytheSmear` (hand, resting on the snath) and `palmFlame` (hand), `palmPoint`;
  * - `wings.ts`: `spiritWings` (back), spectral wings of soul fire, spread by `extra.wings`;
@@ -43,7 +43,7 @@
  * - `plume` (optional): the crest's horsehair (`clothAccent`, then `cloth`, when not set);
  * - `blade`: the blade and the spear's head (falls back to `metalAccent`, then `metal`);
  * - `cloth`: tunic, fitted sleeves; `clothAccent`: tabard, the painted band of the shield;
- * - `leather`: belt, pouch, baldric, wraps, sword grip, boots, gloves, leggings;
+ * - `leather`: belt, pouch, baldric, wraps, sword grip, boots, gloves, leggings, the fist on the spear (`skin` without it);
  * - `cloak` (optional): the cloak's fall (`cloth` when not set);
  * - `wood`: shield disc, the spear's shaft; `woodSeam` (optional): its plank seams, `woodDark` of the theme when not set;
  * - `bone`: skull, jaw, teeth, horns; `boneLimb`: limb bones, spine, ribs (falls back to `bone`);

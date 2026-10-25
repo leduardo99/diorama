@@ -52,7 +52,7 @@ import {
   fleshArm, fleshHand, fleshHead, fleshLeg, fleshLegs, fleshTorso, cuirass, glove, greave, grimoire, groundShockwave, hairCrop, hairTail, hairWaves, helmCrest, highCollar,
   hood, hornedHelm, lamedPauldron, legWraps, longCoat, notchedSword, palmFlame, pouch, reaperScythe, ribBreastplate, ribCage, roundShield, sashTail,
   scytheFist, scytheHeld, scytheSmear, shawl, skullBuckle, skullPauldron, skullSutures, soulLantern, swordHeld, tabard, tunic, weaponSmear, wingedHelm,
-  fittedSleeve, leggings, platePauldron, plateGreave, plateVambrace, spear, spearHeld, spiritWings, tassets,
+  fittedSleeve, leggings, platePauldron, plateGreave, plateVambrace, spear, spearFist, spearHeld, spiritWings, tassets,
 } from '.';
 
 // ----------------------------------------------------------------------------------------------
@@ -233,6 +233,7 @@ const PARTS: PartInfo[] = [
     id: 'spear', label: 'Spear', group: 'weapons', equip: 'weapon', wield: { class: 'polearm', sockets: { tip: (pose, skeleton, p) => spearHeld(pose, skeleton, p.side, (p.options.length as number | undefined) ?? SPEAR.reach, (p.options.butt as number | undefined) ?? SPEAR.butt).tip } }, part: spear, slots: ['hand'], roles: ['wood', 'metal', 'blade', 'metalAccent', 'trim'],
     options: [num('length', 'Reach (grip to tip)', SPEAR.reach, 40, 80, 1), num('butt', 'Shaft behind the grip', SPEAR.butt, 10, 60, 1), flag('lugs', 'Lugs'), flag('bands', 'Gilded bands')],
   },
+  { id: 'spear-fist', label: 'Fist on the spear', group: 'weapons', kind: 'body', part: spearFist, slots: ['hand'], roles: ['leather', 'skin'], requires: 'spear' },
   { id: 'soul-lantern', label: 'Soul lantern', group: 'weapons', part: soulLantern, slots: ['hand'], roles: ['metal', 'glow'], requires: 'reaper-scythe' },
 
   // Shields.

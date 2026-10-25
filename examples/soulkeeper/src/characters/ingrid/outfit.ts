@@ -1,9 +1,11 @@
 /**
  * Ingrid the Valkyrie, as outfit data: a living body (the flesh family, scaled with her
  * `humanoid(1.18)`) in plate — a winged helm over long dark wavy hair, a fitted cuirass, plate
- * pauldrons, plate vambraces over olive sleeves, leather gloves, split tassets over a short olive
+ * pauldrons, plate vambraces over olive sleeves, a leather glove, split tassets over a short olive
  * skirt, plate greaves over leather leggings and boots — a crimson cape, the round shield on her left
- * forearm, a spear in her right hand, and spirit wings of soul fire folded on her back.
+ * forearm, a spear in her right hand — the gloved fist closed on its shaft (`spear-fist`, resting on
+ * the spear, so the shaft runs through the hand in every facing) — and spirit wings of soul fire
+ * folded on her back.
  * Her build is slim and athletic, not bulky: a slighter trunk (`flesh-torso` `width`) under a
  * cuirass that ends at the waist and tapers to it, shoulders about the guard's width at her scale
  * (small layered pauldrons that slope with the shoulder), arms of a believable thickness in fitted
@@ -44,7 +46,7 @@ export const OUTFIT: OutfitData = {
   // near-black hair, her eyes (`hollow`) in the hair's warm near-black rather than the ink of a
   // skull's sockets, rose lips, polished armour steel with brass edges, olive cloth (`moss`) for the
   // skirt under the tassets and the sleeves under the vambraces, a crimson cape with a lighter edge,
-  // leather leggings, gloves and boots, dark wood for the shield's painted planks and the spear's
+  // leather leggings, glove, fist and boots, dark wood for the shield's painted planks and the spear's
   // shaft (darker than her skin, so the shaft never merges with the forearm beside it), the kit's
   // pale blade for the spear's head, and the soul fire for the wings.
   materials: {
@@ -82,7 +84,6 @@ export const OUTFIT: OutfitData = {
     { part: 'plate-pauldron', slot: 'shoulder', side: -1 },
     { part: 'plate-pauldron', slot: 'shoulder', side: 1 },
     { part: 'glove', slot: 'hand', side: -1, options: { size: 0.72 } },
-    { part: 'glove', slot: 'hand', side: 1, options: { size: 0.72 } },
     { part: 'round-shield', slot: 'forearm', side: -1, on: 'vambraceL', options: { radius: 7.6 } },
     {
       part: 'flesh-head', slot: 'head', id: 'head',
@@ -91,5 +92,6 @@ export const OUTFIT: OutfitData = {
     { part: 'hair-waves', slot: 'head', on: 'head', id: 'hair', options: { hairline: 0.8, volume: 0.65 } },
     { part: 'winged-helm', slot: 'head', on: 'hair', options: { rise: 0.35 } },
     { part: 'spear', slot: 'hand', side: 1, id: 'spear' },
+    { part: 'spear-fist', slot: 'hand', side: 1, on: 'spear' },
   ],
 };
