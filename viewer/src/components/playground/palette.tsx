@@ -1,11 +1,13 @@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Field, FieldDescription, FieldLegend, FieldSet, FieldTitle } from '@/components/ui/field';
-import { Kbd } from '@/components/ui/kbd';
+import { Kbd, KbdGroup } from '@/components/ui/kbd';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { useT } from '@/i18n';
+import { Rich, useT } from '@/i18n';
 import type { Entry } from '@/lib/playground/catalog';
+import { controlRows, placeHintVars } from '@/lib/playground/controls';
 import type { Armed, Character, Library } from '@/lib/playground/library';
+import { keyLabel } from '@/lib/shortcuts';
 import { PlacementList } from './placement-list';
 import { PlayerPicker } from './player-picker';
 
@@ -34,7 +36,7 @@ export function Palette({ library, entries, recent, player, onPlayer, armed, onA
 
       <FieldSet className="min-h-0 flex-1">
         <FieldLegend variant="label" className="mb-0 text-muted-foreground uppercase">{t('playground.palette.place')}</FieldLegend>
-        <FieldDescription>{t('playground.palette.placeHint')}</FieldDescription>
+        <FieldDescription><Rich id="playground.palette.placeHint" vars={placeHintVars(t)} /></FieldDescription>
         <PlacementList
           entries={entries}
           recent={recent}
@@ -56,36 +58,33 @@ export function Palette({ library, entries, recent, player, onPlayer, armed, onA
   );
 }
 
-/** The keys of the controlled character, straight from its manifest controls: what each one plays. */
+/** The keys of the controlled character, as the shortcuts window shows them (`lib/playground/controls.ts`), with the clip each one plays. */
 function Controls({ character }: { character: Character }) {
   const { t } = useT();
-  const { locomotion, actions, hit, death, warnings } = character;
-  const rows: Array<[keys: Array<string | number>, label: string, kind?: string]> = [
-    [['W', 'A', 'S', 'D'], locomotion[0]?.key ?? t('playground.controls.move'), locomotion[0]?.kind],
-    ...(locomotion.length > 1 ? [[['Shift'], locomotion.at(-1)!.key, locomotion.at(-1)!.kind] as [string[], string, string]] : []),
-    ...actions.map((action, i) => [[i === 0 ? t('keys.space') : i + 1], action.key, action.kind] as [Array<string | number>, string, string]),
-    ...(hit ? [[['H'], hit.key, hit.kind] as [string[], string, string]] : []),
-    ...(death ? [[['K'], death.key, death.kind] as [string[], string, string]] : []),
-    ...(death || actions.some((a) => a.hold) ? [[['R'], t('playground.controls.restart')] as [string[], string]] : []),
-  ];
+  const rows = controlRows(character, t);
   return (
     <>
       <dl className="flex flex-col gap-1.5 text-muted-foreground">
-        {rows.map(([keys, label, kind]) => (
+        {rows.map(({ keys, label, kind }) => (
           <div key={`${keys.join('')}-${label}`} className="flex items-center justify-between gap-2">
             <dt className="flex items-center gap-1.5">
               <span>{label}</span>
               {kind && kind !== label && <Badge variant="outline">{kind}</Badge>}
             </dt>
-            <dd className="flex gap-1">{keys.map((key) => <Kbd key={key}>{key}</Kbd>)}</dd>
+            {/* W A S D over the arrows: the caps wrap after four, as in the shortcuts window. */}
+            <dd>
+              <KbdGroup className="max-w-28 flex-wrap justify-end">
+                {keys.map((key) => <Kbd key={key}>{keyLabel(t, key)}</Kbd>)}
+              </KbdGroup>
+            </dd>
           </div>
         ))}
       </dl>
-      {warnings.length > 0 && (
+      {character.warnings.length > 0 && (
         <Alert>
           <AlertDescription>
             <ul className="flex list-disc flex-col gap-0.5 pl-4">
-              {warnings.map((warning) => <li key={warning}>{warning}</li>)}
+              {character.warnings.map((warning) => <li key={warning}>{warning}</li>)}
             </ul>
           </AlertDescription>
         </Alert>

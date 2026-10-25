@@ -12,19 +12,19 @@ import { detailsTitle } from '@/lib/asset-role';
 import { isStale } from '@/lib/export-state';
 import { useT } from '@/i18n';
 import { basename, dirname, stripExtension } from '@/lib/format';
+import { peersOf } from '@/lib/groups';
 import { isTyping, useWindowKeydown } from '@/lib/hotkeys';
 import { useReexport } from '@/lib/mutations';
 import type { AssetFileMeta } from '@/lib/types';
 
-/** The assets [ and ] step through: a character's other animations, or the list the Details window was opened from. */
+/** The assets [ and ] step through (`lib/groups.ts: peersOf`): a character's other animations, or the list the Details window was opened from. */
 export function usePeers(asset: AssetFileMeta, clips: AssetFileMeta[], visibleAssets: AssetFileMeta[], onSelect: (asset: AssetFileMeta) => void) {
-  const peers = clips.length > 1 ? clips : visibleAssets;
-  const position = peers.findIndex((p) => p.subpath === asset.subpath);
+  const { peers, position, stepsClips, at } = peersOf(asset, clips, visibleAssets);
   const go = (offset: number) => {
-    const next = clips.length > 1 ? peers[(position + offset + peers.length) % peers.length] : peers[position + offset];
+    const next = at(offset);
     if (next) onSelect(next);
   };
-  return { peers, position, go, stepsClips: clips.length > 1 };
+  return { peers, position, go, stepsClips };
 }
 
 export type Peers = ReturnType<typeof usePeers>;
@@ -56,11 +56,11 @@ export function DetailsHeader({ asset, peers }: { asset: AssetFileMeta; peers: P
         {isStale(asset) && <StaleBadge />}
       </div>
       <div className="flex shrink-0 items-center gap-1">
-        <Button variant="ghost" size="icon" aria-label={t('details.shell.previous')} disabled={stepsClips && peers.peers.length === 1 ? true : !stepsClips && position <= 0} onClick={() => go(-1)}>
+        <Button variant="ghost" size="icon" aria-label={stepsClips ? t('details.shell.previousAnimation') : t('details.shell.previousAsset')} disabled={stepsClips && peers.peers.length === 1 ? true : !stepsClips && position <= 0} onClick={() => go(-1)}>
           <ChevronLeftIcon />
         </Button>
         <span className="text-muted-foreground tabular-nums">{position + 1}/{peers.peers.length}</span>
-        <Button variant="ghost" size="icon" aria-label={t('details.shell.next')} disabled={!stepsClips && (position < 0 || position >= peers.peers.length - 1)} onClick={() => go(1)}>
+        <Button variant="ghost" size="icon" aria-label={stepsClips ? t('details.shell.nextAnimation') : t('details.shell.nextAsset')} disabled={!stepsClips && (position < 0 || position >= peers.peers.length - 1)} onClick={() => go(1)}>
           <ChevronRightIcon />
         </Button>
         <Button variant="outline" size="sm" className="ml-2" disabled={!asset.sheet || reexport.isPending} onClick={() => reexport.mutate(asset)}>
@@ -93,7 +93,7 @@ export function DetailsShell({ asset, peers, hints, children }: { asset: AssetFi
       <DetailsHeader asset={asset} peers={peers} />
       <div className="flex min-h-0 flex-1 flex-col">{children}</div>
       <footer className="flex items-center gap-4 border-t px-4 py-1.5 text-xs text-muted-foreground">
-        <span><Kbd>[</Kbd> <Kbd>]</Kbd> {t('details.footer.asset')}</span>
+        <span><Kbd>[</Kbd> <Kbd>]</Kbd> {peers.stepsClips ? t('details.footer.animation') : t('details.footer.asset')}</span>
         {hints}
       </footer>
     </>

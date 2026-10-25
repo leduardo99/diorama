@@ -175,7 +175,7 @@ function PlayerBody({ asset, clips, projectAssets, peers, directionIndex, onDire
         <span><Kbd>{t('keys.space')}</Kbd> {t('details.footer.play')}</span>
         <span><Kbd>←</Kbd> <Kbd>→</Kbd> {t('details.footer.frame')}</span>
         {keyed && <span><Kbd>↑</Kbd> <Kbd>↓</Kbd> {keyed === 'step' && rows.axis ? t(`details.footer.${rows.axis}`) : t('details.footer.direction')}</span>}
-        <span><Kbd>[</Kbd> <Kbd>]</Kbd> {clips.length > 1 ? t('details.footer.animation') : t('details.footer.asset')}</span>
+        <span><Kbd>[</Kbd> <Kbd>]</Kbd> {peers.stepsClips ? t('details.footer.animation') : t('details.footer.asset')}</span>
         <span><Kbd>B</Kbd> {t('details.footer.background')}</span>
         <span><Kbd>+</Kbd> <Kbd>−</Kbd> <Kbd>0</Kbd> {t('details.footer.zoom')}</span>
         <span className="ml-auto tabular-nums">{plural('counts.frames', frames.length)}</span>

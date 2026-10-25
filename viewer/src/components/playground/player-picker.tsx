@@ -4,6 +4,7 @@ import { Field, FieldLabel } from '@/components/ui/field';
 import { Kbd } from '@/components/ui/kbd';
 import { useT } from '@/i18n';
 import { coverClip, findsCharacter } from '@/lib/playground/catalog';
+import { switchCaps } from '@/lib/playground/controls';
 import type { Character } from '@/lib/playground/library';
 
 interface Props {
@@ -21,7 +22,7 @@ export function PlayerPicker({ characters, player, onPlayer }: Props) {
     <Field>
       <FieldLabel htmlFor="playground-player">
         {t('playground.player.control')}
-        <span className="ml-auto flex gap-1"><Kbd>[</Kbd><Kbd>]</Kbd></span>
+        <span className="ml-auto flex gap-1">{switchCaps().map((key) => <Kbd key={key}>{key}</Kbd>)}</span>
       </FieldLabel>
       <Combobox
         autoHighlight

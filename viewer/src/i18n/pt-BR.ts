@@ -338,7 +338,7 @@ export const ptBR: Shape<typeof en> = {
       playPause: 'Reproduzir / pausar',
       frame: 'Frame anterior / próximo',
       direction: 'Trocar de direção, ou de variação ou altura quando as linhas são essas',
-      animation: 'Animação anterior / próxima',
+      animationOrAsset: 'Animação anterior / próxima de um personagem; nos outros assets, o anterior / próximo da lista',
       zoom: 'Zoom / ajustar',
       background: 'Alternar fundo',
       guides: 'Pivô / bordas do frame',
@@ -473,8 +473,10 @@ export const ptBR: Shape<typeof en> = {
       zoom: 'zoom',
     },
     shell: {
-      previous: 'Anterior ([)',
-      next: 'Próximo (])',
+      previousAnimation: 'Animação anterior ([)',
+      nextAnimation: 'Próxima animação (])',
+      previousAsset: 'Asset anterior ([)',
+      nextAsset: 'Próximo asset (])',
       exportAgain: 'Exportar de novo',
       close: 'Fechar (Esc)',
     },
@@ -999,12 +1001,13 @@ export const ptBR: Shape<typeof en> = {
     palette: {
       character: 'Personagem',
       place: 'Colocar na cena',
-      placeHint: 'Escolha um asset e clique na cena. Clique direito remove; Esc cancela.',
+      placeHint: 'Escolha um asset e clique na cena. <kbd>{rightButton}</kbd> remove o que está sob o cursor e <kbd>{remove}</kbd>, o que está selecionado; <kbd>{escape}</kbd> para de colocar ou tira a seleção; <kbd>{search}</kbd> busca.',
       direction: 'Direção',
     },
     controls: {
       move: 'mover',
       restart: 'reiniciar',
+      use: 'usar',
     },
     toolbar: {
       zoom: 'Zoom',

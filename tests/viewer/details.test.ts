@@ -2,9 +2,11 @@ import assert from 'node:assert/strict';
 import { DIRECTION_NAMES } from '@core/volume';
 import { facingsOf } from '../../viewer/server/catalog';
 import { createTranslator } from '../../viewer/src/i18n/core';
+import { peersOf } from '../../viewer/src/lib/groups';
+import type { AssetFileMeta } from '../../viewer/src/lib/types';
 import { digitRow, FACING_NAMES, framesLabel, keyedAxis, rowWith, sheetRows, stepLabel, stepRow, type RowsMeta } from '../../viewer/src/lib/rows';
 
-console.log('🧪 Checking the Details window (a sheet\'s rows by what they are: facings, variants, states, heights)...\n');
+console.log('🧪 Checking the Details window (a sheet\'s rows by what they are: facings, variants, states, heights; what [ and ] step through)...\n');
 
 const en = createTranslator('en').t;
 const pt = createTranslator('pt-BR').t;
@@ -68,4 +70,19 @@ assert.deepEqual(['character', 'candles', 'wall', 'button', 'door', 'mixed', 'ur
 ]);
 assert.deepEqual(['character', 'candles', 'wall', 'button', 'mixed'].map((name) => frames(pt, name)), ['16 × 8 direções', '6 × 3 variações', '64 × 2 alturas', '1 × 4 estados', '6 × 4 direções × 2 variações']);
 
-console.log('✅ Details window rows passed');
+// 4. [ and ] (the header's arrows, the footer's hint): a character's other animations, round and round, when it has more
+//    than one; otherwise the assets of the list the window was opened from, stopping at either end. `stepsClips` picks the
+//    words ("animation" or "asset") of the footer and of the buttons.
+const asset = (subpath: string) => ({ subpath }) as AssetFileMeta;
+const [idle, walk, run] = ['characters/guard/idle.png', 'characters/guard/walk.png', 'characters/guard/run.png'].map(asset);
+const [candles, crate, wall] = ['scenery/candles.png', 'props/crate.png', 'scenery/wall.png'].map(asset);
+const list = [idle, candles, crate, wall];
+const character = peersOf(walk, [idle, walk, run], list);
+assert.deepEqual([character.stepsClips, character.position, character.at(1)?.subpath, character.at(2)?.subpath, character.at(-2)?.subpath], [true, 1, run.subpath, idle.subpath, run.subpath], 'a character\'s clips go round');
+const lone = peersOf(crate, [crate], list);
+assert.deepEqual([lone.stepsClips, lone.position, lone.at(-1)?.subpath, lone.at(1)?.subpath, lone.at(2)], [false, 2, candles.subpath, wall.subpath, undefined], 'any other asset steps through the list and stops at its end');
+assert.equal(peersOf(idle, [idle], list).at(-1), undefined, 'and at its start');
+assert.equal(peersOf(idle, [idle], list).stepsClips, false, 'a character with a single clip steps through the list');
+assert.deepEqual([en('details.footer.animation'), en('details.footer.asset'), pt('details.shell.previousAnimation'), pt('details.shell.nextAsset')], ['animation', 'asset', 'Animação anterior ([)', 'Próximo asset (])']);
+
+console.log('✅ Details window rows and peers passed');

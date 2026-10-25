@@ -340,7 +340,7 @@ export const en = {
       playPause: 'Play / pause',
       frame: 'Previous / next frame',
       direction: 'Change direction, or the variation or height when the rows are those',
-      animation: 'Previous / next animation',
+      animationOrAsset: 'Previous / next animation of a character; for any other asset, the previous / next in the list',
       zoom: 'Zoom / fit',
       background: 'Toggle background',
       guides: 'Pivot / frame edges',
@@ -475,8 +475,10 @@ export const en = {
       zoom: 'zoom',
     },
     shell: {
-      previous: 'Previous ([)',
-      next: 'Next (])',
+      previousAnimation: 'Previous animation ([)',
+      nextAnimation: 'Next animation (])',
+      previousAsset: 'Previous asset ([)',
+      nextAsset: 'Next asset (])',
       exportAgain: 'Export again',
       close: 'Close (Esc)',
     },
@@ -1001,12 +1003,13 @@ export const en = {
     palette: {
       character: 'Character',
       place: 'Place in the scene',
-      placeHint: 'Pick an asset and click the scene. Right click removes; Esc cancels.',
+      placeHint: 'Pick an asset and click the scene. <kbd>{rightButton}</kbd> removes what is under the cursor and <kbd>{remove}</kbd> what is selected; <kbd>{escape}</kbd> stops placing or clears the selection; <kbd>{search}</kbd> searches.',
       direction: 'Direction',
     },
     controls: {
       move: 'move',
       restart: 'restart',
+      use: 'use',
     },
     toolbar: {
       zoom: 'Zoom',
