@@ -50,7 +50,7 @@ import { checkLayout, type LayoutReport } from './layout.js';
 import { lintProject, type LintIssue } from './lint.js';
 import { EXAMPLE_LOCK, takeLock } from './lock.js';
 import { GENERATED_SHEETS, LAYOUT, PROJECT_ROOTS, REVIEW, findProject, generatedHeader, listProjects, listSheets, missingProject, walkFiles, type ProjectRef } from './project.js';
-import { deleteProject } from './trash.js';
+import { deleteProject, restoreProject } from './trash.js';
 import { typeCheckProject } from './typecheck.js';
 
 const ROOT = resolve(process.cwd());
@@ -1842,6 +1842,33 @@ const EXIT_ON_SIGNAL = { SIGINT: 130, SIGTERM: 143, SIGHUP: 129 } as const;
  * there is removed (the link only). One run at a time (tools/lock.ts), and the copy is made in a hidden folder of
  * projects/ and renamed into place, so a copy that fails half way leaves nothing behind and changes nothing.
  */
+/**
+ * renameSync, retried for a few seconds on Windows, where a folder cannot be renamed while something holds a handle
+ * inside it (an antivirus or an indexer reading the files just written), as Vite's own gracefulRename does.
+ */
+function renameRetrying(from: string, to: string): void {
+  if (process.platform !== 'win32') return renameSync(from, to);
+  const start = Date.now();
+  for (let delay = 10; ; delay = Math.min(delay + 10, 100)) {
+    try {
+      return renameSync(from, to);
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code ?? '';
+      if (!['EPERM', 'EACCES', 'EBUSY'].includes(code) || Date.now() - start > 5000 || existsSync(to)) throw err;
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, delay);
+    }
+  }
+}
+
+/** Removes a folder this command made, without letting a failure hide the message that follows. */
+function removeQuietly(dir: string): void {
+  try {
+    rmSync(dir, { recursive: true, force: true, maxRetries: 5 });
+  } catch {
+    // Left for the next run, which removes what a run cut short left.
+  }
+}
+
 async function example(positionals: string[], flags: Record<string, string | true>): Promise<void> {
   const unknown = Object.keys(flags).filter(flag => !EXAMPLE_FLAGS.includes(flag));
   if (unknown.length) {
@@ -1873,9 +1900,14 @@ async function example(positionals: string[], flags: Record<string, string | tru
   }
   process.on('exit', lock.release);
   for (const [signal, code] of Object.entries(EXIT_ON_SIGNAL)) process.once(signal, () => process.exit(code));
-  // What a copy cut short left (a run that was killed): the lock is this run's, so no other run is copying into them.
+  // What a run cut short left (one that was killed): the lock is this run's, so no other run is using them. A copy goes;
+  // a link it had moved aside goes back to its place, or goes if a fresh copy took that place.
   for (const entry of existsSync(PROJECTS) ? readdirSync(PROJECTS) : []) {
-    if (entry.startsWith(`.${name}.copy-`)) rmSync(join(PROJECTS, entry), { recursive: true, force: true });
+    if (entry.startsWith(`.${name}.copy-`)) removeQuietly(join(PROJECTS, entry));
+    if (entry.startsWith(`.${name}.link-`)) {
+      if (entryAt(target).kind === 'none') renameSync(join(PROJECTS, entry), target);
+      else unlinkSync(join(PROJECTS, entry));
+    }
   }
 
   const force = Boolean(flags['force']);
@@ -1897,20 +1929,22 @@ async function example(positionals: string[], flags: Record<string, string | tru
     try {
       copySample(sample.dir, temp);
     } catch (err) {
-      rmSync(temp, { recursive: true, force: true });
+      removeQuietly(temp);
       fail(`could not copy ${sample.rel} to ${rel}/: ${(err as Error).message}`,
         at.kind === 'none' ? `Nothing was left in projects/. Fix what it says, then run npm run example again.` : `${rel} was left as it was. Fix what it says, then run npm run example -- --force again.`);
     }
-    // Only a whole copy takes the old one's place: a copy that failed changed nothing.
-    let trashed: string | undefined;
+    // Only a whole copy takes the old one's place, and the old one comes back if the copy cannot get there.
+    let trashId: string | undefined;
+    let parked: string | undefined;
     try {
       if (at.kind === 'link') {
-        unlinkSync(target);
-        console.log(pc.yellow(`Removed the link ${rel} (to ${at.to}): the link only, ${at.dangling ? 'which led nowhere' : 'the folder it leads to is untouched'}.`));
+        // Moved aside until the copy is in place (renaming a link, or a junction, moves the link only), then removed.
+        parked = join(PROJECTS, `.${name}.link-${process.pid}`);
+        renameRetrying(target, parked);
       } else if (at.kind === 'dir') {
         // The viewer's own delete (tools/trash.ts): the folder moves whole to .diorama-trash/projects/<id>/<name>.
-        const { trashId } = await deleteProject(ROOT, name);
-        trashed = `.diorama-trash/projects/${trashId}/${name}`;
+        ({ trashId } = await deleteProject(ROOT, name));
+        const trashed = `.diorama-trash/projects/${trashId}/${name}`;
         console.log(pc.yellow(`Moved your ${rel}/ to ${trashed}/.`));
         // The viewer's restore (and a plain move) refuses while a project of that name is in projects/: the fresh copy is.
         restoreSteps = [
@@ -1919,11 +1953,23 @@ async function example(positionals: string[], flags: Record<string, string | tru
           `    mv ${trashed} ${rel}`,
         ];
       }
-      renameSync(temp, target);
+      renameRetrying(temp, target);
     } catch (err) {
-      rmSync(temp, { recursive: true, force: true });
+      removeQuietly(temp);
+      let back = true;
+      try {
+        if (trashId) await restoreProject(ROOT, name, trashId);
+        else if (parked && entryAt(parked).kind !== 'none') renameRetrying(parked, target);
+      } catch {
+        back = false;
+      }
+      const where = trashId ? `.diorama-trash/projects/${trashId}/${name}` : parked ? relative(ROOT, parked) : '';
       fail(`could not ${at.kind === 'none' ? 'put the copy in' : 'replace'} ${rel}/${at.kind === 'none' ? '' : ' with the fresh copy'}: ${(err as Error).message}`,
-        trashed ? `Your old copy is in ${trashed}/: move it back to ${rel}/.` : `${rel} was left as it was.`);
+        at.kind === 'none' ? `Nothing was left in projects/.` : back ? `${rel} was left as it was.` : `${at.kind === 'link' ? 'The link' : 'Your old copy'} is in ${where}: move it back to ${rel}.`);
+    }
+    if (parked) {
+      unlinkSync(parked);
+      console.log(pc.yellow(`Removed the link ${rel} (to ${at.kind === 'link' ? at.to : ''}): the link only, ${at.kind === 'link' && at.dangling ? 'which led nowhere' : 'the folder it leads to is untouched'}.`));
     }
     copied = true;
   }

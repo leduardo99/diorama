@@ -56,7 +56,9 @@ function NoProjects() {
   const copy = projects.find((p) => p.name === SAMPLE_PROJECT);
   const there = copy !== undefined && !running;
   const result = sample.data;
-  const failure = running ? null : sample.isError ? sample.error.message : result && !result.ok && !result.running ? result.output : null;
+  // This page's last run failed, unless the copy has every sheet exported since (by a run in a terminal or another tab).
+  const done = copy !== undefined && copy.pendingSheets.length === 0;
+  const failure = running || done ? null : sample.isError ? sample.error.message : result && !result.ok && !result.running ? result.output : null;
   const openSample = () => void navigate({ to: '/p/$project', params: { project: SAMPLE_PROJECT } });
 
   return (

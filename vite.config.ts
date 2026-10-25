@@ -287,5 +287,8 @@ export default defineConfig({
     open: false,
     // Local only: the viewer is not reachable from other machines on the network.
     host: 'localhost',
+    // npm run example builds its copy in a hidden folder of projects/ and renames it into place: a watch inside it
+    // would hold the folder open, and Windows refuses to rename a folder while anything inside it is open.
+    watch: { ignored: ['**/projects/.*/**'] },
   },
 });

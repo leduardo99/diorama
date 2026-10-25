@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFile, execSync, spawnSync } from 'node:child_process';
-import { chmodSync, copyFileSync, cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, statSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
+import { chmodSync, copyFileSync, cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, readlinkSync, renameSync, rmSync, statSync, symlinkSync, unlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { createServer } from 'node:http';
 import { join, resolve } from 'node:path';
@@ -289,7 +289,7 @@ export const VOLUMES: Record<string, VolumeStyle> = {};
     // The export's own options are passed on (npm run example used to be an export of the sample); anything else is refused
     // with what the command takes, never read as a sample name.
     const passed = example('sample', '--no-export', '--changed', '--jobs', '2');
-    assert.ok(passed.code === 0 && passed.stdout.includes('npm run export -- projects/sample --changed --jobs=2'), `--changed and --jobs go to the export: ${passed.stdout} ${passed.stderr}`);
+    assert.ok(passed.code === 0 && passed.stdout.includes('npm run export -- projects/sample --changed --jobs=2'), `--jobs goes to the export (and --changed, which an existing copy gets anyway; a fresh one is checked below): ${passed.stdout} ${passed.stderr}`);
     const refusals: Array<[string[], string]> = [
       [['--grid', '--no-export'], '--grid is not an option of npm run example'],
       [['--jobs', 'many', '--no-export'], '--jobs needs a whole number'],
@@ -317,7 +317,7 @@ export const VOLUMES: Record<string, VolumeStyle> = {};
     assert.ok(example('sample', '--no-export').stderr.includes('already running'), 'a lock being written (no pid yet) holds');
     utimesSync(lockFile, 1000, 1000);
     assert.equal(example('sample', '--no-export').code, 0, 'an empty lock left long ago is stale');
-    assert.ok(!existsSync(lockFile), 'a failed run removes its lock too (checked below)');
+    assert.ok(!existsSync(lockFile), 'and an empty lock left long ago is removed too');
 
     // A copy that fails half way (an unreadable file) leaves nothing in projects/ and changes nothing: with --force, the
     // user's copy stays where it is and nothing goes to the trash.
@@ -366,11 +366,18 @@ export const VOLUMES: Record<string, VolumeStyle> = {};
     assert.ok(!lstatSync(copy).isSymbolicLink() && existsSync(join(copy, 'STYLE.md')), 'and makes a real copy in its place');
     assert.deepEqual(readdirSync(elsewhere), ['src'], 'what the link led to is untouched');
     assert.ok(existsSync(join(elsewhere, 'src', 'kept.ts')));
+    assert.ok(!readdirSync(join(mini, 'projects')).some((entry) => entry.startsWith('.sample.')), 'and leaves nothing hidden in projects/');
     rmSync(copy, { recursive: true });
+    // --force moves a link aside until the copy is in place: a run killed in between leaves it there, and the next run puts it back.
+    symlinkSync(elsewhere, join(mini, 'projects', '.sample.link-1'));
+    const swept = example('sample', '--no-export');
+    assert.ok(swept.stdout.includes('already exists') && lstatSync(copy).isSymbolicLink() && readlinkSync(copy) === elsewhere, `a link a killed --force run had moved aside goes back to its place: ${swept.stdout} ${swept.stderr}`);
+    unlinkSync(copy);
     symlinkSync(join(mini, 'nowhere'), copy);
     const dangling = example('sample', '--no-export');
     assert.ok(dangling.code !== 0 && dangling.stderr.includes('projects/sample is a link to') && dangling.stderr.includes('which does not exist') && dangling.stderr.includes('--force'), `a link that leads nowhere is refused clearly: ${dangling.stderr}`);
     assert.ok(lstatSync(copy).isSymbolicLink(), 'and left alone');
+    assert.ok(!existsSync(lockFile), 'a run that fails after taking the lock removes it');
     assert.equal(example('sample', '--force', '--no-export').code, 0, '--force replaces a link that leads nowhere');
     assert.ok(!lstatSync(copy).isSymbolicLink() && !existsSync(join(mini, 'nowhere')));
 
@@ -379,11 +386,14 @@ export const VOLUMES: Record<string, VolumeStyle> = {};
     rmSync(copy, { recursive: true });
     const bare = example('sample', '--no-export');
     assert.ok(bare.code === 0 && bare.stdout.includes('npm run export -- projects/sample\n') && !bare.stdout.includes('its exports'), `without exports the copy is exported whole: ${bare.stdout}`);
+    rmSync(copy, { recursive: true });
+    const changedOnly = example('sample', '--no-export', '--changed');
+    assert.ok(changedOnly.code === 0 && changedOnly.stdout.includes('npm run export -- projects/sample --changed\n'), `--changed goes to the export of a fresh copy without exports: ${changedOnly.stdout} ${changedOnly.stderr}`);
     const unknown = example('nope', '--no-export');
     assert.ok(unknown.code !== 0 && unknown.stderr.includes('no sample "nope" in examples/') && unknown.stderr.includes('Samples: sample'), `an unknown sample lists the ones there are: ${unknown.stderr}`);
     const byDefault = example('--no-export');
     assert.ok(byDefault.code !== 0 && byDefault.stderr.includes('no sample "soulkeeper"'), `without a name it is Soulkeeper: ${byDefault.stderr}`);
-    assert.ok(!existsSync(lockFile), 'a run that fails removes its lock');
+    assert.ok(!existsSync(lockFile), 'and a run that fails before taking the lock leaves none');
   } finally {
     rmSync(mini, { recursive: true, force: true });
   }
@@ -393,6 +403,10 @@ export const VOLUMES: Record<string, VolumeStyle> = {};
   // 3b. The export example runs, for real, in this repository: a throwaway sample with one sheet, copied to projects/ and
   // exported whole (it came without exports); run again, the copy is the user's and --changed finds nothing to do; a
   // sample that ships its exports brings them along, and --changed exports only what is out of date (nothing here).
+  // A run stopped half way leaves its throwaway sample behind (git-ignored): one cli test runs at a time, so any found goes.
+  for (const root of ['examples', 'projects']) {
+    for (const entry of readdirSync(root)) if (entry.startsWith('zz-cli-sample-')) rmSync(resolve(root, entry), { recursive: true, force: true });
+  }
   const throwaway = `zz-cli-sample-${Date.now()}`;
   const throwawaySample = resolve('examples', throwaway);
   const throwawayCopy = resolve('projects', throwaway);
