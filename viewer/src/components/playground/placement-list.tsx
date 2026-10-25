@@ -124,11 +124,12 @@ export function PlacementList({ entries, recent, armedKey, playerId, onArm, onCo
               const style = { height: virtual.size, transform: `translateY(${virtual.start}px)` };
               if (row.type === 'header') {
                 const toggleable = row.key.startsWith('group|');
+                // A folder header is the folder's path as written, as the asset list shows it: only "Recent" is a heading in capitals.
                 return (
                   <button
                     key={virtual.key}
                     type="button"
-                    className="absolute inset-x-0 top-0 flex items-center gap-1.5 bg-background/95 px-2 text-xs font-medium text-muted-foreground uppercase hover:text-foreground"
+                    className={cn('absolute inset-x-0 top-0 flex items-center gap-1.5 bg-background/95 px-2 text-xs font-medium text-muted-foreground hover:text-foreground', row.kind === 'recent' && 'uppercase')}
                     style={style}
                     disabled={!toggleable || query.trim() !== ''}
                     onClick={() => {
