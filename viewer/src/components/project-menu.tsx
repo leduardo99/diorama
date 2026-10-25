@@ -15,12 +15,11 @@ import { NewModal } from '@/modals/new-modal';
 
 /**
  * What can be done with the project in use: add an asset, export it, open its game (when it has `game/index.html`), copy
- * its path, delete it. The samples in `examples/` ship with Diorama: they cannot be deleted from here.
+ * its path, delete it (to the trash, with Undo). Every project here is one of `projects/`.
  */
 export function ProjectMenu({ project }: { project: string }) {
   const { data: projects } = useSuspenseQuery(projectsQuery);
   const meta = projects.find((p) => p.name === project);
-  const root = meta?.root ?? 'projects';
   const { t } = useT();
   return (
     <DropdownMenu>
@@ -47,28 +46,24 @@ export function ProjectMenu({ project }: { project: string }) {
           {meta?.hasGame && (
             // A page of its own, not a route of the viewer: a plain link, in a new tab.
             <DropdownMenuItem asChild>
-              <a href={projectUrl(root, project, 'game/')} target="_blank" rel="noopener">
+              <a href={projectUrl(project, 'game/')} target="_blank" rel="noopener">
                 <Gamepad2Icon />
                 {t('projects.menu.openGame')}
               </a>
             </DropdownMenuItem>
           )}
-          <DropdownMenuItem onSelect={() => void copyText(projectDir(root, project), t('projects.menu.pathLabel'))}>
+          <DropdownMenuItem onSelect={() => void copyText(projectDir(project), t('projects.menu.pathLabel'))}>
             <CopyIcon />
             {t('projects.menu.copyPath')}
           </DropdownMenuItem>
         </DropdownMenuGroup>
-        {root === 'projects' && (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem variant="destructive" onSelect={() => void NiceModal.show(DeleteProjectModal, { project })}>
-                <Trash2Icon />
-                {t('projects.menu.delete')}
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-          </>
-        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+          <DropdownMenuItem variant="destructive" onSelect={() => void NiceModal.show(DeleteProjectModal, { project })}>
+            <Trash2Icon />
+            {t('projects.menu.delete')}
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   );

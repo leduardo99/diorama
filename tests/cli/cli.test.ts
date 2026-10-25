@@ -1,13 +1,15 @@
 import assert from 'node:assert/strict';
-import { execFile, execSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs';
+import { execFile, execSync, spawnSync } from 'node:child_process';
+import { chmodSync, copyFileSync, cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, readlinkSync, renameSync, rmSync, statSync, symlinkSync, unlinkSync, utimesSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { createServer } from 'node:http';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { inflateSync } from 'node:zlib';
+import { restoreProject } from '../../tools/trash';
 import { exportTypeErrors } from '../../viewer/src/lib/export-errors';
 
-console.log('🧪 Checking agent commands (new-project, new-asset, new-kit, check, layout, game, list, export incl. --changed and --jobs, inspect, contact)...\n');
+console.log('🧪 Checking agent commands (new-project, new-asset, new-kit, check, layout, game, list, example, export incl. --changed and --jobs, inspect, contact)...\n');
 
 const project = `zz-cli-test-${Date.now()}`;
 const projectDir = resolve('projects', project);
@@ -22,6 +24,12 @@ interface Result {
   code: number;
   stdout: string;
   stderr: string;
+}
+
+/** Runs tools/cli.ts in `cwd` (the repository it works in), without colors. Never throws: callers check the exit code. */
+function cli(args: string[], cwd = resolve('.')): Result {
+  const result = spawnSync(process.execPath, [resolve('node_modules', 'tsx', 'dist', 'cli.mjs'), resolve('tools', 'cli.ts'), ...args], { cwd, encoding: 'utf8', env: { ...process.env, NO_COLOR: '1', FORCE_COLOR: undefined } });
+  return { code: result.status ?? 1, stdout: result.stdout, stderr: result.stderr };
 }
 
 // Runs an npm script. Never throws: callers check the exit code.
@@ -199,13 +207,238 @@ export const VOLUMES: Record<string, VolumeStyle> = {};
   const listed = JSON.parse(run(`npm run --silent list -- ${project} --json`).stdout);
   assert.deepEqual(listed.projects[0].sheets, ['characters/imp/idle', 'characters/knight/walk', 'characters/pup/bite', 'characters/pup/walk', 'marks/rune', 'props/barrel', 'props/crate']);
   assert.equal(listed.projects[0].dir, `projects/${project}`);
-  // Projects are found in projects/ first, then examples/; examples/<name> names the sample explicitly.
-  assert.equal(JSON.parse(run('npm run --silent list -- soulkeeper --json').stdout).projects[0].dir, 'examples/soulkeeper', 'the sample is found in examples/');
-  assert.equal(JSON.parse(run('npm run --silent list -- examples/soulkeeper --json').stdout).projects[0].project, 'soulkeeper');
+  // examples/<name> names the sample explicitly, whether or not a copy is in projects/ (where a bare name looks first: both
+  // states are checked in a miniature repository in 3a).
+  const sampleListed = JSON.parse(run('npm run --silent list -- examples/soulkeeper --json').stdout).projects[0];
+  assert.deepEqual([sampleListed.project, sampleListed.dir, sampleListed.sample], ['soulkeeper', 'examples/soulkeeper', true], 'examples/<name> is the sample, labelled as one');
+  assert.equal(listed.projects[0].sample, false, 'a project of projects/ is not a sample');
+  const everyProject = cli(['list']);
+  assert.ok(everyProject.stdout.includes('soulkeeper examples/soulkeeper sample (npm run example copies it into projects/)'), `list shows the samples, labelled: ${everyProject.stdout.split('\n').filter(line => line.includes('soulkeeper')).join(' | ')}`);
+  assert.ok(JSON.parse(run('npm run --silent list -- --json').stdout).projects.some((p: { dir: string; sample: boolean }) => p.dir === 'examples/soulkeeper' && p.sample), 'and --json marks them');
   const missingProject = run('npm run --silent list -- zz-no-such-project');
-  assert.ok(missingProject.code !== 0 && missingProject.stderr.includes('projects/ or examples/') && missingProject.stderr.includes('soulkeeper (examples)'), `an unknown project lists the ones there are: ${missingProject.stderr}`);
+  assert.ok(missingProject.code !== 0 && missingProject.stderr.includes('projects/ or examples/') && missingProject.stderr.includes('soulkeeper (examples)'), `an unknown project lists the ones there are, the samples too: ${missingProject.stderr}`);
+  // projects/<name> is how the viewer names a project: the answer is about projects/ alone, the viewer has no samples.
+  for (const missing of [cli(['gear-items', 'projects/zz-no-such-project']), run('npm run --silent export -- projects/zz-no-such-project')]) {
+    assert.ok(missing.code !== 0 && /[Pp]roject "zz-no-such-project" does not exist in projects\/\./.test(missing.stderr) && !missing.stderr.includes('examples'), `a missing project of projects/ is not answered with the samples: ${missing.stderr}`);
+  }
 
-  // 3b. A volume scaffold exports as a direction sheet: 8 rows, the pivot at scale 2, the role in meta.data.
+  // 3a. example copies a sample of examples/ into projects/ (everything but review/, every file with its times), refuses to
+  // copy over a copy that is there (it is the user's), and --force first moves that one to the viewer's trash. The command
+  // works in the repository it runs in: here a miniature one with a small sample, and --no-export (the export it runs,
+  // --changed or full, is checked for real in 3b, in this repository).
+  const mini = mkdtempSync(join(tmpdir(), 'diorama-example-'));
+  const example = (...args: string[]) => cli(['example', ...args], mini);
+  const lockFile = join(mini, 'projects', '.example.lock');
+  const projectsOf = () => readdirSync(join(mini, 'projects')).sort();
+  try {
+    const shipped = join(mini, 'examples', 'sample');
+    const putSample = (rel: string, content: string, seconds: number) => {
+      const file = join(shipped, rel);
+      mkdirSync(join(file, '..'), { recursive: true });
+      writeFileSync(file, content);
+      utimesSync(file, seconds, seconds);
+    };
+    putSample('STYLE.md', '# Sample\n', 900);
+    putSample('src/theme.ts', 'export const THEME = 1;\n', 900);
+    putSample('sheets/props/crate.ts', "export { THEME as default } from '../../src/theme';\n", 900);
+    putSample('assets/props/crate.png', 'png', 1000);
+    putSample('assets/props/crate.json', '{}', 1000);
+    putSample('review/contact/crate-contact.png', 'scratch', 1000);
+    const copy = join(mini, 'projects', 'sample');
+    // Projects are found in projects/ first, then examples/; examples/<name> names the sample explicitly. A bare name finds
+    // the sample while no project of that name is in projects/, and the copy once example has made one.
+    const bareDir = () => JSON.parse(cli(['list', 'sample', '--json'], mini).stdout).projects[0].dir;
+    assert.equal(bareDir(), 'examples/sample', 'without a copy, a bare name is the sample of examples/');
+
+    const first = example('sample', '--no-export');
+    assert.equal(first.code, 0, `example failed: ${first.stderr}`);
+    assert.equal(bareDir(), 'projects/sample', 'with a copy, a bare name is the copy in projects/');
+    assert.equal(JSON.parse(cli(['list', 'examples/sample', '--json'], mini).stdout).projects[0].dir, 'examples/sample', 'and examples/<name> still the sample');
+    assert.ok(first.stdout.includes('Copied examples/sample to projects/sample/') && first.stdout.includes('its exports with their times'), `example says what it copied: ${first.stdout}`);
+    assert.ok(first.stdout.includes('npm run export -- projects/sample --changed'), `with the sample's exports, only what is out of date needs exporting: ${first.stdout}`);
+    assert.ok(first.stdout.includes('npm run view') && first.stdout.includes('/viewer/p/sample') && first.stdout.includes('/packages/phaser/demo/?project=sample'), `example says how to open it: ${first.stdout}`);
+    assert.deepEqual(readdirSync(copy).sort(), ['STYLE.md', 'assets', 'sheets', 'src'], 'everything but review/ is copied');
+    assert.equal(readFileSync(join(copy, 'sheets/props/crate.ts'), 'utf8'), readFileSync(join(shipped, 'sheets/props/crate.ts'), 'utf8'));
+    assert.deepEqual(['sheets/props/crate.ts', 'src/theme.ts', 'assets/props/crate.png'].map(rel => statSync(join(copy, rel)).mtimeMs), [900_000, 900_000, 1_000_000], 'every file keeps its time, so export --changed sees the same state as in the sample');
+    assert.ok(existsSync(join(shipped, 'review/contact/crate-contact.png')), 'the sample is left as it ships');
+    assert.deepEqual(projectsOf(), ['sample'], 'the copy is renamed into place: no copy folder and no lock is left in projects/');
+
+    // A copy that is there is the user's: nothing is copied over it.
+    writeFileSync(join(copy, 'src', 'mine.ts'), 'export const MINE = 1;\n');
+    putSample('STYLE.md', '# Sample, newer\n', 2000);
+    const again = example('sample', '--no-export');
+    assert.equal(again.code, 0, `example on an existing copy failed: ${again.stderr}`);
+    assert.ok(again.stdout.includes('projects/sample/ already exists') && again.stdout.includes('--force'), `example says the copy is kept, and how to replace it: ${again.stdout}`);
+    assert.ok(existsSync(join(copy, 'src', 'mine.ts')) && readFileSync(join(copy, 'STYLE.md'), 'utf8') === '# Sample\n', 'the copy is left as it is');
+
+    // --force: the old copy goes to the viewer's trash (where its restore finds it), and a fresh one takes its place. The
+    // restore refuses while the fresh copy is there, so the command says to move that one out of the way first.
+    const forced = example('sample', '--force', '--no-export');
+    assert.equal(forced.code, 0, `example --force failed: ${forced.stderr}`);
+    const trashed = /\.diorama-trash\/projects\/([^/]+)\/sample\//.exec(forced.stdout);
+    assert.ok(trashed, `example --force says where the old copy went: ${forced.stdout}`);
+    assert.ok(existsSync(join(mini, '.diorama-trash', 'projects', trashed[1], 'sample', 'src', 'mine.ts')), 'the old copy is in the trash, whole');
+    assert.ok(!existsSync(join(copy, 'src', 'mine.ts')) && readFileSync(join(copy, 'STYLE.md'), 'utf8') === '# Sample, newer\n', 'and a fresh copy of the sample is in projects/');
+    assert.ok(forced.stdout.includes('move that out of the way first') && forced.stdout.includes('mv projects/sample projects/sample-fresh') && forced.stdout.includes(`mv .diorama-trash/projects/${trashed[1]}/sample projects/sample`), `example --force prints the steps that get the old copy back: ${forced.stdout}`);
+    await assert.rejects(restoreProject(mini, 'sample', trashed[1]), /already exists/, 'the restore never moves the old copy over the fresh one');
+    renameSync(copy, `${copy}-fresh`);
+    await restoreProject(mini, 'sample', trashed[1]);
+    assert.ok(existsSync(join(copy, 'src', 'mine.ts')), "with the fresh copy moved away, the viewer's restore brings the old copy back");
+    rmSync(`${copy}-fresh`, { recursive: true });
+
+    // The export's own options are passed on (npm run example used to be an export of the sample); anything else is refused
+    // with what the command takes, never read as a sample name.
+    const passed = example('sample', '--no-export', '--changed', '--jobs', '2');
+    assert.ok(passed.code === 0 && passed.stdout.includes('npm run export -- projects/sample --changed --jobs=2'), `--jobs goes to the export (and --changed, which an existing copy gets anyway; a fresh one is checked below): ${passed.stdout} ${passed.stderr}`);
+    const refusals: Array<[string[], string]> = [
+      [['--grid', '--no-export'], '--grid is not an option of npm run example'],
+      [['--jobs', 'many', '--no-export'], '--jobs needs a whole number'],
+      [['--jobs'], '--jobs needs a value'],
+      [['props/crate', '--no-export'], 'npm run export -- projects/soulkeeper props/crate'],
+      [['sample', 'props/', '--no-export'], 'copies one sample'],
+    ];
+    for (const [args, says] of refusals) {
+      const refused = example(...args);
+      assert.ok(refused.code !== 0 && refused.stderr.includes(says), `example ${args.join(' ')} is refused with "${says}": ${refused.stderr}`);
+    }
+
+    // One run at a time: a run holds projects/.example.lock (its pid) while it copies and exports, and another refuses. A
+    // lock whose process is gone, or an empty one a run left long ago, is stale and taken over; every run removes its own.
+    writeFileSync(lockFile, JSON.stringify({ pid: process.pid, startedAt: '2026-01-01T00:00:00.000Z', command: 'npm run example' }));
+    const busy = example('sample', '--force', '--no-export');
+    assert.ok(busy.code !== 0 && busy.stderr.includes('npm run example is already running') && busy.stderr.includes(`process ${process.pid}`) && busy.stderr.includes('remove projects/.example.lock'), `a second run refuses: ${busy.stderr}`);
+    assert.ok(existsSync(join(copy, 'src', 'mine.ts')) && JSON.parse(readFileSync(lockFile, 'utf8')).pid === process.pid, 'and touches neither the copy nor the lock of the run that holds it');
+    const gone = spawnSync(process.execPath, ['-e', '']).pid;
+    writeFileSync(lockFile, JSON.stringify({ pid: gone, startedAt: '2026-01-01T00:00:00.000Z', command: 'npm run example' }));
+    const takenOver = example('sample', '--no-export');
+    assert.equal(takenOver.code, 0, `a lock whose process is gone does not stop a run: ${takenOver.stderr}`);
+    assert.ok(!existsSync(lockFile), 'and the run removes the lock when it ends');
+    writeFileSync(lockFile, '');
+    assert.ok(example('sample', '--no-export').stderr.includes('already running'), 'a lock being written (no pid yet) holds');
+    utimesSync(lockFile, 1000, 1000);
+    assert.equal(example('sample', '--no-export').code, 0, 'an empty lock left long ago is stale');
+    assert.ok(!existsSync(lockFile), 'and an empty lock left long ago is removed too');
+
+    // A copy that fails half way (an unreadable file) leaves nothing in projects/ and changes nothing: with --force, the
+    // user's copy stays where it is and nothing goes to the trash.
+    const unreadable = join(shipped, 'src', 'secret.ts');
+    writeFileSync(unreadable, 'export const SECRET = 1;\n');
+    chmodSync(unreadable, 0o000);
+    let readable = true;
+    try {
+      readFileSync(unreadable);
+    } catch {
+      readable = false;
+    }
+    if (readable) {
+      console.log('  (skipped the failed-copy check: this user reads files without permission, as root does)');
+    } else {
+      const trashEntries = () => (existsSync(join(mini, '.diorama-trash', 'projects')) ? readdirSync(join(mini, '.diorama-trash', 'projects')).length : 0);
+      const trashBefore = trashEntries();
+      const brokenForce = example('sample', '--force', '--no-export');
+      assert.ok(brokenForce.code !== 0 && brokenForce.stderr.includes('could not copy examples/sample to projects/sample/') && brokenForce.stderr.includes('projects/sample was left as it was'), `a failed copy says so: ${brokenForce.stderr}`);
+      assert.ok(existsSync(join(copy, 'src', 'mine.ts')), 'with --force, the copy that was there stays');
+      assert.equal(trashEntries(), trashBefore, 'and nothing went to the trash');
+      assert.deepEqual(projectsOf(), ['sample'], 'no half copy and no lock are left in projects/');
+      rmSync(copy, { recursive: true });
+      const broken = example('sample', '--no-export');
+      assert.ok(broken.code !== 0 && broken.stderr.includes('Nothing was left in projects/'), `a failed first copy says so: ${broken.stderr}`);
+      assert.deepEqual(projectsOf(), [], 'and leaves no projects/sample that a later run would take for the user\'s');
+      // A copy folder that a killed run left behind is removed by the next run (only one runs at a time).
+      mkdirSync(join(mini, 'projects', '.sample.copy-99999', 'src'), { recursive: true });
+      chmodSync(unreadable, 0o644);
+      assert.equal(example('sample', '--no-export').code, 0);
+      assert.deepEqual(projectsOf(), ['sample'], 'what a killed copy left is removed');
+    }
+    chmodSync(unreadable, 0o644);
+    rmSync(unreadable);
+
+    // A link at projects/<sample>: --force removes the link only (never what it leads to) and puts a copy there; a link that
+    // leads nowhere is refused without --force, before anything is copied.
+    rmSync(copy, { recursive: true, force: true });
+    const elsewhere = join(mini, 'elsewhere');
+    mkdirSync(join(elsewhere, 'src'), { recursive: true });
+    writeFileSync(join(elsewhere, 'src', 'kept.ts'), 'export const KEPT = 1;\n');
+    symlinkSync(elsewhere, copy);
+    assert.ok(example('sample', '--no-export').stdout.includes('already exists'), 'a link to a folder is the user\'s project too');
+    const relinked = example('sample', '--force', '--no-export');
+    assert.ok(relinked.code === 0 && relinked.stdout.includes('Removed the link projects/sample') && relinked.stdout.includes('the folder it leads to is untouched'), `--force removes the link: ${relinked.stdout} ${relinked.stderr}`);
+    assert.ok(!lstatSync(copy).isSymbolicLink() && existsSync(join(copy, 'STYLE.md')), 'and makes a real copy in its place');
+    assert.deepEqual(readdirSync(elsewhere), ['src'], 'what the link led to is untouched');
+    assert.ok(existsSync(join(elsewhere, 'src', 'kept.ts')));
+    assert.ok(!readdirSync(join(mini, 'projects')).some((entry) => entry.startsWith('.sample.')), 'and leaves nothing hidden in projects/');
+    rmSync(copy, { recursive: true });
+    // --force moves a link aside until the copy is in place: a run killed in between leaves it there, and the next run puts it back.
+    symlinkSync(elsewhere, join(mini, 'projects', '.sample.link-1'));
+    const swept = example('sample', '--no-export');
+    assert.ok(swept.stdout.includes('already exists') && lstatSync(copy).isSymbolicLink() && readlinkSync(copy) === elsewhere, `a link a killed --force run had moved aside goes back to its place: ${swept.stdout} ${swept.stderr}`);
+    unlinkSync(copy);
+    symlinkSync(join(mini, 'nowhere'), copy);
+    const dangling = example('sample', '--no-export');
+    assert.ok(dangling.code !== 0 && dangling.stderr.includes('projects/sample is a link to') && dangling.stderr.includes('which does not exist') && dangling.stderr.includes('--force'), `a link that leads nowhere is refused clearly: ${dangling.stderr}`);
+    assert.ok(lstatSync(copy).isSymbolicLink(), 'and left alone');
+    assert.ok(!existsSync(lockFile), 'a run that fails after taking the lock removes it');
+    assert.equal(example('sample', '--force', '--no-export').code, 0, '--force replaces a link that leads nowhere');
+    assert.ok(!lstatSync(copy).isSymbolicLink() && !existsSync(join(mini, 'nowhere')));
+
+    // A sample without exports is exported whole; a name that is not a sample, or no sample at all, is an error.
+    rmSync(join(shipped, 'assets'), { recursive: true });
+    rmSync(copy, { recursive: true });
+    const bare = example('sample', '--no-export');
+    assert.ok(bare.code === 0 && bare.stdout.includes('npm run export -- projects/sample\n') && !bare.stdout.includes('its exports'), `without exports the copy is exported whole: ${bare.stdout}`);
+    rmSync(copy, { recursive: true });
+    const changedOnly = example('sample', '--no-export', '--changed');
+    assert.ok(changedOnly.code === 0 && changedOnly.stdout.includes('npm run export -- projects/sample --changed\n'), `--changed goes to the export of a fresh copy without exports: ${changedOnly.stdout} ${changedOnly.stderr}`);
+    const unknown = example('nope', '--no-export');
+    assert.ok(unknown.code !== 0 && unknown.stderr.includes('no sample "nope" in examples/') && unknown.stderr.includes('Samples: sample'), `an unknown sample lists the ones there are: ${unknown.stderr}`);
+    const byDefault = example('--no-export');
+    assert.ok(byDefault.code !== 0 && byDefault.stderr.includes('no sample "soulkeeper"'), `without a name it is Soulkeeper: ${byDefault.stderr}`);
+    assert.ok(!existsSync(lockFile), 'and a run that fails before taking the lock leaves none');
+  } finally {
+    rmSync(mini, { recursive: true, force: true });
+  }
+  const exampleHelp = run('npm run --silent example -- --help');
+  assert.ok(exampleHelp.code === 0 && exampleHelp.stdout.includes('projects/soulkeeper') && exampleHelp.stdout.includes('--force') && exampleHelp.stdout.includes('--no-export') && exampleHelp.stdout.includes('--changed'), `example --help lists its options: ${exampleHelp.stdout}`);
+
+  // 3b. The export example runs, for real, in this repository: a throwaway sample with one sheet, copied to projects/ and
+  // exported whole (it came without exports); run again, the copy is the user's and --changed finds nothing to do; a
+  // sample that ships its exports brings them along, and --changed exports only what is out of date (nothing here).
+  // A run stopped half way leaves its throwaway sample behind (git-ignored): one cli test runs at a time, so any found goes.
+  for (const root of ['examples', 'projects']) {
+    for (const entry of readdirSync(root)) if (entry.startsWith('zz-cli-sample-')) rmSync(resolve(root, entry), { recursive: true, force: true });
+  }
+  const throwaway = `zz-cli-sample-${Date.now()}`;
+  const throwawaySample = resolve('examples', throwaway);
+  const throwawayCopy = resolve('projects', throwaway);
+  try {
+    mkdirSync(join(throwawaySample, 'src'), { recursive: true });
+    mkdirSync(join(throwawaySample, 'sheets'), { recursive: true });
+    writeFileSync(join(throwawaySample, 'src', 'badge.ts'), badgeSource.replace('export default ', 'export const badge = '));
+    writeFileSync(join(throwawaySample, 'sheets', 'badge.ts'), "export { badge as default } from '../src/badge';\n");
+    const png = join(throwawayCopy, 'assets', 'badge.png');
+    const full = cli(['example', throwaway, '--jobs', '1']);
+    assert.equal(full.code, 0, `example with its export failed: ${full.stdout} ${full.stderr}`);
+    assert.ok(full.stdout.includes(`Exporting projects/${throwaway}: all 1 sheet.`) && !full.stdout.includes(`Exporting projects/${throwaway} with --changed`), `a sample without exports is exported whole: ${full.stdout}`);
+    assert.ok(existsSync(png) && full.stdout.includes('badge.png (32x32'), `the export wrote the copy's image: ${full.stdout}`);
+    assert.ok(full.stdout.includes(`${throwaway} is ready in projects/${throwaway}/, exported.`));
+    assert.ok(!existsSync(join(throwawaySample, 'assets')), 'and nothing into the sample');
+    const exportedAt = statSync(png).mtimeMs;
+    const kept = cli(['example', throwaway]);
+    assert.ok(kept.code === 0 && kept.stdout.includes('already exists') && kept.stdout.includes(`Exporting projects/${throwaway} with --changed`), `an existing copy is exported with --changed: ${kept.stdout} ${kept.stderr}`);
+    assert.ok(kept.stdout.includes('--changed: 0 never exported, 0 older than their code, 1 up to date') && kept.stdout.includes('Nothing exported'), `the real export ran with --changed: ${kept.stdout}`);
+    assert.equal(statSync(png).mtimeMs, exportedAt, 'nothing up to date is exported again');
+    cpSync(join(throwawayCopy, 'assets'), join(throwawaySample, 'assets'), { recursive: true, preserveTimestamps: true });
+    rmSync(throwawayCopy, { recursive: true });
+    const shippedExports = cli(['example', throwaway]);
+    assert.ok(shippedExports.code === 0 && shippedExports.stdout.includes('its exports with their times') && shippedExports.stdout.includes(`Exporting projects/${throwaway} with --changed`) && shippedExports.stdout.includes('1 up to date'), `exports that come along are kept: ${shippedExports.stdout} ${shippedExports.stderr}`);
+    assert.ok(Math.abs(statSync(png).mtimeMs - statSync(join(throwawaySample, 'assets', 'badge.png')).mtimeMs) < 1, 'with the time they had in the sample (to the millisecond a copy keeps)');
+    assert.ok(!existsSync(resolve('projects', '.example.lock')), 'the run left no lock');
+  } finally {
+    rmSync(throwawaySample, { recursive: true, force: true });
+    rmSync(throwawayCopy, { recursive: true, force: true });
+  }
+
+  // 3c. A volume scaffold exports as a direction sheet: 8 rows, the pivot at scale 2, the role in meta.data.
   assert.equal(run(`npm run --silent export -- ${project} props/crate`).code, 0, 'the volume scaffold must export');
   const crate = JSON.parse(readFileSync(resolve(projectDir, 'assets', 'props', 'crate.json'), 'utf8'));
   assert.deepEqual(crate.meta.directions, ['S', 'SW', 'W', 'NW', 'N', 'NE', 'E', 'SE']);
@@ -512,7 +745,7 @@ export default defineAsset({
   rmSync(resolve(layoutDir, 'scratch.md'));
   assert.equal(layoutOf().code, 0, 'and passes again once the file is gone');
   // The sample follows every rule.
-  const sample = JSON.parse(run('npm run --silent layout -- soulkeeper --json').stdout);
+  const sample = JSON.parse(run('npm run --silent layout -- examples/soulkeeper --json').stdout);
   assert.ok(sample.ok && sample.errors.length === 0, `examples/soulkeeper follows the layout: ${JSON.stringify(sample.errors.slice(0, 3))}`);
 
   // 10b. game serves a project's game/ and prints where: it says so of a project without one, and where the exports can be
@@ -710,10 +943,10 @@ export default defineAsset({
   rmSync(kitFile('scenery', 'noise.ts'));
   rmSync(resolve(kitsDir, 'sheets', 'swatch.ts'));
   // The sample is deterministic.
-  const sampleCheck = JSON.parse(run('npm run --silent check -- soulkeeper --json').stdout);
+  const sampleCheck = JSON.parse(run('npm run --silent check -- examples/soulkeeper --json').stdout);
   assert.ok(sampleCheck.lint.ok && sampleCheck.lint.issues.length === 0 && sampleCheck.projectErrors.length === 0, `examples/soulkeeper passes the type check and the determinism lint: ${JSON.stringify(sampleCheck.projectErrors.slice(0, 3))} ${JSON.stringify(sampleCheck.lint.issues.slice(0, 3))}`);
 
-  console.log('✔ new-project, new-asset (volume and rig), new-kit, check (types, layout, determinism), layout (rule 8 included), game, list, export (incl. --mockup, the type check, --changed and --jobs), inspect and contact behave as documented.\n');
+  console.log('✔ new-project, new-asset (volume and rig), new-kit, check (types, layout, determinism), layout (rule 8 included), game, list, example, export (incl. --mockup, the type check, --changed and --jobs), inspect and contact behave as documented.\n');
 } finally {
   rmSync(projectDir, { recursive: true, force: true });
   rmSync(layoutDir, { recursive: true, force: true });

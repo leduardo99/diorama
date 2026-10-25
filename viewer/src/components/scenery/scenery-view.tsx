@@ -15,7 +15,6 @@ import { savedScenesQuery, sceneryQuery } from '@/lib/scenery/catalog';
 import { canFlip, countCells, duplicateProp, emptyScene, nudgeSelected, pieceOf, removeSelected, rotateProp, validSelection, type EraseLayer, type Layer, type Picked, type Selection } from '@/lib/scenery/edit';
 import { TOOL_KEYS, brushOf, type PieceGroup, type Tool } from '@/lib/scenery/labels';
 import { createCanvasStatus } from '@/lib/scenery/status';
-import type { ProjectRoot } from '@/lib/types';
 import { useHistory } from '@/lib/scenery/use-history';
 import { cn } from '@/lib/utils';
 import { usePref } from '@/lib/use-pref';
@@ -47,7 +46,7 @@ export function SceneryView() {
   const { fixture = false } = sceneryRoute.useSearch();
   const { data: projects } = useSuspenseQuery(projectsQuery);
   const meta = projects.find((p) => p.name === project);
-  const { data: catalog } = useSuspenseQuery(sceneryQuery(project, meta?.root ?? 'projects', fixture, meta?.hasSceneryKit ?? false));
+  const { data: catalog } = useSuspenseQuery(sceneryQuery(project, fixture, meta?.hasSceneryKit ?? false));
   const { t } = useT();
 
   if (!catalog) {
@@ -63,15 +62,15 @@ export function SceneryView() {
       </Empty>
     );
   }
-  return <Painter key={`${project}:${fixture}`} project={project} root={meta?.root ?? 'projects'} catalog={catalog} fixture={fixture} sceneNames={meta?.scenes ?? []} />;
+  return <Painter key={`${project}:${fixture}`} project={project} catalog={catalog} fixture={fixture} sceneNames={meta?.scenes ?? []} />;
 }
 
 const firstOf = (catalog: SceneryCatalog, groups: PieceGroup[]) => catalog.pieces.find((p) => groups.includes(p.group))?.id ?? null;
 
-function Painter({ project, root, catalog, fixture, sceneNames }: { project: string; root: ProjectRoot; catalog: SceneryCatalog; fixture: boolean; sceneNames: string[] }) {
+function Painter({ project, catalog, fixture, sceneNames }: { project: string; catalog: SceneryCatalog; fixture: boolean; sceneNames: string[] }) {
   const { t, plural } = useT();
   // The list follows the catalog; keeping the previous one while it reloads leaves the painter where it is.
-  const { data: saved = [] } = useQuery({ ...savedScenesQuery(project, root, fixture, sceneNames), placeholderData: keepPreviousData });
+  const { data: saved = [] } = useQuery({ ...savedScenesQuery(project, fixture, sceneNames), placeholderData: keepPreviousData });
   const history = useHistory<SceneData>(() => drafts.get(project) ?? emptyScene(catalog, DEFAULT_SIZE.cols, DEFAULT_SIZE.rows));
   const scene = history.value;
   useEffect(() => {

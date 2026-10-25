@@ -77,7 +77,7 @@ The `diorama-volume` skill lists the readability checks (silhouette, value contr
 
 ## The viewer
 
-`npm run view` starts the dev server and serves the viewer at `http://localhost:5173`. It lists every project (yours in `projects/`, the samples in `examples/`), its sources and its exported `assets/`. It never reads `review/`, where contact sheets, scenery tests and mockups are written. The sample's exports are not versioned: `npm run example` creates them.
+`npm run view` starts the dev server and serves the viewer at `http://localhost:5173`. It lists your projects, the folders of `projects/`, with their sources and their exported `assets/`; the samples in `examples/` are not listed. It never reads `review/`, where contact sheets, scenery tests and mockups are written. To look at the sample, `npm run example` copies it to `projects/soulkeeper` and exports it there (the exports are not versioned).
 
 Each project page has four tabs:
 

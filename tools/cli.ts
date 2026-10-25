@@ -29,6 +29,8 @@
  *   npm run new-scene -- <project> <name> --scene <file.json>
  *   npm run scenery-test -- <project> <piece>
  *   npm run new-outfit-character -- <project> <name> --from <character> --outfit <file.json>
+ *   npm run example -- [sample] [--force] [--no-export] [--changed] [--jobs <n>]
+ *     copies examples/soulkeeper to projects/soulkeeper (the viewer shows projects/ only) and exports it there.
  *
  * Commands that create files refuse to overwrite anything (the catalog commands keep the files
  * already there unless --force). Use --json (with `npm run --silent`) to get output that can be
@@ -36,22 +38,27 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, readlinkSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { basename, dirname, extname, join, relative, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { deflateSync, inflateSync } from 'node:zlib';
 import pc from 'picocolors';
+import { IMAGE_RE } from './freshness.js';
 import { FIRST_PIECE, KIT_KINDS, kitFiles, readKitTheme, type KitKind, type KitTheme } from './kits.js';
 import { serverOn } from './dev-server.js';
 import { checkLayout, type LayoutReport } from './layout.js';
 import { lintProject, type LintIssue } from './lint.js';
-import { GENERATED_SHEETS, LAYOUT, REVIEW, availableProjects, findProject, generatedHeader, listProjects, listSheets, walkFiles, type ProjectRef } from './project.js';
+import { EXAMPLE_LOCK, takeLock } from './lock.js';
+import { GENERATED_SHEETS, LAYOUT, PROJECT_ROOTS, REVIEW, findProject, generatedHeader, listProjects, listSheets, missingProject, walkFiles, type ProjectRef } from './project.js';
+import { deleteProject, restoreProject } from './trash.js';
 import { typeCheckProject } from './typecheck.js';
 
 const ROOT = resolve(process.cwd());
 const PROJECTS = resolve(ROOT, 'projects');
 const TEMPLATES = resolve(ROOT, 'templates');
 const PROJECT_NAME_RE = /^[a-z0-9][a-z0-9_-]*$/;
+/** The sample of examples/ that `npm run example` copies into projects/ when it is given no name. */
+const DEFAULT_SAMPLE = 'soulkeeper';
 /** kebab-case path segments: what the layout check accepts for files and folders. */
 const KEBAB_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
@@ -63,7 +70,7 @@ function fail(message: string, hint?: string): never {
   process.exit(1);
 }
 
-const VALUE_FLAGS = ['engine', 'size', 'frames', 'fps', 'directions', 'out', 'zoom', 'bg', 'rows', 'skeleton', 'clip', 'with', 'from', 'outfit', 'scene', 'on', 'genre', 'character', 'port'];
+const VALUE_FLAGS = ['engine', 'size', 'frames', 'fps', 'directions', 'out', 'zoom', 'bg', 'rows', 'skeleton', 'clip', 'with', 'from', 'outfit', 'scene', 'on', 'genre', 'character', 'port', 'jobs'];
 
 function parseFlags(argv: string[]): { positionals: string[]; flags: Record<string, string | true> } {
   const positionals: string[] = [];
@@ -93,7 +100,11 @@ function parseFlags(argv: string[]): { positionals: string[]; flags: Record<stri
 function requireProject(name: string | undefined): ProjectRef {
   if (!name) fail('a project name is required.');
   const project = findProject(name, ROOT);
-  if (!project) fail(`project "${name}" does not exist in projects/ or examples/.`, availableProjects(ROOT));
+  if (!project) {
+    // `projects/<name>` (what the viewer runs) is answered with projects/ alone: the viewer has no samples to offer.
+    const { message, hint } = missingProject(name, ROOT);
+    fail(message, hint);
+  }
   return project;
 }
 
@@ -496,11 +507,14 @@ function listOutputs(dir: string): string[] {
 
 function list(positionals: string[], flags: Record<string, string | true>): void {
   const asJson = Boolean(flags['json']);
-  const refs = positionals[0] ? [requireProject(positionals[0])] : listProjects(ROOT);
+  // Every folder of projects/, then every sample of examples/ (one a project of the same name hides too: examples/<name> reaches it).
+  const refs = positionals[0] ? [requireProject(positionals[0])] : PROJECT_ROOTS.flatMap(root => listProjects(ROOT, [root]));
 
   const projects = refs.map(ref => ({
     project: ref.name,
     dir: ref.rel,
+    // A sample ships with Diorama (examples/): the viewer does not show it until npm run example copies it into projects/.
+    sample: ref.root === 'examples',
     sheets: listSheets(ref.dir),
     assets: listOutputs(resolve(ref.dir, LAYOUT.assets)),
     // Review files (contact sheets, scenery tests, --mockup exports): never game assets.
@@ -513,7 +527,7 @@ function list(positionals: string[], flags: Record<string, string | true>): void
     return;
   }
   for (const p of projects) {
-    console.log(`${pc.bold(p.project)} ${pc.gray(p.dir)}`);
+    console.log(`${pc.bold(p.project)} ${pc.gray(p.dir)}${p.sample ? pc.cyan(` sample (npm run example${p.project === DEFAULT_SAMPLE ? '' : ` -- ${p.project}`} copies it into projects/)`) : ''}`);
     console.log(`  sheets (${p.sheets.length}):  ${p.sheets.join(', ') || '-'}`);
     console.log(`  assets (${p.assets.length}):  ${p.assets.join(', ') || '-'}`);
     console.log(`  review files (${p.review.length}): ${p.review.join(', ') || '-'}`);
@@ -1778,6 +1792,217 @@ export default defineSceneAsset({ catalog: SCENERY, scene: seamTestScene(SCENERY
   console.log(`Look at it at 1×, then zoom the joins: npm run contact -- ${relative(ROOT, out)} --zoom 3`);
 }
 
+// ---------------------------------------------------------------------------
+// example: a sample of examples/, copied into projects/ so it is a project of the user's. The viewer shows projects/
+// only, so the sample appears there, and what the viewer saves goes into the copy, never into the shipped sample.
+// ---------------------------------------------------------------------------
+
+/** A copy of the sample: everything but review/ (scratch) and OS metadata, every file with its times. */
+function copySample(from: string, to: string): void {
+  const osMetadata = /(^|[\\/])(\.DS_Store|Thumbs\.db|desktop\.ini)$/;
+  const review = resolve(from, LAYOUT.review);
+  cpSync(from, to, {
+    recursive: true,
+    errorOnExist: true,
+    force: false,
+    // The times say which exports are out of date (tools/freshness.ts): kept, `export --changed` finds the same ones.
+    preserveTimestamps: true,
+    filter: (src) => resolve(src) !== review && !resolve(src).startsWith(review + sep) && !osMetadata.test(src),
+  });
+}
+
+/** What is at `path`, without following a link: nothing, a folder, a link (and where it leads), or something else. */
+function entryAt(path: string): { kind: 'none' | 'dir' | 'other' } | { kind: 'link'; to: string; dangling: boolean; dir: boolean } {
+  let info;
+  try {
+    info = lstatSync(path);
+  } catch {
+    return { kind: 'none' };
+  }
+  if (info.isSymbolicLink()) {
+    const to = readlinkSync(path);
+    try {
+      return { kind: 'link', to, dangling: false, dir: statSync(path).isDirectory() };
+    } catch {
+      return { kind: 'link', to, dangling: true, dir: false };
+    }
+  }
+  return { kind: info.isDirectory() ? 'dir' : 'other' };
+}
+
+/** The options of `example`. --changed and --jobs are the export's (`npm run example` used to be an export of the sample). */
+const EXAMPLE_FLAGS = ['force', 'no-export', 'changed', 'jobs', 'help'];
+const EXIT_ON_SIGNAL = { SIGINT: 130, SIGTERM: 143, SIGHUP: 129 } as const;
+
+/**
+ * Copies examples/<sample> to projects/<sample> and exports the copy. With exports in the sample's assets/, they come
+ * along and only what is out of date is exported (--changed); without, every sheet is. A copy already in projects/ is
+ * the user's: nothing is copied over it and it is exported with --changed, unless --force, which replaces it: the old
+ * one goes to the trash (.diorama-trash/projects/<id>/<sample>, tools/trash.ts, the viewer's "Delete project"), a link
+ * there is removed (the link only). One run at a time (tools/lock.ts), and the copy is made in a hidden folder of
+ * projects/ and renamed into place, so a copy that fails half way leaves nothing behind and changes nothing.
+ */
+/**
+ * renameSync, retried for a few seconds on Windows, where a folder cannot be renamed while something holds a handle
+ * inside it (an antivirus or an indexer reading the files just written), as Vite's own gracefulRename does.
+ */
+function renameRetrying(from: string, to: string): void {
+  if (process.platform !== 'win32') return renameSync(from, to);
+  const start = Date.now();
+  for (let delay = 10; ; delay = Math.min(delay + 10, 100)) {
+    try {
+      return renameSync(from, to);
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code ?? '';
+      if (!['EPERM', 'EACCES', 'EBUSY'].includes(code) || Date.now() - start > 5000 || existsSync(to)) throw err;
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, delay);
+    }
+  }
+}
+
+/** Removes a folder this command made, without letting a failure hide the message that follows. */
+function removeQuietly(dir: string): void {
+  try {
+    rmSync(dir, { recursive: true, force: true, maxRetries: 5 });
+  } catch {
+    // Left for the next run, which removes what a run cut short left.
+  }
+}
+
+async function example(positionals: string[], flags: Record<string, string | true>): Promise<void> {
+  const unknown = Object.keys(flags).filter(flag => !EXAMPLE_FLAGS.includes(flag));
+  if (unknown.length) {
+    fail(`${unknown.map(flag => `--${flag}`).join(', ')} ${unknown.length === 1 ? 'is not an option' : 'are not options'} of npm run example.`,
+      `Its options: [sample] [--force] [--no-export] [--changed] [--jobs <n>] (npm run example -- --help). To export the copy another way: npm run export -- projects/${positionals[0] ?? DEFAULT_SAMPLE} [subpath...] [options].`);
+  }
+  if (positionals.length > 1) fail(`npm run example copies one sample, not "${positionals.join(' ')}".`, `To export some sheets of the copy: npm run export -- projects/${DEFAULT_SAMPLE} ${positionals.slice(1).join(' ')}`);
+  const name = positionals[0] ?? DEFAULT_SAMPLE;
+  if (!PROJECT_NAME_RE.test(name)) {
+    fail(`"${name}" is not a sample name: give the name of a folder of examples/, e.g. ${DEFAULT_SAMPLE}.`,
+      name.includes('/') ? `npm run example no longer takes sheets: to export some sheets of the copy, npm run export -- projects/${DEFAULT_SAMPLE} ${name}` : undefined);
+  }
+  const jobs = flags['jobs'];
+  if (jobs !== undefined && (jobs === true || !/^[1-9]\d*$/.test(jobs))) fail(`--jobs needs a whole number of sheets to render at once, for example --jobs 4 (got "${jobs}").`);
+  const sample = findProject(`examples/${name}`, ROOT);
+  if (!sample) {
+    const samples = listProjects(ROOT, ['examples']).map(p => p.name);
+    fail(`there is no sample "${name}" in examples/.`, samples.length ? `Samples: ${samples.join(', ')}` : undefined);
+  }
+  const target = resolve(PROJECTS, name);
+  const rel = `projects/${name}`;
+
+  // One run at a time: a second one (another terminal, the viewer's "Try the sample") would copy and export beside it.
+  const lock = takeLock(resolve(ROOT, EXAMPLE_LOCK), `npm run example${name === DEFAULT_SAMPLE ? '' : ` -- ${name}`}`);
+  if (!lock.ok) {
+    const { pid, startedAt } = lock.holder;
+    fail(`npm run example is already running${pid ? ` (process ${pid}${startedAt ? `, started ${startedAt}` : ''})` : ''}: nothing was copied or exported. Wait for it to finish; it brings the sample in.`,
+      `If no such run is going on (its process is gone), remove ${EXAMPLE_LOCK} and run npm run example again.`);
+  }
+  process.on('exit', lock.release);
+  for (const [signal, code] of Object.entries(EXIT_ON_SIGNAL)) process.once(signal, () => process.exit(code));
+  // What a run cut short left (one that was killed): the lock is this run's, so no other run is using them. A copy goes;
+  // a link it had moved aside goes back to its place, or goes if a fresh copy took that place.
+  for (const entry of existsSync(PROJECTS) ? readdirSync(PROJECTS) : []) {
+    if (entry.startsWith(`.${name}.copy-`)) removeQuietly(join(PROJECTS, entry));
+    if (entry.startsWith(`.${name}.link-`)) {
+      if (entryAt(target).kind === 'none') renameSync(join(PROJECTS, entry), target);
+      else unlinkSync(join(PROJECTS, entry));
+    }
+  }
+
+  const force = Boolean(flags['force']);
+  const at = entryAt(target);
+  if (at.kind === 'other') fail(`${rel} is a file, not a project folder: nothing was copied over it.`, `Move it out of the way, then run npm run example again.`);
+  if (at.kind === 'link' && !at.dir && !force) {
+    fail(`${rel} is a link to ${at.to}, ${at.dangling ? 'which does not exist' : 'which is not a folder'}: nothing was copied.`,
+      `Remove the link (only the link: rm ${rel}), or run npm run example -- --force, which removes it and puts a fresh copy there.`);
+  }
+  let copied = false;
+  let restoreSteps: string[] = [];
+  if (at.kind !== 'none' && !force) {
+    console.log(pc.yellow(`${rel}/ already exists: it is your project, so nothing was copied over it.`));
+    console.log(pc.gray(`  npm run example -- --force replaces it with a fresh copy of ${sample.rel}; the one there now goes to the trash first.`));
+  } else {
+    // The copy is made beside the target, in a folder no command lists (a dot name), and renamed into place when whole.
+    mkdirSync(PROJECTS, { recursive: true });
+    const temp = join(PROJECTS, `.${name}.copy-${process.pid}`);
+    try {
+      copySample(sample.dir, temp);
+    } catch (err) {
+      removeQuietly(temp);
+      fail(`could not copy ${sample.rel} to ${rel}/: ${(err as Error).message}`,
+        at.kind === 'none' ? `Nothing was left in projects/. Fix what it says, then run npm run example again.` : `${rel} was left as it was. Fix what it says, then run npm run example -- --force again.`);
+    }
+    // Only a whole copy takes the old one's place, and the old one comes back if the copy cannot get there.
+    let trashId: string | undefined;
+    let parked: string | undefined;
+    try {
+      if (at.kind === 'link') {
+        // Moved aside until the copy is in place (renaming a link, or a junction, moves the link only), then removed.
+        parked = join(PROJECTS, `.${name}.link-${process.pid}`);
+        renameRetrying(target, parked);
+      } else if (at.kind === 'dir') {
+        // The viewer's own delete (tools/trash.ts): the folder moves whole to .diorama-trash/projects/<id>/<name>.
+        ({ trashId } = await deleteProject(ROOT, name));
+        const trashed = `.diorama-trash/projects/${trashId}/${name}`;
+        console.log(pc.yellow(`Moved your ${rel}/ to ${trashed}/.`));
+        // The viewer's restore (and a plain move) refuses while a project of that name is in projects/: the fresh copy is.
+        restoreSteps = [
+          `  To get it back: the fresh copy is in ${rel}/ now, so move that out of the way first, then move yours back:`,
+          `    mv ${rel} ${rel}-fresh   (or delete the fresh copy in the viewer: the project's menu, Delete project)`,
+          `    mv ${trashed} ${rel}`,
+        ];
+      }
+      renameRetrying(temp, target);
+    } catch (err) {
+      removeQuietly(temp);
+      let back = true;
+      try {
+        if (trashId) await restoreProject(ROOT, name, trashId);
+        else if (parked && entryAt(parked).kind !== 'none') renameRetrying(parked, target);
+      } catch {
+        back = false;
+      }
+      const where = trashId ? `.diorama-trash/projects/${trashId}/${name}` : parked ? relative(ROOT, parked) : '';
+      fail(`could not ${at.kind === 'none' ? 'put the copy in' : 'replace'} ${rel}/${at.kind === 'none' ? '' : ' with the fresh copy'}: ${(err as Error).message}`,
+        at.kind === 'none' ? `Nothing was left in projects/.` : back ? `${rel} was left as it was.` : `${at.kind === 'link' ? 'The link' : 'Your old copy'} is in ${where}: move it back to ${rel}.`);
+    }
+    if (parked) {
+      unlinkSync(parked);
+      console.log(pc.yellow(`Removed the link ${rel} (to ${at.kind === 'link' ? at.to : ''}): the link only, ${at.kind === 'link' && at.dangling ? 'which led nowhere' : 'the folder it leads to is untouched'}.`));
+    }
+    copied = true;
+  }
+  const exported = walkFiles(resolve(target, LAYOUT.assets)).some(file => IMAGE_RE.test(file));
+  const sheets = listSheets(target).length;
+  if (copied) {
+    console.log(pc.green(`Copied ${sample.rel} to ${rel}/ (everything but review/${exported ? ', its exports with their times' : ''}): ${sheets} sheet${sheets === 1 ? '' : 's'}.`));
+    console.log(`  It is your project now, the one the viewer shows and saves into; ${sample.rel} stays as it ships.`);
+  }
+  for (const line of restoreSteps) console.log(pc.gray(line));
+
+  // A copy that brought its exports, one that was already here, or --changed: only what is missing or older than its code.
+  const changed = Boolean(flags['changed']) || !copied || exported;
+  const exportArgs = [rel, ...(changed ? ['--changed'] : []), ...(jobs ? [`--jobs=${jobs}`] : [])];
+  if (flags['no-export']) {
+    console.log(pc.gray(`Not exported (--no-export). Export it with: npm run export -- ${exportArgs.join(' ')}`));
+  } else {
+    console.log(changed
+      ? `Exporting ${rel} with --changed: only the sheets never exported or older than their code.`
+      : `Exporting ${rel}: all ${sheets} sheet${sheets === 1 ? '' : 's'}${name === DEFAULT_SAMPLE ? ' (about 45 seconds on four performance cores)' : ''}.`);
+    try {
+      execFileSync(process.execPath, [resolve(ROOT, 'node_modules', 'tsx', 'dist', 'cli.mjs'), resolve(ROOT, 'tools', 'export.ts'), ...exportArgs], { cwd: ROOT, stdio: 'inherit' });
+    } catch {
+      fail(`the export of ${rel} failed (its messages are above). The copy is in ${rel}/: fix what they say, then run npm run example again, which exports what is still missing.`);
+    }
+  }
+
+  console.log(pc.green(flags['no-export'] ? `${name} is in ${rel}/, not exported yet.` : `${name} is ready in ${rel}/, exported.`));
+  console.log(`  Open it: npm run view, then the project ${name} in the project switcher (http://localhost:5173/viewer/p/${name}).`);
+  if (existsSync(resolve(target, LAYOUT.game, 'index.html'))) console.log(`  Its game: http://localhost:5173/${rel}/${LAYOUT.game}/ (npm run game -- ${name}).`);
+  console.log(`  Its characters in Phaser, on the test bench of @diorama/phaser: http://localhost:5173/packages/phaser/demo/?project=${name}`);
+}
+
 const [command, ...rest] = process.argv.slice(2);
 const { positionals, flags } = parseFlags(rest);
 
@@ -1785,7 +2010,7 @@ const USAGE: Record<string, string> = {
   'new-project': 'npm run new-project -- <project> [--style] [--genre <preset>] [--character <height>]\n  Creates projects/<project>/ with the layout of docs/ARCHITECTURE.md: src/theme.ts (from templates/project/: a neutral volume theme with palettes, ramps, line weights, the 2.5D CAMERA and the VOLUMES materials, to make the project\'s own), an empty sheets/ and a .gitignore for review/.\n  --genre      add src/space.ts, the space profile (grid, scale against the characters, wall placement) from a genre preset: jrpg, action-rpg, tactics, farm-sim or dungeon-crawler\n  --character  height of a standing character in world units for the profile (default 80)\n  --style      add STYLE.md (style first, or theme first with a summary). Only when the project is created: for an existing project copy templates/optional/STYLE.md to projects/<project>/STYLE.md',
   'new-asset': 'npm run new-asset -- <project> <subpath> [--engine volume|rig] [--size WxH] [--frames N] [--fps N] [--directions N] [--skeleton humanoid|quadruped] [--clip walk|run|idle|attack|hit|death]\n  <subpath>     kebab-case names joined by "/": the sheet is sheets/<subpath>.ts and the export assets/<subpath>.png. For rig it is <character-folder>/<clip>, e.g. characters/goblin/walk: the folder is the character, the file name is the clip key\n  --engine      volume (default: a prop, scenery piece or effect built from 2.5D volumes, turned to face each direction; the drawing goes in src/<subpath>.ts, exported by name, and the sheet re-exports it) or rig (an animated character clip on a @core/rig skeleton)\n  --size        logical size of one frame; the export is size × scale 2 (default 128x128; rig: 96x112 humanoid, 112x96 quadruped)\n  --frames      frames in an animation strip (default 1; rig 8)\n  --fps         playback speed hint (default 6; not for rig: the clip sets it)\n  --directions  facings rendered as rows (default 8: S, SW, W, NW, N, NE, E, SE; 4: S, W, N, E; 1 for a piece that never turns)\n  --skeleton    rig only: humanoid (default) or quadruped\n  --clip        rig only: walk, run, idle, attack, hit or death. Default: the file name when it is one of these, else walk\n  The first clip of a character creates src/<character-folder>/character.ts (defineCharacter, with a mannequin block-out skin to replace: diorama-rig skill). --skeleton, --size, --frames and --directions apply to that first clip only; a later clip prints the line to add to `clips` there.',
   'new-kit': 'npm run new-kit -- <project> scenery|gear|vfx|items [--force] [--json]\n  Starts a kit in src/<kit>/ (docs/ARCHITECTURE.md, Kits): catalog.ts (what editors and the generator command read), index.ts (what other code imports) and a first piece in a family file, written with the engine\'s types and the project\'s theme (CAMERA, the VOLUMES materials) and space profile (src/space.ts, when it has one):\n    scenery  src/scenery/props.ts, a crate prop (SCENERY)                then scenery-items, export scenery/, scenery-test; new-scene works on it\n    gear     src/gear/heads.ts, a helm, and bodies.ts, a mannequin body (CATALOG, and CHARACTERS with a mannequin that wears it)   then gear-items, export gear/\n    vfx      src/vfx/bursts.ts, a spark burst (VFX)                       then vfx-items, export vfx/\n    items    src/items/gems.ts, a gem with its rarity tiers (ITEMS)       then item-icons, export icons/\n  The first piece is a block-out that renders, so the kit\'s generator, the export and check --strict pass on it; make it the project\'s own. Refuses to overwrite an existing kit\'s files unless --force (the kit\'s other files stay).',
-  list: 'npm run list -- [project] [--json]\n  Sheets, exported assets and review files (review/) of one project or of all of them (projects/, then examples/).',
+  list: 'npm run list -- [project] [--json]\n  Sheets, exported assets and review files (review/) of one project or of all of them: yours in projects/, then the samples of examples/, labelled as samples ("sample": true in --json; npm run example copies one into projects/, where the viewer shows it).',
   check: 'npm run check -- <project> [--strict] [--json]\n  Type-checks the project\'s src/, sheets/ and game/ with the repository\'s tsconfig (errors in the engine and package files it imports are counted apart), then checks its layout (npm run layout) and that src/ and sheets/ are deterministic (game/ is not linted): no Math.random, no Date or performance.now, and no raw color literals (#hex, rgb(), hsl()) outside src/theme.ts, each reported with its file and line. Fails on any of them; --strict also fails on sheets not exported yet and assets without a sheet.',
   layout: 'npm run layout -- <project> [--strict] [--json]\n  Checks the project against the rules of docs/ARCHITECTURE.md: only src/, sheets/, assets/, review/, game/, STYLE.md, README.md, diorama.config.json (only outDir, scale, format, cols and gap) and .gitignore at its root; no underscore prefixes and kebab-case names in src/ and sheets/ (markdown notes in src/ may use capitals); sheets are thin (no function or class, at most 20 lines of code) and generated ones keep their "Generated by" line; src/ never imports sheets/ and sheets never import sheets; a kit with catalog.ts has index.ts; assets/ holds only PNG and JSON; game/ holds code and data only (no images: they come from assets/, through the packages), and every import and URL of its code, CSS and page is a relative path that stays inside game/ or one of @diorama/runtime, @diorama/phaser, @diorama/phaser/sheets and phaser (a dynamic import or a glob: a static ./ or ../ path); src/ and sheets/ never import a game, their imports resolved with the repository\'s tsconfig.json. Sheets without an export and assets without a sheet are warnings (errors with --strict).',
   game: 'npm run game -- <project> [--port N]\n  Serves the project\'s game (game/index.html, rule 8 of docs/ARCHITECTURE.md) with the viewer\'s dev server and prints its URL, http://localhost:5173/<projects|examples>/<project>/game/; the page loads the exports from the project\'s assets/. When this repository\'s dev server (npm run view) already answers on the port, it only prints the URL; another program on the port is an error. Ctrl+C stops the server it started. A project without game/index.html has no game, and the command says so; the test bench of @diorama/phaser (/packages/phaser/demo/?project=<project>) plays its characters without one.\n  --port  the port to serve on (default 5173, the viewer\'s)',
@@ -1797,6 +2022,7 @@ const USAGE: Record<string, string> = {
   'item-icons': 'npm run item-icons -- <project> [--force] [--json]\n  Writes sheets/icons/<id>.ts for every item of src/items/catalog.ts (ITEMS): defineItemIcon, the item fitted into the icon square with its rarity frame. Generated sheets start with their "Generated by" line; existing ones are kept unless --force. Then export icons/.',
   'scenery-test': 'npm run scenery-test -- <project> <piece> [--on <floor>|none] [--field] [--out <png>] [--keep] [--json]\n  Renders one piece through every join it has (seamTestScene: floor patches and saddles, wall loops, L, T, cross, lone post and joins, or every facing × variant of a prop) into <project>/review/scenery-tests/<piece>.png, through a throwaway sheet in sheets/scenery-tests/ (removed unless --keep).\n  --on     the floor everything stands on (default: the lowest floor; none for no floor), e.g. water over crypt-flags\n  --field  floors only: a 14 × 10 field of the floor alone, to judge repetition at 1×\n  Zoom the joins with contact --zoom 3.',
   'gear-items': 'npm run gear-items -- <project> [--force] [--json]\n  Writes sheets/gear/<id>.ts for every part of src/gear/catalog.ts (except effects and base bodies): defineGearAsset of the part alone, worn by the first character whose outfit has it. Generated sheets start with their "Generated by" line; existing ones are kept unless --force. Then export gear/.',
+  example: 'npm run example -- [sample] [--force] [--no-export] [--changed] [--jobs <n>]\n  Copies Soulkeeper, the sample game (examples/soulkeeper; another folder of examples/ when [sample] names one), to projects/soulkeeper, everything but review/, and exports it there. The viewer shows the projects of projects/ only: the copy is a project of yours, which it shows and saves into, and the sample in examples/ stays as it ships. When the sample has exports in its assets/, they are copied with their times and only the sheets out of date are exported (--changed); otherwise every sheet is (about 45 seconds). When projects/soulkeeper already exists it is yours: nothing is copied over it, and it is exported with --changed. The copy is made in a hidden folder of projects/ and moved into place when it is whole, so a copy that fails leaves nothing behind. One run at a time: while one runs (projects/.example.lock holds its process), another refuses. Commands still reach the sample itself as examples/soulkeeper.\n  --force      replace an existing projects/soulkeeper with a fresh copy: the old one is moved to the viewer\'s trash, .diorama-trash/projects/<id>/soulkeeper (a link there is removed, the link only), and the command prints how to get it back (move the fresh copy out of the way, then move the old one back)\n  --no-export  copy only, without exporting\n  --changed    export only what is missing or out of date, even for a copy that came without exports\n  --jobs <n>   sheets the export renders at once (npm run export -- --help)',
   'new-outfit-character': 'npm run new-outfit-character -- <project> <name> --from <character> --outfit <file.json> [--force] [--json]\n  Turns an outfit saved as JSON (OutfitData, e.g. from the viewer\'s customizer) into src/characters/<name>/outfit.ts and character.ts (defineCharacter with the outfit and the skeleton, clips and cell of <character> from src/gear/catalog.ts CHARACTERS) and one sheet per clip it can use in sheets/characters/<name>/: clips made for another weapon than the one the outfit holds are skipped (checkWield). The outfit is validated against CATALOG first.',
 };
 
@@ -1806,7 +2032,6 @@ function overview(): string {
     'Diorama commands (npm run <command> -- --help for the options of one):',
     ...Object.values(USAGE).map(text => `  ${text.split('\n')[0]}`),
     '  npm run export -- <project> [subpath...] [--grid|--compact] [--mockup] [--changed] [--jobs <n>] [--force] [--json]   (type checks first; npm run export -- --help)',
-    '  npm run example   (exports Soulkeeper, the sample game: examples/soulkeeper)',
   ].join('\n');
 }
 
@@ -1834,6 +2059,7 @@ switch (command) {
   case 'scenery-test': run(sceneryTest(positionals, flags)); break;
   case 'vfx-items': run(catalogItems('vfx', positionals, flags)); break;
   case 'item-icons': run(catalogItems('items', positionals, flags)); break;
+  case 'example': run(example(positionals, flags)); break;
   default:
     console.error(command ? pc.red(`Error: unknown command "${command}".`) : pc.red('Error: a command is required.'));
     console.error(overview());

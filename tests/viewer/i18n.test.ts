@@ -57,6 +57,26 @@ assert.equal(english.t('assets.filtered', { shown: 3 }), '3 of {total}', 'a plac
 assert.equal(english.t('no.such.key' as never), 'no.such.key', 'a missing key shows itself');
 assert.equal(createTranslator('en'), english, 'a translator is made once per language');
 
+// 4b. The app with no project (routes/index.tsx) speaks both languages: what Diorama is, "New project", "Try the sample"
+//     with its progress and its failure, the command a terminal runs instead, and the copy once it is there (after a run
+//     whose export failed, or one that ended elsewhere) with "Open soulkeeper".
+const EMPTY_STATE = ['title', 'description', 'where', 'create', 'sample', 'sampleRunning', 'sampleHint', 'copying', 'exporting', 'terminal', 'copyCommand', 'commandLabel', 'sampleFailed', 'sampleReady', 'sampleThere', 'sampleThereHint', 'sampleExportFailed', 'sampleRetryHint', 'open'];
+for (const key of EMPTY_STATE.map((name) => `projects.none.${name}`)) {
+  assert.ok(en.has(key) && pt.has(key), `${key} is in both dictionaries`);
+  assert.notEqual(pt.get(key), en.get(key), `${key} is translated`);
+}
+assert.deepEqual([...en.keys()].filter((key) => key.startsWith('projects.none.')), EMPTY_STATE.map((name) => `projects.none.${name}`), 'the empty state has these strings and no others');
+for (const translator of [english, portuguese]) {
+  assert.match(translator.t('projects.none.sampleHint'), /<code>examples\/soulkeeper<\/code>.*<code>projects\/soulkeeper<\/code>/, 'the sample comes from examples/ into projects/');
+}
+for (const translator of [english, portuguese]) {
+  assert.match(translator.t('projects.none.sampleThereHint'), /<code>projects\/soulkeeper<\/code>.*<code>examples\/soulkeeper<\/code>/, 'the copy is in projects/, the sample stays in examples/');
+}
+assert.deepEqual([english.t('projects.none.open', { project: 'soulkeeper' }), portuguese.t('projects.none.open', { project: 'soulkeeper' })], ['Open soulkeeper', 'Abrir soulkeeper']);
+assert.equal(english.t('projects.none.exporting', { done: 3, total: 163 }), 'Exporting the sheets: 3 of 163 done');
+assert.equal(portuguese.t('projects.none.exporting', { done: 3, total: 163 }), 'Exportando as sheets: 3 de 163 prontas');
+assert.ok(!en.has('projects.switcher.example') && !en.has('modals.new.exampleOption'), 'no project is marked as an example: the viewer lists projects/ only');
+
 // 5. Numbers, dates, sizes, lists and times follow the language.
 assert.equal(english.number(1234.5), '1,234.5');
 assert.equal(portuguese.number(1234.5), '1.234,5');

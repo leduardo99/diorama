@@ -2,19 +2,20 @@
  * Builds the catalog the viewer reads from /__api/assets and /__api/projects:
  * every exported image with its atlas summary, sheet and engine.
  *
- * Projects come from `projects/` and `examples/` (tools/project.ts: a name in `projects/` wins). A project is
- * `src/` (code), `sheets/` (one file per exported sheet), `assets/` (the exports) and `review/` (scratch: the
- * viewer never reads it). An export lands at its sheet's own path, so `assets/a/b.png` comes from `sheets/a/b.ts`.
+ * Projects come from `projects/` alone (tools/project.ts, `VIEWER_ROOTS`): the samples in `examples/` ship with Diorama
+ * and are not the app's to browse or edit; `npm run example` copies one into `projects/`. A project is `src/` (code),
+ * `sheets/` (one file per exported sheet), `assets/` (the exports) and `review/` (scratch: the viewer never reads it).
+ * An export lands at its sheet's own path, so `assets/a/b.png` comes from `sheets/a/b.ts`.
  */
 
 import { existsSync } from 'node:fs';
 import { open, readFile, readdir, stat } from 'node:fs/promises';
 import { extname, join, resolve } from 'node:path';
 import { IMAGE_RE } from '../../tools/freshness';
-import { LAYOUT, isSheetFile, listProjects, walkFiles, type ProjectRoot } from '../../tools/project';
+import { LAYOUT, VIEWER_ROOTS, isSheetFile, listProjects, walkFiles } from '../../tools/project';
 import { createSourceReader, type Engine } from '../../tools/sources';
 
-export type { Engine, ProjectRoot };
+export type { Engine };
 
 export interface AtlasInfo {
   mode: string;
@@ -42,15 +43,13 @@ export interface AtlasInfo {
 
 export interface AssetFileMeta {
   project: string;
-  /** Where the project lives: `projects` (yours) or `examples` (the samples that ship with Diorama). */
-  root: ProjectRoot;
   /** Path relative to the project's `assets/`. */
   subpath: string;
   filename: string;
   format: string;
   size: number;
   mtime: number;
-  /** Where the dev server serves the image from: `/<root>/<project>/assets/<subpath>`. */
+  /** Where the dev server serves the image from: `/projects/<project>/assets/<subpath>`. */
   url: string;
   /** Image pixel size (PNG header or atlas), null when it cannot be read cheaply. */
   width: number | null;
@@ -66,11 +65,8 @@ export interface AssetFileMeta {
 }
 
 export interface ProjectMeta {
+  /** The project's folder name in `projects/`. */
   name: string;
-  /** Where the project lives: `projects` (yours) or `examples` (the samples that ship with Diorama). */
-  root: ProjectRoot;
-  /** The project's folder from the repository root, as typed in a terminal: `examples/soulkeeper`. */
-  rel: string;
   hasStyle: boolean;
   assetCount: number;
   sheetCount: number;
@@ -81,7 +77,7 @@ export interface ProjectMeta {
   hasSceneryKit: boolean;
   /** Names of the scenes saved in `src/scenes/<name>.ts` (the files that export `SCENE`). */
   scenes: string[];
-  /** The project has a game that plays its exports, `game/index.html` (rule 8), served at `/<root>/<project>/game/`. */
+  /** The project has a game that plays its exports, `game/index.html` (rule 8), served at `/projects/<project>/game/`. */
   hasGame: boolean;
   totalSize: number;
 }
@@ -148,7 +144,7 @@ function pickEngine(engines: Set<Engine>): Engine | null {
 export async function buildAssetCatalog(repo: string): Promise<AssetFileMeta[]> {
   const assets: AssetFileMeta[] = [];
   const reach = createSourceReader();
-  for (const { name: project, root, dir } of listProjects(repo)) {
+  for (const { name: project, rel, dir } of listProjects(repo, VIEWER_ROOTS)) {
     const assetsDir = join(dir, LAYOUT.assets);
     const sheetsDir = join(dir, LAYOUT.sheets);
     for (const subpath of walkFiles(assetsDir)) {
@@ -171,13 +167,12 @@ export async function buildAssetCatalog(repo: string): Promise<AssetFileMeta[]> 
 
       assets.push({
         project,
-        root,
         subpath,
         filename: subpath.split('/').pop() ?? subpath,
         format: ext === 'jpg' ? 'jpeg' : ext,
         size: info.size,
         mtime: info.mtimeMs,
-        url: `/${root}/${project}/${LAYOUT.assets}/${subpath}`,
+        url: `/${rel}/${LAYOUT.assets}/${subpath}`,
         width: png?.width ?? atlasInfo?.width ?? null,
         height: png?.height ?? atlasInfo?.height ?? null,
         atlas,
@@ -202,7 +197,7 @@ async function listScenes(dir: string): Promise<string[]> {
 
 export async function buildProjectCatalog(repo: string): Promise<ProjectMeta[]> {
   const projects: ProjectMeta[] = [];
-  for (const { name, root, rel, dir } of listProjects(repo)) {
+  for (const { name, dir } of listProjects(repo, VIEWER_ROOTS)) {
     const assetsDir = join(dir, LAYOUT.assets);
     const srcDir = join(dir, LAYOUT.src);
     const images = walkFiles(assetsDir).filter((file) => IMAGE_RE.test(file));
@@ -214,8 +209,6 @@ export async function buildProjectCatalog(repo: string): Promise<ProjectMeta[]> 
     const pendingSheets = sheets.filter((sheet) => !exported.has(sheet.replace(/\.ts$/, '')));
     projects.push({
       name,
-      root,
-      rel,
       hasStyle: existsSync(resolve(dir, 'STYLE.md')),
       assetCount: images.length,
       sheetCount: sheets.length,

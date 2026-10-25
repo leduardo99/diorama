@@ -34,7 +34,7 @@ export function CustomizeView() {
   const { character: characterId, fixture = false } = customizeRoute.useSearch();
   const { data: projects } = useSuspenseQuery(projectsQuery);
   const meta = projects.find((p) => p.name === project);
-  const { data: kit } = useSuspenseQuery(kitQuery(project, meta?.root ?? 'projects', fixture, meta?.hasGearKit ?? false));
+  const { data: kit } = useSuspenseQuery(kitQuery(project, fixture, meta?.hasGearKit ?? false));
   const { t } = useT();
 
   if (!kit) {

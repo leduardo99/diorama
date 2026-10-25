@@ -18,7 +18,7 @@ Pick the skill for the job, and read this one first:
 
 ## Where things go
 
-A project is one folder: `projects/<project>/` (yours; Diorama does not version it) or `examples/<project>/`, versioned with Diorama: Soulkeeper, the sample game (`examples/soulkeeper`). Commands and the viewer find a project by name, `projects/` first, then `examples/`; `projects/<name>` or `examples/<name>` picks one. Inside it there are four places, and nothing else at the root but `STYLE.md`, an optional `README.md`, `diorama.config.json` and `.gitignore`:
+A project is one folder: `projects/<project>/` (yours; Diorama does not version it) or `examples/<project>/`, versioned with Diorama: Soulkeeper, the sample game (`examples/soulkeeper`). Commands find a project by name, `projects/` first, then `examples/`; `projects/<name>` or `examples/<name>` picks one. The viewer shows `projects/` only: the sample is not one of its projects until `npm run example` copies it to `projects/soulkeeper`, and what the viewer saves goes into that copy, never into `examples/`. Inside it there are four places, and nothing else at the root but `STYLE.md`, an optional `README.md`, `diorama.config.json` and `.gitignore`:
 
 | Place | It holds | You write it |
 | :--- | :--- | :--- |
@@ -38,7 +38,7 @@ The rules the layout check enforces (the eight of [docs/ARCHITECTURE.md](../../.
 - **Mirrors.** Every sheet has its export in `assets/` at the same path, and every asset has its sheet.
 - **A game is apart.** Everything `game/` imports or loads is a relative path inside `game/` or one of `@diorama/runtime`, `@diorama/phaser`, `@diorama/phaser/sheets` and `phaser` (never `@core`, `../src` or a root path); `src/` and `sheets/` never import a game, and it holds no images: it reads `assets/` through the packages.
 
-`npm run check -- <project>` runs the type check, then these rules, then the determinism lint (`Math.random`, the clock and raw colors outside `src/theme.ts`, see Rejection rules), and every message says what to move where or what to use instead. After an export run `npm run layout -- <project> --strict`, which also fails on a sheet that was never exported and on an asset that has no sheet. To see a finished project in this layout, `npm run example` exports Soulkeeper, the sample game (`examples/soulkeeper`; about 45 seconds on four performance cores; `assets/` is not versioned, so a fresh clone has none), and the skills point to its `src/` for technique.
+`npm run check -- <project>` runs the type check, then these rules, then the determinism lint (`Math.random`, the clock and raw colors outside `src/theme.ts`, see Rejection rules), and every message says what to move where or what to use instead. After an export run `npm run layout -- <project> --strict`, which also fails on a sheet that was never exported and on an asset that has no sheet. To see a finished project in this layout, `npm run example` copies Soulkeeper, the sample game, from `examples/soulkeeper` to `projects/soulkeeper` and exports it there (about 45 seconds on four performance cores; `assets/` is not versioned, so a fresh clone has none), which makes it a project the viewer shows. The skills point to its `src/` in `examples/soulkeeper` for technique.
 
 ## Authority
 
@@ -145,7 +145,7 @@ Run commands from the repository root. Use `npm run --silent` whenever you need 
 | Check the layout alone | `npm run layout -- <project> [--strict] [--json]` (`--strict` also fails on sheets without an export and assets without a sheet: run it after exporting) |
 | Export official assets | `npm run export -- <project> [subpath] [options]` (`subpath` is a sheet under `sheets/`, without `.ts`, or a folder of them, `characters/hero/`; the project's type check runs first and a type error stops the export, `--force` skips it for experiments) |
 | Export only what changed | `npm run export -- <project> [subpath] --changed` (the sheets whose image is missing or older than the sheet or a local file it imports, however deep: the ones the viewer marks as stale; the engine, `core/`, does not count) |
-| Export Soulkeeper, the sample game | `npm run example` (`examples/soulkeeper`, about 45 seconds on four performance cores) |
+| Bring Soulkeeper, the sample game, in as a project | `npm run example` (copies `examples/soulkeeper` to `projects/soulkeeper` and exports it, about 45 seconds on four performance cores; run again, it keeps the copy and exports what changed; `--force` replaces the copy, moving the old one to `.diorama-trash/`) |
 | Export with a JSON summary | `npm run --silent export -- <project> [subpath] [options] --json` |
 | Export a mockup (never overwrites official files) | `npm run export -- <project> <subpath> --mockup` |
 | List projects and assets | `npm run list -- [project] [--json]` |

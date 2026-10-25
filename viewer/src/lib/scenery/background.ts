@@ -2,7 +2,6 @@ import { queryOptions } from '@tanstack/react-query';
 import type { SceneData, SceneRenderer, SceneryCatalog } from '@core/volume';
 import type * as Living from './living';
 import type { Geometry } from './render';
-import type { ProjectRoot } from '../types';
 
 /**
  * A saved scene, ready to stand in the playground: its floors and decals drawn once (what never covers a character),
@@ -36,9 +35,9 @@ export function groundOf(scene: SceneData): SceneData {
  * Loads a saved scene of the project (or the fixture's) and draws its ground. The picture is made once, at the export
  * scale: zooming only scales it with hard edges, as it does the characters, so a zoom never draws a frame again.
  */
-export const sceneWorldQuery = (project: string, root: ProjectRoot, name: string, fixture: boolean) =>
+export const sceneWorldQuery = (project: string, name: string, fixture: boolean) =>
   queryOptions({
-    queryKey: ['scene-world', project, root, name, fixture],
+    queryKey: ['scene-world', project, name, fixture],
     staleTime: Infinity,
     gcTime: 60_000,
     structuralSharing: false,
@@ -46,7 +45,7 @@ export const sceneWorldQuery = (project: string, root: ProjectRoot, name: string
       const [{ validateScene, createSceneRenderer }, { loadCatalog, loadScene }, { geometryOf, paintScene }, living] = await Promise.all([import('@core/volume'), import('./catalog'), import('./render'), import('./living')]);
       const [catalog, scene] = fixture
         ? await import('./fixture').then((f) => [f.FIXTURE_SCENERY, f.FIXTURE_SCENE] as const)
-        : await Promise.all([loadCatalog(project, root), loadScene(project, root, name)]);
+        : await Promise.all([loadCatalog(project), loadScene(project, name)]);
       const problems = validateScene(scene, catalog);
       if (problems.length) throw new Error(problems[0]);
       const geo = geometryOf(scene, catalog);

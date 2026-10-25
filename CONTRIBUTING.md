@@ -20,12 +20,12 @@ npm run doctor
 npm test
 ```
 
-`npm run example` exports Soulkeeper, the sample game (`examples/soulkeeper`, 163 sheets in about 45 seconds on four performance cores), so the viewer (`npm run view`) has something to show. `npm run example -- --changed` exports only the sheets whose code changed since.
+`npm run example` copies Soulkeeper, the sample game, from `examples/soulkeeper` to `projects/soulkeeper` and exports it there (163 sheets in about 45 seconds on four performance cores), so the viewer (`npm run view`), which shows only the projects of `projects/`, has something to show; with no project at all, the viewer's "Try the sample" runs it. Run it again and it keeps your copy and exports only the sheets whose code changed; `--force` replaces the copy, after moving it to the viewer's trash. The sample itself, the one you change when you work on it, stays `examples/soulkeeper`: the commands reach it by that path (`npm run export -- examples/soulkeeper`, `npm run check -- examples/soulkeeper --strict`).
 
 ## Rules that keep the project healthy
 
 - **Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) first.** Every folder has one job, and `npm run check -- <project>` enforces the project layout.
-- **Generations must not change by accident.** A change to the engine, the exporter or the sample must leave the sample's exported images pixel-identical, unless changing them is the point. Before the change, run `npm run example` and `npm run compare-exports -- --save`. After it, run `npm run example` and `npm run compare-exports`. Use a full export for the proof, not `--changed`: an engine change makes no sheet look out of date. A change to the exporter itself must keep the files identical byte for byte, since the viewer and users compare them.
+- **Generations must not change by accident.** A change to the engine, the exporter or the sample must leave the sample's exported images pixel-identical, unless changing them is the point. Before the change, run `npm run export -- examples/soulkeeper` and `npm run compare-exports -- --save`. After it, run `npm run export -- examples/soulkeeper` and `npm run compare-exports`. Use a full export for the proof, not `--changed` (which `npm run example` uses on a copy that is there): an engine change makes no sheet look out of date. A change to the exporter itself must keep the files identical byte for byte, since the viewer and users compare them.
 - **Tests and docs move with the code.** `npm test` must pass; a new feature comes with its test and with the guide or skill that explains it. Snippets in guides compile (`npm run test:docs`).
 - **The viewer is bilingual.** Every interface string goes through `t()` with its key in both `viewer/src/i18n/en.ts` and `pt-BR.ts`.
 - **Determinism.** Assets use the seeded random (`createRng`) and theme tokens, never `Math.random`, dates or raw colors.

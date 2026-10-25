@@ -9,93 +9,10 @@ import { resolve, extname, join, relative, sep } from 'node:path';
 import { execFile } from 'node:child_process';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { buildAssetCatalog, buildProjectCatalog } from './viewer/server/catalog';
-import { LAYOUT, listProjects } from './tools/project';
+import { cliArgs } from './viewer/server/cli-args';
+import { EXAMPLE_LOCK, lockHolder } from './tools/lock';
+import { LAYOUT, PROJECT_ROOTS, listProjects } from './tools/project';
 import { PathError, deleteAsset, deleteProject, planDelete, restoreAsset, restoreProject } from './viewer/server/assets-fs';
-
-// Maps a request from the viewer's "New" dialog to a tools/ script and its arguments (the layout of docs/ARCHITECTURE.md:
-// new-asset writes src/ + sheets/, new-scene src/scenes/ + sheets/scenes/, gear-items sheets/gear/, new-outfit-character
-// src/characters/<name>/ + sheets/characters/<name>/; export takes paths relative to sheets/). The scripts find the
-// project by name in projects/ and then examples/, and do all the validation; this only rejects values that would be
-// read as flags. `outfitFile` is where the handler saved the outfit (or scene) of a new-outfit-character / new-scene request.
-function cliArgs(body: any, outfitFile?: string): string[] {
-  const str = (v: unknown, field: string): string => {
-    const s = String(v ?? '').trim();
-    if (!s) throw new Error(`${field} is required.`);
-    if (s.startsWith('-')) throw new Error(`${field} cannot start with "-".`);
-    return s;
-  };
-  const optional = (v: unknown, field: string): string | undefined =>
-    String(v ?? '').trim() ? str(v, field) : undefined;
-  switch (body?.command) {
-    case 'new-project': {
-      const args = ['tools/cli.ts', 'new-project', str(body.name, 'name')];
-      if (body.style) args.push('--style');
-      return args;
-    }
-    case 'new-asset': {
-      // The subpath is sheets/<subpath>.ts (kebab-case names joined by "/"); the drawing goes in src/.
-      const engine = str(body.engine, 'engine');
-      if (engine !== 'volume' && engine !== 'rig') throw new Error('engine must be volume or rig.');
-      const args = [
-        'tools/cli.ts', 'new-asset', str(body.project, 'project'), str(body.subpath, 'subpath'),
-        `--engine=${engine}`,
-        `--frames=${str(body.frames, 'frames')}`,
-      ];
-      // Both turn to face other directions.
-      const directions = optional(body.directions, 'directions');
-      if (directions) args.push(`--directions=${directions}`);
-      if (engine === 'volume') {
-        args.push(`--size=${str(body.size, 'size')}`, `--fps=${str(body.fps, 'fps')}`);
-      } else {
-        // A rig clip takes the cell of its skeleton and plays at the speed its seconds set: no --size, no --fps.
-        // The first clip of a character folder creates src/<folder>/character.ts. Without --clip the script uses the file name when it is a clip name.
-        args.push(`--skeleton=${str(body.skeleton, 'skeleton')}`);
-        const clip = optional(body.clip, 'clip');
-        if (clip) args.push(`--clip=${clip}`);
-      }
-      return args;
-    }
-    case 'gear-items': {
-      // One sheet (sheets/gear/<part>.ts) per part of the project's gear catalog (it keeps the ones already there).
-      const args = ['tools/cli.ts', 'gear-items', str(body.project, 'project')];
-      if (body.force) args.push('--force');
-      return args;
-    }
-    case 'new-scene': {
-      if (!outfitFile) throw new Error('scene is required.');
-      const args = ['tools/cli.ts', 'new-scene', str(body.project, 'project'), str(body.name, 'name'), '--scene', outfitFile];
-      if (body.force) args.push('--force');
-      return args;
-    }
-    case 'new-outfit-character': {
-      if (!outfitFile) throw new Error('outfit is required.');
-      const args = [
-        'tools/cli.ts', 'new-outfit-character', str(body.project, 'project'), str(body.name, 'name'),
-        '--from', str(body.from, 'from'), '--outfit', outfitFile,
-      ];
-      if (body.force) args.push('--force');
-      return args;
-    }
-    case 'export': {
-      // The subpath is relative to sheets/. Empty exports the whole project; a trailing "/" exports a folder.
-      const args = ['tools/export.ts', str(body.project, 'project')];
-      const subpath = optional(body.subpath, 'subpath');
-      if (subpath) args.push(subpath);
-      if (body.sheet === 'grid' || body.sheet === 'compact') {
-        args.push(`--${body.sheet}`);
-        const gap = optional(body.gap, 'gap');
-        const cols = optional(body.cols, 'cols');
-        if (gap) args.push(`--gap=${gap}`);
-        if (cols) args.push(`--cols=${cols}`);
-        if (body.both) args.push('--both');
-      }
-      if (body.mockup) args.push('--mockup');
-      return args;
-    }
-    default:
-      throw new Error('command must be new-project, new-asset, new-outfit-character, new-scene, gear-items or export.');
-  }
-}
 
 function sendJson(res: ServerResponse, status: number, body: unknown) {
   res.statusCode = status;
@@ -147,7 +64,8 @@ function dioramaApiPlugin(): Plugin {
   return {
     name: 'diorama-api',
     configureServer(server) {
-      // The repository root: projects live in projects/ and examples/ (a name in projects/ wins), found by tools/project.ts.
+      // The repository root: the viewer's projects live in projects/ (tools/project.ts, VIEWER_ROOTS); the samples in
+      // examples/ are not listed, and npm run example copies one in.
       const repo = server.config.root;
 
       // The viewer is a single-page app under /viewer/: deep links must reach its index.html,
@@ -229,9 +147,21 @@ function dioramaApiPlugin(): Plugin {
         sendJson(res, 200, { ok: true, ...(await restoreProject(repo, body.project, body.trashId)) });
       }));
 
-      // Runs new-project, new-asset, new-outfit-character, new-scene, gear-items and export from the viewer
+      // `npm run example` brings the sample in one run at a time (tools/lock.ts). A run is going on while this server runs
+      // one (from the moment it is asked for, before the script takes the lock) or while another process holds the lock
+      // (a terminal, another server): "Try the sample" shows it as running and does not start another.
+      let exampleInFlight: { startedAt: string } | undefined;
+      const exampleRun = (): { running: boolean; startedAt?: string } => {
+        const holder = lockHolder(join(repo, EXAMPLE_LOCK));
+        if (exampleInFlight || holder) return { running: true, startedAt: exampleInFlight?.startedAt ?? (holder?.startedAt || undefined) };
+        return { running: false };
+      };
+      server.middlewares.use('/__api/example-run', (_req, res) => sendJson(res, 200, exampleRun()));
+
+      // Runs new-project, new-asset, new-outfit-character, new-scene, gear-items, export and example from the viewer
       server.middlewares.use('/__api/cli', postOnly(async (req, res) => {
         let args: string[];
+        let isExample = false;
         // An outfit or a scene travels as a file: the script reads it from a temp folder that is removed when it ends.
         let outfitDir: string | undefined;
         const cleanup = () => (outfitDir ? rm(outfitDir, { recursive: true, force: true }) : undefined);
@@ -248,9 +178,15 @@ function dioramaApiPlugin(): Plugin {
             await writeFile(outfitFile, JSON.stringify(data, null, 2));
           }
           args = cliArgs(body, outfitFile);
+          isExample = body.command === 'example';
         } catch (err: any) {
           await cleanup();
           return sendJson(res, 400, { ok: false, output: `Error: ${err.message}` });
+        }
+        if (isExample) {
+          // A second "Try the sample" (another tab, a double request) while one runs: answered as running, never started.
+          if (exampleRun().running) return sendJson(res, 409, { ok: false, running: true, output: 'npm run example is already running: it brings the sample in.' });
+          exampleInFlight = { startedAt: new Date().toISOString() };
         }
         // Same entry point as the npm scripts, without a shell. Plain text output: no ANSI colors.
         const { FORCE_COLOR: _forceColor, ...env } = process.env;
@@ -259,41 +195,50 @@ function dioramaApiPlugin(): Plugin {
           ['--import', 'tsx', ...args],
           { cwd: server.config.root, env: { ...env, NO_COLOR: '1' } },
           async (err, stdout, stderr) => {
+            if (isExample) exampleInFlight = undefined;
             await cleanup();
             sendJson(res, 200, { ok: !err, output: (stdout + stderr).trim() });
           },
         );
       }));
 
-      // Tell the open viewer to refetch whenever an export, a sheet, a source file or a delete changes the catalog.
+      // Tell the open viewer to refetch whenever an export, a sheet, a source file or a delete changes the catalog. A folder of
+      // projects/ with a dot name is no project (npm run example copies into one, then renames it into place).
       let pending: ReturnType<typeof setTimeout> | undefined;
       const notify = (file: string) => {
         const normalized = file.replace(/\\/g, '/');
-        if (!/\/(projects|examples)\/[^/]+\/(assets|sheets|src)\//.test(normalized)) return;
+        if (!/\/projects\/[^/.][^/]*\/(assets|sheets|src)\//.test(normalized)) return;
         clearTimeout(pending);
         pending = setTimeout(() => server.ws.send({ type: 'custom', event: 'diorama:update', data: { file: normalized } }), 150);
       };
       server.watcher.on('add', notify).on('change', notify).on('unlink', notify);
     },
 
-    // Vite reloads every open page when a module outside any HMR boundary changes. Projects (src/, sheets/), the engine
-    // and the tools are such modules: the viewer reads the catalog from the server and loads the kits it needs on
-    // demand, and a reload would throw away its toasts (including the Undo that follows a delete).
-    handleHotUpdate({ file, server }) {
+    // Vite reloads every open page when a module outside any HMR boundary is changed, created or deleted. Projects (src/,
+    // sheets/), the engine and the tools are such modules: the viewer reads the catalog from the server and loads the kits
+    // it needs on demand, and a reload would throw away its state and its toasts (the Undo that follows a delete, the
+    // progress of "Try the sample"). `hotUpdate` sees all three kinds of event; the older `handleHotUpdate` saw changes
+    // only, so creating or deleting a project's files (Delete project, npm run example, a new asset) still reloaded it.
+    hotUpdate({ file, server }) {
       const rel = relative(server.config.root, file).split(sep).join('/');
+      // The pages are the browser's: the client environment sends their reloads, once.
+      const client = this.environment.name === 'client';
       // @diorama/phaser is in no page but its test bench (packages/phaser/demo/) and the projects' games (the viewer plays
-      // the exports with the runtime alone): reload those pages, and only them.
+      // the exports with the runtime alone): reload those pages, and only them. Every folder of projects/ and examples/
+      // counts, a sample that a project of the same name hides too (each has its own game page).
       if (rel.startsWith('packages/phaser/')) {
-        const games = listProjects(server.config.root).filter(({ dir }) => existsSync(join(dir, LAYOUT.game, 'index.html')));
-        for (const path of ['/packages/phaser/demo/index.html', ...games.map(({ rel: project }) => `/${project}/${LAYOUT.game}/index.html`)]) {
-          server.ws.send({ type: 'full-reload', path });
+        if (client) {
+          const games = PROJECT_ROOTS.flatMap((root) => listProjects(server.config.root, [root])).filter(({ dir }) => existsSync(join(dir, LAYOUT.game, 'index.html')));
+          for (const path of ['/packages/phaser/demo/index.html', ...games.map(({ rel: project }) => `/${project}/${LAYOUT.game}/index.html`)]) {
+            this.environment.hot.send({ type: 'full-reload', path });
+          }
         }
         return [];
       }
       if (!/^(projects|examples|core|templates|tools)\//.test(rel)) return;
       // A project's game (game/, rule 8 of docs/ARCHITECTURE.md) is a page of its own: reload that page, and only that one.
       const game = /^((?:projects|examples)\/[^/]+\/game)\//.exec(rel);
-      if (game) server.ws.send({ type: 'full-reload', path: `/${game[1]}/index.html` });
+      if (game && client) this.environment.hot.send({ type: 'full-reload', path: `/${game[1]}/index.html` });
       return [];
     },
   };
@@ -342,5 +287,8 @@ export default defineConfig({
     open: false,
     // Local only: the viewer is not reachable from other machines on the network.
     host: 'localhost',
+    // npm run example builds its copy in a hidden folder of projects/ and renames it into place: a watch inside it
+    // would hold the folder open, and Windows refuses to rename a folder while anything inside it is open.
+    watch: { ignored: ['**/projects/.*/**'] },
   },
 });

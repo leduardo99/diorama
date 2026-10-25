@@ -15,7 +15,7 @@ import {
 
 console.log('🧪 Checking the viewer delete / undo endpoint (path validation, trash, restore)...\n');
 
-// A repository in miniature: projects live in <repo>/projects and <repo>/examples, and the trash in <repo>/.diorama-trash.
+// A repository in miniature: projects live in <repo>/projects, the samples in <repo>/examples, and the trash in <repo>/.diorama-trash.
 const root = mkdtempSync(join(tmpdir(), 'diorama-viewer-'));
 const projectsDir = join(root, 'projects');
 const project = 'demo';
@@ -72,7 +72,7 @@ try {
     'projects/demo/assets/chars/wolf/walk.json',
     'projects/demo/sheets/chars/wolf/walk.ts',
   ], 'paths are from the repository root');
-  await rejects(() => planDelete(root, 'ghost', 'a.png'), 'a project that is in neither projects/ nor examples/');
+  await rejects(() => planDelete(root, 'ghost', 'a.png'), 'a project that is not in projects/');
 
   // 4. Delete without the sheet: image and atlas go to the trash, the sheet stays.
   const first = await deleteAsset(root, project, 'chars/wolf/walk.png');
@@ -115,29 +115,50 @@ try {
   await deleteAsset(root, project, 'solo/only.png');
   assert.ok(!existsSync(join(projectsDir, project, 'assets/solo')), 'empty asset folder must be removed');
 
-  // 9. A project is found in projects/ first and then in examples/: a sample's assets can be deleted and restored,
-  // a name in projects/ hides the sample of the same name, and a restore only goes back where the asset came from.
+  // 9. The viewer's projects are those of projects/ alone: a sample of examples/ ships with Diorama and no delete, restore
+  // or whole-project delete reaches it, whatever the name. npm run example copies it into projects/, and that copy is
+  // the user's like any project. A restore only goes back where the asset came from.
   const sample = join(root, 'examples', 'sample');
   seed('gear/helm.png', 'assets', 'x', sample);
   seed('gear/helm.json', 'assets', '{}', sample);
   seed('gear/helm.ts', 'sheets', 'x', sample);
-  const samplePlan = await planDelete(root, 'sample', 'gear/helm.png');
-  assert.deepEqual(samplePlan.files.map((f) => f.path), ['examples/sample/assets/gear/helm.png', 'examples/sample/assets/gear/helm.json', 'examples/sample/sheets/gear/helm.ts']);
-  const sampleGone = await deleteAsset(root, 'sample', 'gear/helm.png', { deleteSheet: true });
-  assert.ok(!existsSync(join(sample, 'assets/gear/helm.png')) && !existsSync(join(sample, 'sheets/gear/helm.ts')));
-  assert.ok(existsSync(join(root, '.diorama-trash', 'assets', 'sample', sampleGone.trashId, 'sheets/gear/helm.ts')));
-  assert.ok(!existsSync(join(sample, '.trash')), 'no trash inside a sample either');
-  assert.equal((await restoreAsset(root, 'sample', sampleGone.trashId)).restored.length, 3);
-  assert.ok(existsSync(join(sample, 'assets/gear/helm.png')));
-  await rejects(() => deleteProject(root, 'sample'), 'a sample ships with Diorama: it is not deleted as a whole');
-  assert.ok(existsSync(sample), 'the sample must stay');
-  const shadowed = await deleteAsset(root, 'sample', 'gear/helm.png');
-  seed('gear/helm.png', 'assets', 'mine', join(projectsDir, 'sample'));
-  seed('gear/helm.json', 'assets', '{}', join(projectsDir, 'sample'));
-  await rejects(() => restoreAsset(root, 'sample', shadowed.trashId), 'the project of that name is now another one');
-  rmSync(join(projectsDir, 'sample'), { recursive: true });
-  await restoreAsset(root, 'sample', shadowed.trashId);
-  assert.ok(existsSync(join(sample, 'assets/gear/helm.png')), 'back in the sample once the project that hid it is gone');
+  await rejects(() => planDelete(root, 'sample', 'gear/helm.png'), 'a sample in examples/ is not a project of the viewer');
+  await rejects(() => deleteAsset(root, 'sample', 'gear/helm.png', { deleteSheet: true }), 'its assets are never deleted from the viewer');
+  await rejects(() => deleteProject(root, 'sample'), 'nor is the sample deleted as a whole');
+  assert.ok(existsSync(join(sample, 'assets/gear/helm.png')) && existsSync(join(sample, 'sheets/gear/helm.ts')), 'the sample stays as it ships');
+  const copy = join(projectsDir, 'sample');
+  seed('gear/helm.png', 'assets', 'mine', copy);
+  seed('gear/helm.json', 'assets', '{}', copy);
+  seed('gear/helm.ts', 'sheets', 'x', copy);
+  // An entry deleted from a sample before the viewer stopped listing them names examples/: it never lands in projects/.
+  const old = join(root, '.diorama-trash', 'assets', 'sample', 'old-entry');
+  mkdirSync(join(old, 'assets', 'gear'), { recursive: true });
+  writeFileSync(join(old, 'assets', 'gear', 'urn.png'), 'x');
+  writeFileSync(join(old, 'manifest.json'), JSON.stringify({ project: 'sample', root: 'examples', subpath: 'gear/urn.png', files: [{ kind: 'image', area: 'assets', rel: 'gear/urn.png' }] }));
+  await rejects(() => restoreAsset(root, 'sample', 'old-entry'), 'an asset deleted from a sample is not restored into the copy');
+  assert.ok(!existsSync(join(copy, 'assets/gear/urn.png')));
+  rmSync(old, { recursive: true });
+  const copyPlan = await planDelete(root, 'sample', 'gear/helm.png');
+  assert.deepEqual(copyPlan.files.map((f) => f.path), ['projects/sample/assets/gear/helm.png', 'projects/sample/assets/gear/helm.json', 'projects/sample/sheets/gear/helm.ts'], 'the copy in projects/ is the one deleted');
+  const copyGone = await deleteAsset(root, 'sample', 'gear/helm.png', { deleteSheet: true });
+  assert.ok(!existsSync(join(copy, 'assets/gear/helm.png')) && existsSync(join(sample, 'assets/gear/helm.png')), 'the copy loses the asset, the sample keeps it');
+  assert.ok(existsSync(join(root, '.diorama-trash', 'assets', 'sample', copyGone.trashId, 'sheets/gear/helm.ts')));
+  assert.equal((await restoreAsset(root, 'sample', copyGone.trashId)).restored.length, 3);
+  assert.equal(readFileSync(join(copy, 'assets/gear/helm.png'), 'utf8'), 'mine');
+  // The copy goes to the trash whole like any project (npm run example -- --force does this to the copy it replaces).
+  const copyTrashed = await deleteProject(root, 'sample');
+  assert.ok(!existsSync(copy) && existsSync(join(root, '.diorama-trash', 'projects', copyTrashed.trashId, 'sample', 'sheets/gear/helm.ts')));
+  assert.ok(existsSync(sample), 'the sample stays');
+  assert.deepEqual(await restoreProject(root, 'sample', copyTrashed.trashId), { restored: 'sample' });
+  assert.equal(readFileSync(join(copy, 'assets/gear/helm.png'), 'utf8'), 'mine', 'the restore brings the copy back, whole');
+  assert.ok(existsSync(join(copy, 'sheets/gear/helm.ts')) && !existsSync(join(root, '.diorama-trash', 'projects', copyTrashed.trashId)), 'and empties its trash entry');
+  // A link where the project was (or one that leads nowhere) is something there too: the restore never moves onto it.
+  const again = await deleteProject(root, 'sample');
+  symlinkSync(join(root, 'nowhere'), copy);
+  await rejects(() => restoreProject(root, 'sample', again.trashId), 'a restore onto a dangling link');
+  rmSync(copy);
+  await restoreProject(root, 'sample', again.trashId);
+  rmSync(copy, { recursive: true });
   assert.ok(!existsSync(join(root, '.diorama-trash', 'assets', 'sample')), 'restoring the last trash entry of a project leaves no empty folder');
   assert.ok(existsSync(join(root, '.diorama-trash', 'assets', project)), 'entries of other projects stay');
 

@@ -28,13 +28,13 @@ npm install
 npx playwright install chromium
 npm run doctor
 npm test
-npm run check -- soulkeeper
+npm run check -- examples/soulkeeper
 npm run example
 ```
 
-`npm run check -- soulkeeper` type checks the sample, checks its layout and that it is deterministic. `npm run example` exports Soulkeeper, the sample game (`examples/soulkeeper`, 163 sheets, about 45 seconds on four performance cores). Exports are never versioned, so a fresh clone has none until you run it; after it the viewer has something to show and the skills have a finished project to read. `npm run example -- --changed` exports again only the sheets whose code changed since.
+`npm run check -- examples/soulkeeper` type checks the sample, checks its layout and that it is deterministic. `npm run example` brings Soulkeeper, the sample game, in as a project of yours: it copies `examples/soulkeeper` to `projects/soulkeeper` and exports it there (163 sheets, about 45 seconds on four performance cores). The viewer shows only your projects, those of `projects/`, so the copy is what it opens and what its editors save into, and the sample in `examples/` stays as it ships. Run it again and it keeps your copy, exporting only the sheets whose code changed (`--changed`); `npm run example -- --force` replaces the copy with a fresh one, after moving yours to the viewer's trash (`.diorama-trash/`), and prints how to get yours back.
 
-To open the viewer: on Windows, run `dev.bat`; on macOS and Linux, run `sh dev.sh`. Any system can run `npm run view` and then open `http://localhost:5173`.
+To open the viewer: on Windows, run `dev.bat`; on macOS and Linux, run `sh dev.sh`. Any system can run `npm run view` and then open `http://localhost:5173`. With no project yet, it says what Diorama is and offers "New project" and "Try the sample", which runs `npm run example` for you and opens Soulkeeper. Its characters also play in Phaser on the test bench of `@diorama/phaser`, `http://localhost:5173/packages/phaser/demo/?project=soulkeeper`; Soulkeeper has no game of its own yet (when it has one, "Play game" opens it at `/projects/soulkeeper/game/`).
 
 ## How a repository and a project are laid out
 
@@ -68,7 +68,7 @@ A project, in `projects/<project>/` or `examples/<project>/`, has four places:
 
 `src/` is code and nothing there is exported by itself; `sheets/` lists what is exported, each sheet a one-line re-export of an asset in `src/`; `assets/` is the output and `review/` is scratch, and neither is versioned. No file or folder starts with an underscore, names are kebab-case, and a kit folder (`gear/`, `scenery/`, `vfx/`, `items/`) has a `catalog.ts` for editors and an `index.ts` for code. `npm run check -- <project>` runs the type check, then these rules, then the determinism lint (no `Math.random`, no clock, no raw colors outside `src/theme.ts`), and says what to move or use instead when one is broken; `npm run layout -- <project> --strict` (or `npm run check -- <project> --strict`) also fails on sheets without an export, which is the gate after an export.
 
-**`examples/` and `projects/`.** `examples/` holds the samples Diorama ships; `projects/` holds your own, one folder each, and Diorama does not version them (only [`projects/README.md`](projects/README.md) is in the repository), so each can be a git repository of its own. Commands and the viewer find a project by name, in `projects/` first, then in `examples/`; `projects/<name>` or `examples/<name>` picks one exactly.
+**`examples/` and `projects/`.** `examples/` holds the samples Diorama ships, versioned with it; `projects/` holds your own, one folder each, and Diorama does not version them (only [`projects/README.md`](projects/README.md) is in the repository), so each can be a git repository of its own. The viewer shows `projects/` only: a sample becomes one of your projects when `npm run example` copies it there. Commands find a project by name, in `projects/` first, then in `examples/`; `projects/<name>` or `examples/<name>` picks one exactly, so `examples/soulkeeper` always names the sample itself.
 
 ## Start with a coding agent
 
@@ -103,8 +103,8 @@ npm run view
 | Check the layout alone | `npm run layout -- <project> [--strict] [--json]` |
 | Export (type checks first; `--force` exports anyway) | `npm run export -- <project> [subpath] [options] [--force]` |
 | Export only what changed since the last export | `npm run export -- <project> --changed` |
-| Export Soulkeeper, the sample game | `npm run example` |
-| List | `npm run list -- [project] [--json]` |
+| Bring Soulkeeper, the sample game, in as a project and export it | `npm run example [-- --force]` |
+| List your projects and the samples | `npm run list -- [project] [--json]` |
 | Measure a PNG | `npm run inspect -- <file.png> [--json]` |
 | Review sheet of a strip or direction sheet | `npm run contact -- <file.png> [--rows W,SW] [--frames 0-3] [--with <b.png>] [--gray] [--bg <hex>] [--zoom N]` |
 | Write one sheet per scenery piece | `npm run scenery-items -- <project> [--force]` |
@@ -123,20 +123,20 @@ npm run view
 
 ## The viewer
 
-`npm run view` serves the viewer at `http://localhost:5173`. It lists every project (yours in `projects/` and the samples in `examples/`), its sources and its exported assets. Each project has four tabs (the interface is in English or Brazilian Portuguese, from the language switch in the header):
+`npm run view` serves the viewer at `http://localhost:5173`. It lists your projects, the folders of `projects/`, with their sources and their exported assets; the samples in `examples/` are not listed until `npm run example` (or "Try the sample", when there is no project yet) copies one in. Each project has four tabs (the interface is in English or Brazilian Portuguese, from the language switch in the header):
 
 - **Assets.** Every exported sheet, filterable by kind (characters, items, scenery, props, effects, icons, interface), with a preview that plays animations. A banner says when a source is newer than its export, and exports it.
 - **Playground.** Characters and props play from their exported atlases: WASD moves, Shift runs, 1 to 9 trigger actions, H is a hit and K a death. Effects start at their sockets, and a chosen scene becomes the world, with walls, doors and props that react and sort against the characters.
 - **Customize.** Dress a character with the project's gear kit by slot, swap and remove pieces, and save the outfit as a new character.
 - **Scenery.** Paint scenes with the project's scenery kit: floors, walls, fences, doors, props and scale figures, with the navigation overlay, saved as scenes.
 
-A project with a game of its own (`game/index.html`, which plays the exports in Phaser through `@diorama/phaser`) has **Play game** in its bar and "Open game" in its ⋯ menu, which open the game in a new tab at `/<projects|examples>/<project>/game/`; the Playground plays the same exports with debug tools, and says so. Soulkeeper has no game yet. To see a project's characters in Phaser without one, the package's test bench is at `http://localhost:5173/packages/phaser/demo/?project=<name>` ([packages/phaser/README.md](packages/phaser/README.md#the-test-bench)).
+A project with a game of its own (`game/index.html`, which plays the exports in Phaser through `@diorama/phaser`) has **Play game** in its bar and "Open game" in its ⋯ menu, which open the game in a new tab at `/projects/<project>/game/`; the Playground plays the same exports with debug tools, and says so. Soulkeeper has no game yet. To see a project's characters in Phaser without one, the package's test bench is at `http://localhost:5173/packages/phaser/demo/?project=<name>` ([packages/phaser/README.md](packages/phaser/README.md#the-test-bench)).
 
 ## Projects
 
 Your projects live in `projects/<project>/`, laid out as above. Create one with `npm run new-project -- <project>`; it starts with `src/theme.ts` (the palette, the camera and the materials, to make your own), an empty `sheets/` and a `.gitignore` for `review/`.
 
-Soulkeeper, the sample game (`examples/soulkeeper`), shows the tool at work in one genre: a small dark-fantasy JRPG set in a necropolis, whose playable slice (a crypt and its battle) comes with the game packages. For now it is its art, 163 sheets. It has five characters (a guard, a captain, the necromancer Malvek, a wolf and a spider) with a gear kit of 28 parts, a scenery kit with floors, walls, fences, doors, a chest, a lever and breakable urns, four scenes, ten effects, 31 item icons and 11 HUD pieces. It is the worked example the skills point to; read its `src/` and `sheets/`, and run `npm run example` to export it.
+Soulkeeper, the sample game (`examples/soulkeeper`), shows the tool at work in one genre: a small dark-fantasy JRPG set in a necropolis, whose playable slice (a crypt and its battle) comes with the game packages. For now it is its art, 163 sheets. It has five characters (a guard, a captain, the necromancer Malvek, a wolf and a spider) with a gear kit of 28 parts, a scenery kit with floors, walls, fences, doors, a chest, a lever and breakable urns, four scenes, ten effects, 31 item icons and 11 HUD pieces. It is the worked example the skills point to; read its `src/` and `sheets/` in `examples/soulkeeper`, and run `npm run example` to make it a project of yours in `projects/soulkeeper`, exported and open in the viewer.
 
 ## Skills and documentation for agents
 

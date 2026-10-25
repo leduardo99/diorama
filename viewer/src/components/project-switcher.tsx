@@ -3,19 +3,15 @@ import NiceModal from '@ebay/nice-modal-react';
 import { useNavigate } from '@tanstack/react-router';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { ChevronsUpDownIcon, FolderPlusIcon } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from '@/components/ui/command';
 import { Kbd } from '@/components/ui/kbd';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { createTranslator, LANGS, useT } from '@/i18n';
+import { useT } from '@/i18n';
 import { useWindowKeydown } from '@/lib/hotkeys';
 import { projectsQuery } from '@/lib/queries';
 import { SECTION_PATHS, type Section } from '@/lib/sections';
 import { NewModal } from '@/modals/new-modal';
-
-/** An example project is found by the word for it in every language, whichever one the interface speaks. */
-const EXAMPLE_KEYWORDS = LANGS.map((lang) => createTranslator(lang).t('projects.switcher.example'));
 
 /** The project's initial on a small tile: what the switcher shows in place of a logo for each project. */
 function ProjectTile({ name }: { name: string }) {
@@ -24,8 +20,8 @@ function ProjectTile({ name }: { name: string }) {
 
 /**
  * The project in use, and a searchable list to switch to another (⌘K): the way organisations are switched in most
- * web apps. Switching keeps the section the user is in (assets, playground, scenery...). The projects come from
- * `projects/` (yours) and `examples/` (the samples that ship with Diorama, marked with an "exemplo" badge).
+ * web apps. Switching keeps the section the user is in (assets, playground, scenery...). The projects are the folders of
+ * `projects/`, the user's own: a sample of `examples/` is listed once `npm run example` has copied it there.
  */
 export function ProjectSwitcher({ project, section }: { project: string | undefined; section: Section }) {
   const { data: projects } = useSuspenseQuery(projectsQuery);
@@ -61,10 +57,9 @@ export function ProjectSwitcher({ project, section }: { project: string | undefi
             <CommandEmpty>{t('projects.switcher.empty')}</CommandEmpty>
             <CommandGroup heading={t('projects.switcher.heading')}>
               {projects.map((p) => (
-                <CommandItem key={p.name} value={p.name} keywords={p.root === 'examples' ? EXAMPLE_KEYWORDS : undefined} data-checked={p.name === project} onSelect={() => choose(p.name)}>
+                <CommandItem key={p.name} value={p.name} data-checked={p.name === project} onSelect={() => choose(p.name)}>
                   <ProjectTile name={p.name} />
                   <span className="truncate">{p.name}</span>
-                  {p.root === 'examples' && <Badge variant="outline">{t('projects.switcher.example')}</Badge>}
                   <span className="ml-auto text-muted-foreground tabular-nums">{p.assetCount}</span>
                 </CommandItem>
               ))}

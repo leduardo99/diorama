@@ -158,7 +158,7 @@ export const NewModal = NiceModal.create(({ tab: initialTab = 'new-asset', proje
         </SelectTrigger>
         <SelectContent>
           <SelectGroup>
-            {projects.map((p) => <SelectItem key={p.name} value={p.name}>{p.root === 'examples' ? t('modals.new.exampleOption', { name: p.name }) : p.name}</SelectItem>)}
+            {projects.map((p) => <SelectItem key={p.name} value={p.name}>{p.name}</SelectItem>)}
           </SelectGroup>
         </SelectContent>
       </Select>

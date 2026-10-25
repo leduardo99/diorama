@@ -15,6 +15,12 @@ export const assetsQuery = queryOptions({
   queryFn: api.assets,
 });
 
+/** Whether `npm run example` is running (any run: the viewer's, a terminal's): the empty state shows it as running. */
+export const exampleRunQuery = queryOptions({
+  queryKey: ['example-run'],
+  queryFn: api.exampleRun,
+});
+
 export const deletePlanQuery = (project: string, subpath: string) =>
   queryOptions({
     queryKey: ['delete-plan', project, subpath],
@@ -30,7 +36,7 @@ export const atlasQuery = (asset: AssetFileMeta) =>
     enabled: asset.atlas !== null,
     staleTime: Infinity,
     queryFn: async (): Promise<Atlas> => {
-      const res = await fetch(`${projectUrl(asset.root, asset.project, `assets/${asset.atlas}`)}?t=${asset.mtime}`);
+      const res = await fetch(`${projectUrl(asset.project, `assets/${asset.atlas}`)}?t=${asset.mtime}`);
       if (!res.ok) throw new Error(currentTranslator().t('errors.readFile', { path: asset.atlas ?? '' }));
       return res.json();
     },

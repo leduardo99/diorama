@@ -3,7 +3,8 @@
  *
  * A project is found by name in `projects/` (your own projects) first, then in `examples/` (the
  * versioned samples). `projects/<name>` or `examples/<name>` names one of them explicitly. Every
- * command of tools/cli.ts and the exporter resolve projects through `findProject`.
+ * command of tools/cli.ts and the exporter resolve projects through `findProject`. The viewer shows
+ * `projects/` alone (`VIEWER_ROOTS`): a sample is the user's to open once `npm run example` copies it there.
  *
  * Inside a project: `src/` is hand-written code (never exported by itself), `sheets/` holds one thin
  * file per exported sheet (every `.ts` under it is a sheet), `assets/` the exported PNG + atlas JSON
@@ -17,6 +18,9 @@ import { join, relative, resolve, sep } from 'node:path';
 /** Folders that hold projects, in lookup order: a project in `projects/` hides an example of the same name. */
 export const PROJECT_ROOTS = ['projects', 'examples'] as const;
 export type ProjectRoot = (typeof PROJECT_ROOTS)[number];
+
+/** What the viewer lists and edits: your projects only. The samples are reached by the commands, by path or by name. */
+export const VIEWER_ROOTS = ['projects'] as const satisfies readonly ProjectRoot[];
 
 /** The four places of a project, and the optional game that plays its exports (rule 8). */
 export const LAYOUT = { src: 'src', sheets: 'sheets', assets: 'assets', review: 'review', game: 'game' } as const;
@@ -56,26 +60,31 @@ const isDir = (path: string) => existsSync(path) && statSync(path).isDirectory()
 
 /**
  * The project called `spec`: a bare name is looked up in `projects/`, then `examples/`;
- * `projects/<name>` and `examples/<name>` pick one folder. Undefined when there is none.
+ * `projects/<name>` and `examples/<name>` pick one folder. Only the folders of `roots` are looked in (all of them by
+ * default; the viewer passes `VIEWER_ROOTS`). Undefined when there is none.
  */
-export function findProject(spec: string, repo = process.cwd()): ProjectRef | undefined {
+export function findProject(spec: string, repo = process.cwd(), roots: readonly ProjectRoot[] = PROJECT_ROOTS): ProjectRef | undefined {
   const clean = spec.replace(/\\/g, '/').replace(/\/+$/, '');
   const qualified = /^(projects|examples)\/([^/]+)$/.exec(clean);
   const candidates: [ProjectRoot, string][] = qualified
     ? [[qualified[1] as ProjectRoot, qualified[2]]]
     : clean.includes('/') || clean === '' || clean.startsWith('.') ? [] : PROJECT_ROOTS.map(root => [root, clean]);
   for (const [root, name] of candidates) {
+    if (!roots.includes(root)) continue;
     const dir = resolve(repo, root, name);
     if (isDir(dir)) return { name, root, dir, rel: `${root}/${name}` };
   }
   return undefined;
 }
 
-/** Every project, `projects/` first; an example hidden by a project of the same name is left out. */
-export function listProjects(repo = process.cwd()): ProjectRef[] {
+/**
+ * Every project of `roots` (all of them by default), `projects/` first; an example hidden by a project of the same name
+ * is left out. The viewer passes `VIEWER_ROOTS`.
+ */
+export function listProjects(repo = process.cwd(), roots: readonly ProjectRoot[] = PROJECT_ROOTS): ProjectRef[] {
   const seen = new Set<string>();
   const out: ProjectRef[] = [];
-  for (const root of PROJECT_ROOTS) {
+  for (const root of roots) {
     const base = resolve(repo, root);
     if (!isDir(base)) continue;
     for (const name of readdirSync(base).sort()) {
@@ -87,10 +96,35 @@ export function listProjects(repo = process.cwd()): ProjectRef[] {
   return out;
 }
 
-/** "Available: a (projects), b (examples)" for error messages. */
+/**
+ * "Available: a (projects), b (examples)" for error messages. Each folder is listed whole, so a sample that a project of
+ * the same name hides still shows: `examples/<name>` reaches it.
+ */
 export function availableProjects(repo = process.cwd()): string {
-  const all = listProjects(repo);
+  const all = PROJECT_ROOTS.flatMap(root => listProjects(repo, [root]));
   return all.length ? `Available: ${all.map(p => `${p.name} (${p.root})`).join(', ')}` : 'There are no projects yet: npm run new-project -- <name>';
+}
+
+/**
+ * Why `spec` names no project, and what there is instead, for an error message. `projects/<name>` is answered with the
+ * projects of projects/ alone (the viewer runs every command on its project so, and has no samples to offer),
+ * `examples/<name>` with the samples, and a bare name with both folders (`availableProjects`).
+ */
+export function missingProject(spec: string, repo = process.cwd()): { message: string; hint: string } {
+  const clean = spec.replace(/\\/g, '/').replace(/\/+$/, '');
+  const qualified = /^(projects|examples)\/([^/]+)$/.exec(clean);
+  if (qualified?.[1] === 'projects') {
+    const names = listProjects(repo, ['projects']).map(p => p.name);
+    return {
+      message: `project "${qualified[2]}" does not exist in projects/.`,
+      hint: names.length ? `Projects: ${names.join(', ')}` : 'There are no projects in projects/ yet: npm run new-project -- <name>',
+    };
+  }
+  if (qualified?.[1] === 'examples') {
+    const names = listProjects(repo, ['examples']).map(p => p.name);
+    return { message: `there is no sample "${qualified[2]}" in examples/.`, hint: names.length ? `Samples: ${names.join(', ')}` : 'There are no samples in examples/.' };
+  }
+  return { message: `project "${spec}" does not exist in projects/ or examples/.`, hint: availableProjects(repo) };
 }
 
 /** OS files that never count as project content. */

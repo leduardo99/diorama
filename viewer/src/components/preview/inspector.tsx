@@ -185,8 +185,8 @@ export function Inspector({ player, asset, directionIndex, onDirection, onHighli
 function Info({ atlas, asset, frameCount }: { atlas: Atlas | undefined; asset: AssetFileMeta; frameCount: number }) {
   const { t, number, date } = useT();
   const meta = atlas?.meta;
-  const exportedPath = projectFile(asset.root, asset.project, `assets/${asset.subpath}`);
-  const sheetPath = asset.sheet ? projectFile(asset.root, asset.project, `sheets/${asset.sheet}`) : null;
+  const exportedPath = projectFile(asset.project, `assets/${asset.subpath}`);
+  const sheetPath = asset.sheet ? projectFile(asset.project, `sheets/${asset.sheet}`) : null;
   // A piece's clip sheet names its clip with an object (frames, fps, from, to): show its name. JSON can hold null there.
   const written = meta?.data?.clip;
   const clip = typeof written === 'object' && written !== null ? written.name : written;

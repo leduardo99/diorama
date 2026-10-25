@@ -19,6 +19,14 @@ function post<T>(url: string, payload: unknown): Promise<T> {
 export interface CliResult {
   ok: boolean;
   output: string;
+  /** `example` only: another run of it is bringing the sample in, so this one was not started. */
+  running?: boolean;
+}
+
+/** Whether `npm run example` is bringing the sample in: from the viewer, a terminal or another server (tools/lock.ts). */
+export interface ExampleRun {
+  running: boolean;
+  startedAt?: string;
 }
 
 export const api = {
@@ -32,7 +40,9 @@ export const api = {
     post<{ ok: true; restored: string[] }>('/__api/restore', input),
   deleteProject: (input: { project: string }) => post<{ ok: true; project: string; trashId: string }>('/__api/delete-project', input),
   restoreProject: (input: { project: string; trashId: string }) => post<{ ok: true; restored: string }>('/__api/restore-project', input),
-  // The cli endpoint answers 200 with ok:false when a script fails and 400 when the request itself is invalid.
+  exampleRun: () => request<ExampleRun>('/__api/example-run'),
+  // The cli endpoint answers 200 with ok:false when a script fails, 400 when the request itself is invalid and 409
+  // (running: true) for an `example` while another run of it goes on.
   cli: async (payload: Record<string, unknown>): Promise<CliResult> => {
     const res = await fetch('/__api/cli', {
       method: 'POST',

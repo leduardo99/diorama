@@ -44,7 +44,7 @@ import { execFileSync } from 'node:child_process';
 import { availableParallelism } from 'node:os';
 import pc from 'picocolors';
 import { IMAGE_EXTENSIONS, isOutOfDate } from './freshness.js';
-import { ALLOWED_CONFIG_KEYS, LAYOUT, REVIEW, availableProjects, findProject, isSheetFile, walkFiles } from './project.js';
+import { ALLOWED_CONFIG_KEYS, LAYOUT, REVIEW, findProject, isSheetFile, missingProject, walkFiles } from './project.js';
 import { createSourceReader } from './sources.js';
 import { serverOn } from './dev-server.js';
 import { typeCheckProject } from './typecheck.js';
@@ -827,8 +827,10 @@ async function main() {
   const rootDir = resolve(process.cwd());
   const ref = findProject(args.project, rootDir);
   if (!ref) {
-    console.error(pc.red(`\nError: Project "${args.project}" was not found in projects/ or examples/.`));
-    console.error(pc.yellow(availableProjects(rootDir)));
+    // `projects/<name>` (what the viewer runs) is answered with projects/ alone: the viewer has no samples to offer.
+    const { message, hint } = missingProject(args.project, rootDir);
+    console.error(pc.red(`\nError: ${message[0].toUpperCase()}${message.slice(1)}`));
+    console.error(pc.yellow(hint));
     process.exit(1);
   }
   const projectName = ref.name;
