@@ -4,8 +4,8 @@
  * bracers, tassets over an olive skirt, plate greaves over boots — a crimson cape, the round shield
  * on her left forearm, a spear in her right hand, and spirit wings of soul fire folded on her back.
  * Her face is made to read at its real size, about 14 pixels across: an oval face of warm
- * golden-brown (`oval`, no `ears` under the hair), small dark eyes without whites (`eyeSize`,
- * `eyeSpacing`, `whites`), thin arched brows (`arch`, `browWidth`), a soft nose with no line
+ * golden-brown (`oval`, no `ears` under the hair), dark eyes with whites and a lash line
+ * (`eyeSize`, `eyeSpacing`, `whites`, `lashes`), arched brows (`arch`, `browWidth`), a soft nose with no line
  * (`nose`), rose lips in a calm half-smile (`smile`, `mouthWidth`, the `lips` role), turned a little
  * to the camera in the 3/4 views (`turn`), so both eyes read there. The helm's rim rides up the
  * forehead (`rise`) and the hair sweeps off it and frames the face from the temples (`hairline`).
@@ -73,9 +73,9 @@ export const OUTFIT: OutfitData = {
     { part: 'round-shield', slot: 'forearm', side: -1, on: 'armL', options: { radius: 7.6 } },
     {
       part: 'flesh-head', slot: 'head', id: 'head',
-      options: { smile: 0.8, arch: 0.7, lashes: false, turn: 0.4, eyeSize: 0.65, eyeSpacing: 0.8, whites: false, browWidth: 0.6, nose: 'soft', mouthWidth: 0.9, ears: false, oval: 1 },
+      options: { smile: 0.6, arch: 0.7, lashes: true, turn: 0.4, eyeSize: 0.85, eyeSpacing: 0.96, whites: true, browWidth: 0.8, nose: 'soft', mouthWidth: 0.8, ears: false, oval: 0.6 },
     },
-    { part: 'hair-waves', slot: 'head', on: 'head', id: 'hair', options: { hairline: 0.8, volume: 0.8 } },
+    { part: 'hair-waves', slot: 'head', on: 'head', id: 'hair', options: { hairline: 0.8, volume: 0.65 } },
     { part: 'winged-helm', slot: 'head', on: 'hair', options: { rise: 0.35 } },
     { part: 'spear', slot: 'hand', side: 1, id: 'spear' },
   ],

@@ -36,9 +36,9 @@ export const PALETTES = {
   skin: '#b08d79',
   skinDark: '#5e443c',
   // Warm golden-brown skin: deeper and warmer than `skin`, its shadow a warm brown, never grey.
-  skinWarmLit: '#e0a074',
-  skinWarm: '#c47f55',
-  skinWarmDark: '#8f553a',
+  skinWarmLit: '#e2a983',
+  skinWarm: '#c3845e',
+  skinWarmDark: '#8b573d',
   // Lips: a muted rose-brown, between the warm skin's shadow and a red, so a closed mouth reads as
   // lips, not a dark line.
   lipsLit: '#b65e4a',
