@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { Rich, useT } from '@/i18n';
 import { api } from '@/lib/api';
+import { exportFailureText } from '@/lib/export-errors';
 import { isValidCharacterName } from '@/lib/outfit/save';
 import { useModalDialog } from '@/lib/use-modal-dialog';
 
@@ -47,7 +48,7 @@ export const SaveOutfitModal = NiceModal.create(({ project, characterId, outfit,
       if (!created.ok) throw new Error(created.output);
       // The folder is new: export all of it, so the sheets exist when the user opens the playground.
       const exported = await api.cli({ command: 'export', project, subpath: `characters/${name}/` });
-      return { name, output: [created.output, exported.output].filter(Boolean).join('\n\n'), exported: exported.ok };
+      return { name, output: [created.output, exported.ok ? exported.output : exportFailureText(exported.output, t('toasts.fixTypeErrors'))].filter(Boolean).join('\n\n'), exported: exported.ok };
     },
     // The catalog changed under the viewer whether or not the export worked.
     onSettled: () => Promise.all([queryClient.invalidateQueries({ queryKey: ['assets'] }), queryClient.invalidateQueries({ queryKey: ['projects'] })]),

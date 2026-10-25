@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useRouter } from '@tanstack/react-router';
 import { toast } from 'sonner';
 import { api } from './api';
+import { exportFailureText } from './export-errors';
 import { exportTarget, pendingExports } from './export-state';
 import { useT } from '../i18n';
 import { stripExtension } from './format';
@@ -92,7 +93,7 @@ export function useDeleteProject() {
   });
 }
 
-/** Runs tools/cli.ts or tools/export.ts; the Novo dialog shows the output itself. */
+/** Runs tools/cli.ts or tools/export.ts; the New dialog shows the output itself. */
 export function useCli() {
   const refresh = useRefreshCatalog();
   return useMutation({
@@ -152,7 +153,7 @@ export function useReexport() {
     onMutate: ({ subpath }) => toast.loading(t('toasts.exporting'), { description: subpath }),
     onSuccess: async (result, { subpath }, toastId) => {
       if (!result.ok) {
-        toast.error(t('toasts.exportFailed'), { id: toastId, description: result.output.split('\n').slice(-4).join('\n') });
+        toast.error(t('toasts.exportFailed'), { id: toastId, description: exportFailureText(result.output, t('toasts.fixTypeErrors')) });
         return;
       }
       await refresh();
@@ -177,7 +178,7 @@ export function useExportSheets() {
         for (const sheet of sheets) {
           toast.loading(t('toasts.exportingProgress', { current: done + 1, total: sheets.length }), { id: toastId, description: sheet });
           const result = await api.cli({ command: 'export', project, subpath: exportTarget(sheet) });
-          if (!result.ok) throw new Error(`${sheet}\n${result.output.split('\n').slice(-4).join('\n')}`);
+          if (!result.ok) throw new Error(`${sheet}\n${exportFailureText(result.output, t('toasts.fixTypeErrors'))}`);
           done++;
         }
         toast.success(plural('toasts.assetsExported', done), { id: toastId });
@@ -220,7 +221,7 @@ export function useRefreshGearItems() {
         }
         toast.loading(t('toasts.itemsExporting'), { id: toastId, description: plural('toasts.itemsChanged', count) });
         const exported = await api.cli({ command: 'export', project, subpath: GEAR_ITEMS });
-        if (!exported.ok) throw new Error(exported.output.split('\n').slice(-4).join('\n'));
+        if (!exported.ok) throw new Error(exportFailureText(exported.output, t('toasts.fixTypeErrors')));
         toast.success(t('toasts.itemsUpdated'), { id: toastId, description: plural('toasts.itemsExported', count) });
       } catch (error) {
         toast.error(t('toasts.itemsUpdateFailed'), { id: toastId, description: error instanceof Error ? error.message : String(error) });

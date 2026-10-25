@@ -11,7 +11,7 @@ import { useT } from '@/i18n';
 import { useWindowKeydown } from '@/lib/hotkeys';
 import { projectsQuery } from '@/lib/queries';
 import { SECTION_PATHS, type Section } from '@/lib/sections';
-import { NovoModal } from '@/modals/novo-modal';
+import { NewModal } from '@/modals/new-modal';
 
 /** The project's initial on a small tile: what the switcher shows in place of a logo for each project. */
 function ProjectTile({ name }: { name: string }) {
@@ -72,7 +72,7 @@ export function ProjectSwitcher({ project, section }: { project: string | undefi
                 value={`${t('projects.switcher.new')} ${t('common.create')}`}
                 onSelect={() => {
                   setOpen(false);
-                  void NiceModal.show(NovoModal, { tab: 'new-project' });
+                  void NiceModal.show(NewModal, { tab: 'new-project' });
                 }}
               >
                 <FolderPlusIcon />

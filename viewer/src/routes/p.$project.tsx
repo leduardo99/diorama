@@ -10,7 +10,7 @@ import { assetsQuery, projectsQuery } from '@/lib/queries';
 import { Rich, useT } from '@/i18n';
 import { projectUrl } from '@/lib/project-paths';
 import { sectionOf } from '@/lib/sections';
-import { NovoModal } from '@/modals/novo-modal';
+import { NewModal } from '@/modals/new-modal';
 
 /** What `beforeLoad` hands the not-found page when the project itself is missing. */
 const MISSING_PROJECT = 'missing-project';
@@ -103,11 +103,11 @@ function ProjectLayout() {
               <TooltipContent side="bottom"><Rich id="project.playGameHint" /></TooltipContent>
             </Tooltip>
           )}
-          <Button variant="outline" size="sm" onClick={() => void NiceModal.show(NovoModal, { tab: 'export', project })}>
+          <Button variant="outline" size="sm" onClick={() => void NiceModal.show(NewModal, { tab: 'export', project })}>
             <UploadIcon data-icon="inline-start" />
             {t('project.export')}
           </Button>
-          <Button size="sm" onClick={() => void NiceModal.show(NovoModal, { tab: 'new-asset', project })}>
+          <Button size="sm" onClick={() => void NiceModal.show(NewModal, { tab: 'new-asset', project })}>
             <PlusIcon data-icon="inline-start" />
             {t('project.newAsset')}
           </Button>

@@ -13,7 +13,7 @@ import { Rich, useT } from '@/i18n';
 import { copyText } from '@/lib/clipboard';
 import { SAMPLE_COMMAND, SAMPLE_PROJECT, useTrySample } from '@/lib/mutations';
 import { exampleRunQuery, projectsQuery } from '@/lib/queries';
-import { NovoModal } from '@/modals/novo-modal';
+import { NewModal } from '@/modals/new-modal';
 
 export const Route = createFileRoute('/')({
   beforeLoad: async ({ context: { queryClient } }) => {
@@ -69,7 +69,7 @@ function NoProjects() {
       </EmptyHeader>
       <EmptyContent className="max-w-md">
         <div className="flex flex-wrap justify-center gap-2">
-          <Button onClick={() => void NiceModal.show(NovoModal, { tab: 'new-project' })}>
+          <Button onClick={() => void NiceModal.show(NewModal, { tab: 'new-project' })}>
             <FolderPlusIcon data-icon="inline-start" />
             {t('projects.none.create')}
           </Button>
