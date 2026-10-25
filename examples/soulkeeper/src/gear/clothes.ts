@@ -9,8 +9,8 @@
  */
 
 import { createRng } from '@core';
-import { partFrame, type Part } from '@core/rig';
-import { Blob, Round, Tube, UP, add3, dot3, lerp3, norm3, scale3, sub3, vec3, visibleArc, type Vec3 } from '@core/volume';
+import { partFrame, solvePose, type Part } from '@core/rig';
+import { Blob, Round, Tube, UP, add3, dot3, len3, lerp3, norm3, scale3, sub3, vec3, visibleArc, type Vec3 } from '@core/volume';
 import { headFrame } from './heads';
 import { trunkScale } from './torso';
 import { legOf, plate, role, scaleOf, tornPanel, type NoOptions } from './util';
@@ -80,9 +80,9 @@ export interface CloakOptions {
 }
 
 /**
- * A cloak: a yoke over the shoulders, a long fall down the back that sways with the legs and
- * drapes flat along the floor once the body lies, a small front collar the fall hangs from, and a
- * hem of a few broad folds. The fall takes the `cloak` role when the outfit gives one, so a cloak
+ * A cloak: a yoke over the shoulders, a long fall down the back that trails behind the body as it
+ * moves (never forward through it) and drapes flat along the floor once the body lies, a small
+ * front collar the fall hangs from, and a hem of a few broad, rounded folds. The fall takes the `cloak` role when the outfit gives one, so a cloak
  * can wear a cloth of its own value and hue next to the coat and the hood.
  * Seen from the front it stays behind the body; seen from behind (the back and the three-quarter
  * rear views) it is the outermost garment: it hangs straight down the back and draws over the coat.
@@ -108,19 +108,24 @@ export const cloak: Part<CloakOptions> = (ctx, { length, seed = 'cloak' }) => {
   );
   o.add(collar, cloth);
   // The fall hangs from the back of the shoulders, sways a little with the legs' average stride
-  // and drapes away from the head once the body lies (the long coat's math).
+  // and drapes away from the head once the body lies (the long coat's math). The sway is measured
+  // against the standing body: at rest the knees already sit ahead of the chest, and counting that
+  // reach would tilt the whole fall forward, in front of the legs in the profiles. A lean or a lunge
+  // that carries the chest ahead of the knees swings it back; nothing swings it forward through the
+  // body it hangs behind, in any facing, and a long stride or a lunge eases out to a soft limit, so
+  // the fall trails behind instead of standing out like a board.
   const j = pose.joints;
   const [first, second] = kit.skeleton.legs;
-  const knees = lerp3(j[`${first.name}.knee`], j[`${second.name}.knee`], 0.5);
-  const sway = sub3(knees, j.chest);
+  const kneesOf = (p: typeof pose) => lerp3(p.joints[`${first.name}.knee`], p.joints[`${second.name}.knee`], 0.5);
+  const rest = solvePose(kit.skeleton, pose.frame);
+  const sway = sub3(sub3(kneesOf(pose), j.chest), sub3(kneesOf(rest), rest.joints.chest));
   let swing = scale3(sub3(sway, scale3(UP, dot3(sway, UP))), 0.12 * (1 - lie));
-  // Seen from behind (`rear`, measured on the hips and along the floor, so a twist of the shoulders in
-  // an attack or a lean in a run does not count; 0 once the body lies) the fall hangs against the back:
-  // it can sway away from it, but not forward through the body, which is where the knees' reach ahead
-  // of the chest would take it, and a long cloak would shrink to a stub. Nothing changes in the front
-  // facings or the profiles.
+  swing = sub3(swing, scale3(hipForward, Math.max(0, dot3(swing, hipForward))));
+  const reach = len3(swing);
+  if (reach > 1e-6) swing = scale3(swing, (0.3 * Math.tanh(reach / 0.3)) / reach);
+  // How squarely the back is turned to the camera, measured on the hips and along the floor, so a
+  // twist of the shoulders in an attack or a lean in a run does not count; 0 once the body lies.
   const rear = rearness(dot3(hipForward, norm3(sub3(cam.viewDir, scale3(UP, dot3(cam.viewDir, UP)))))) * (1 - lie);
-  swing = sub3(swing, scale3(chestFwd, rear * Math.max(0, dot3(swing, chestFwd))));
   const L = (length ?? j.pelvis.z + 9 * k) * (1 - 0.36 * lie);
   const top = add3(chest, add3(scale3(up, 5.2 * s), scale3(chestFwd, -3.2 * k)));
   const hang = norm3(add3(scale3(up, -1), scale3(chestFwd, -0.16)));
@@ -152,15 +157,15 @@ export const cloak: Part<CloakOptions> = (ctx, { length, seed = 'cloak' }) => {
   const hungFrom = Math.max(0, cam.depth(chest) - fall.depth(cam));
   const behind = { bias: rear * hungFrom - 52 * frontness * k };
   o.add(fall, cloth, behind);
-  // The hem: three broad folds that overlap and drape, each its own length — wide cloth masses,
-  // not a row of tongues. They ride `on` the fall, so the same bias keeps them behind the body.
+  // The hem: three broad folds that overlap and drape, each its own length and ending round —
+  // wide cloth masses, not a row of tongues or teeth. They ride `on` the fall, so the same bias keeps them behind the body.
   const folds = 3;
   for (let f = 0; f < folds; f++) {
     const frac = ((f + 0.5) / folds) * 2 - 1;
     const base = centre(0.62, frac * mix(widths, 0.62) * 0.72);
     const tip = centre(1.02 + rng.float(0, 0.1), frac * mix(widths, 1) * 0.82 + rng.float(-0.4, 0.4) * k);
     const mid = lerp3(base, tip, 0.55);
-    o.add(new Tube([base, mid, tip], { start: mix(widths, 0.8) * 0.62 * rng.float(0.95, 1.15), end: 0.5 * k }), cloth, { on: fall, ...behind });
+    o.add(new Tube([base, mid, tip], { start: mix(widths, 0.8) * 0.62 * rng.float(0.95, 1.15), end: 2.2 * k }), cloth, { on: fall, ...behind });
   }
   // The fall's edge in the accent cloth, when the outfit gives one: the whole edge from behind, and
   // from the other facings the part of it that faces the camera.
