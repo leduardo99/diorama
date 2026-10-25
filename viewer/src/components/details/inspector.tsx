@@ -14,9 +14,13 @@ import { projectFile } from '@/lib/project-paths';
 import type { AssetFileMeta } from '@/lib/types';
 import { ZOOMS, type Backdrop, type Player, type Zoom } from './use-player';
 
+/**
+ * A section of a right-hand panel. A fieldset is as wide as its widest line by default (`min-inline-size: min-content`),
+ * so a long path would push the values out of the column: `min-w-0` keeps every line inside it, and cut with an ellipsis.
+ */
 export function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <FieldSet className="gap-3 border-b p-4">
+    <FieldSet className="min-w-0 gap-3 border-b p-4">
       <FieldLegend variant="label" className="mb-0 text-muted-foreground uppercase">{title}</FieldLegend>
       {children}
     </FieldSet>
@@ -92,7 +96,8 @@ export function Inspector({ player, asset, directionIndex, onDirection, onHighli
             className="grid w-fit grid-cols-3 gap-1 self-center"
           >
             {COMPASS.flat().map((name, i) => {
-              if (!name) return <span key={i} className="grid place-items-center text-muted-foreground tabular-nums">{directions[directionIndex]}</span>;
+              // The middle of the compass stays empty: the highlighted point already names the direction.
+              if (!name) return <span key={i} aria-hidden />;
               const at = directions.indexOf(name);
               return (
                 <ToggleGroupItem key={name} value={at < 0 ? `missing-${name}` : String(at)} disabled={at < 0} className="w-11 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground" title={at < 0 ? t('details.inspector.directionMissing', { name }) : `${name} · ${at + 1}`}>
@@ -214,12 +219,13 @@ function Info({ atlas, asset, frameCount }: { atlas: Atlas | undefined; asset: A
           </div>
         ))}
       </dl>
+      {/* A path is cut to the column; its title shows it whole on hover (it is data, so a plain title, as on the compass). */}
       <div className="flex flex-col gap-1">
-        <Button variant="outline" size="sm" className="justify-start font-mono" onClick={() => void copyText(exportedPath, t('details.data.filePathLabel'))}>
+        <Button variant="outline" size="sm" className="justify-start font-mono" title={exportedPath} onClick={() => void copyText(exportedPath, t('details.data.filePathLabel'))}>
           <span className="truncate">{exportedPath}</span>
         </Button>
         {sheetPath && (
-          <Button variant="outline" size="sm" className="justify-start font-mono" onClick={() => void copyText(sheetPath, t('details.data.sheetPathLabel'))}>
+          <Button variant="outline" size="sm" className="justify-start font-mono" title={sheetPath} onClick={() => void copyText(sheetPath, t('details.data.sheetPathLabel'))}>
             <span className="truncate">{sheetPath}</span>
           </Button>
         )}
