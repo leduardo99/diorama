@@ -206,7 +206,7 @@ const GLOSSARY: Array<{ en: string[]; pt: string[]; not: string[]; except?: stri
   { en: ['add-on', 'add-ons'], pt: ['complemento', 'complementos'], not: ['add-on', 'add-ons'] },
 ];
 assert.ok(wordsOf('Slot ocupado por {name}').has('slot') && !wordsOf('Vestir {slot}').has('slot') && wordsOf('Pivô / bordas do frame').has('frame') && wordsOf('{count} add-ons.').has('add-ons'), 'the word splitter');
-// Sheet is masculine ("o sheet", "os sheets"), and export as a noun is "o export".
+// Sheet stays sheet, never "folha", and is masculine ("o sheet", "os sheets"); export as a noun is "o export", "os exports".
 const FEMININE_SHEET = /\b(a|as|da|das|na|nas|uma|umas|esta|estas|essa|essas|pela|pelas)\s+(sprite\s+)?sheets?\b/i;
 assert.ok(FEMININE_SHEET.test('exporta as sprite sheets') && !FEMININE_SHEET.test('Exportando os sheets') && !FEMININE_SHEET.test('Há {count} sheet em sheets/'), 'the gender check');
 
@@ -220,8 +220,9 @@ for (const [key, text] of en) {
     const variant = term.not.find((word) => words.has(word));
     if (variant) glossaryProblems.push(`${key}: "${variant}" is a variant, say ${term.pt[0]}: ${JSON.stringify(said)}`);
   }
+  if (words.has('folha') || words.has('folhas')) glossaryProblems.push(`${key}: sheet stays sheet ("os sheets"), not folha: ${JSON.stringify(said)}`);
   if (FEMININE_SHEET.test(said)) glossaryProblems.push(`${key}: sheet is masculine ("o sheet", "os sheets"): ${JSON.stringify(said)}`);
-  if (words.has('exportação')) glossaryProblems.push(`${key}: export as a noun is "o export": ${JSON.stringify(said)}`);
+  if (words.has('exportação') || words.has('exportações')) glossaryProblems.push(`${key}: export as a noun is "o export", "os exports": ${JSON.stringify(said)}`);
 }
 assert.deepEqual(glossaryProblems, [], `Portuguese says each term one way (the GLOSSARY in this section)\n${glossaryProblems.join('\n')}`);
 
