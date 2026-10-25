@@ -46,6 +46,7 @@ import pc from 'picocolors';
 import { IMAGE_EXTENSIONS, isOutOfDate } from './freshness.js';
 import { ALLOWED_CONFIG_KEYS, LAYOUT, REVIEW, availableProjects, findProject, isSheetFile, walkFiles } from './project.js';
 import { createSourceReader } from './sources.js';
+import { serverOn } from './dev-server.js';
 import { typeCheckProject } from './typecheck.js';
 
 interface CliArgs {
@@ -269,7 +270,7 @@ ${pc.bold('Options:')}
   --no-json            Disable generating the companion atlas metadata JSON file
   --scale=<num>        Override device scale factor (e.g. 2 for 2x retina)
   --format=<png|jpeg>  Override target output format
-  --server=<url>       Use existing running dev server (default: auto-detected or 5173)
+  --server=<url>       Use this running dev server (default: this checkout's viewer on 5173 if it runs, else a server of its own)
   --mockup             Review render (context.preview = true) into <project>/review/mockups/ (never touches assets/ or outDir)
   --json               Print a JSON summary on stdout (human logs go to stderr)
   --force              Export even when the project has type errors (skips the type check that runs first; for experiments)
@@ -308,18 +309,6 @@ async function changedSheets(tasks: AssetTask[], outputDir: string): Promise<{ m
   return { missing, stale };
 }
 
-async function isServerRunning(url: string): Promise<boolean> {
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 600);
-    const res = await fetch(url, { signal: controller.signal });
-    clearTimeout(timer);
-    return res.status === 200 || res.status === 404;
-  } catch {
-    return false;
-  }
-}
-
 async function ensureServer(
   preferredUrl?: string
 ): Promise<{ origin: string; stop: () => Promise<void> }> {
@@ -327,9 +316,13 @@ async function ensureServer(
     return { origin: preferredUrl.replace(/\/$/, ''), stop: async () => {} };
   }
 
-  const defaultUrl = 'http://127.0.0.1:5173';
-  if (await isServerRunning(defaultUrl)) {
-    return { origin: defaultUrl, stop: async () => {} };
+  // Reuse the viewer's dev server only when it is this checkout's: whatever else answers on its port (another program,
+  // or the viewer of another clone or an older tool) would render other code.
+  const viewer = await serverOn(5173);
+  if (viewer.kind === 'ours') return { origin: 'http://localhost:5173', stop: async () => {} };
+  if (viewer.kind !== 'none') {
+    const who = viewer.kind === 'diorama' ? `the viewer of another checkout (${viewer.root})` : 'another program';
+    console.error(pc.dim(`  Port 5173 is ${who}: exporting with a server of its own.`));
   }
 
   const rootDir = resolve(process.cwd());
