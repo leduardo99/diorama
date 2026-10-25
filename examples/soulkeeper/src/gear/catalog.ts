@@ -14,10 +14,11 @@
  *   sword and the scythe their sockets (`tip`, `lantern`), so a character's tip follows its weapon.
  * - `CATALOG.bases`: the base bodies an outfit is drawn over (the bone legs).
  * - `CATALOG.materials`: the theme's `VOLUMES`, by name.
- * - `CHARACTERS`: the guard, Malvek and the captain: each one's rig (skeleton, clips with their
- *   frames, camera, cell, pivot, shadow, sockets: `characters/<name>/spec.ts`) and the outfit it
- *   wears (`characters/<name>/outfit.ts`). Each character's `character.ts` draws that same outfit
- *   with `outfitFromData(OUTFIT, CATALOG)`, so what the customizer edits is what the game exports.
+ * - `CHARACTERS`: the guard, Malvek and the captain: each one's rig (label, skeleton, clips with
+ *   their frames, camera, cell, pivot, shadow, sockets: `characters/<name>/spec.ts`) and the outfit
+ *   it wears (`characters/<name>/outfit.ts`). Each character's `character.ts` spreads that same rig,
+ *   so the customizer and the exported manifest show one name, and draws that same outfit with
+ *   `outfitFromData(OUTFIT, CATALOG)`, so what the customizer edits is what the game exports.
  *
  * Adding a part: export it from its kit file, list it here (its defaults must be the part's own),
  * and give it a group, slots and roles. The catalog is not re-exported by `index.ts`: it imports the
@@ -208,7 +209,7 @@ export const CATALOG: GearCatalog = {
 // ----------------------------------------------------------------------------------------------
 
 export const CHARACTERS: OutfitCharacterInfo[] = [
-  { id: 'guard', label: 'Ossuary Guard', ...GUARD_RIG, outfit: GUARD_OUTFIT },
-  { id: 'malvek', label: 'Malvek Ravenlight', ...MALVEK_RIG, outfit: MALVEK_OUTFIT },
-  { id: 'captain', label: 'Ossuary Captain', ...CAPTAIN_RIG, outfit: CAPTAIN_OUTFIT },
+  { id: 'guard', ...GUARD_RIG, outfit: GUARD_OUTFIT },
+  { id: 'malvek', ...MALVEK_RIG, outfit: MALVEK_OUTFIT },
+  { id: 'captain', ...CAPTAIN_RIG, outfit: CAPTAIN_OUTFIT },
 ];

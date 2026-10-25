@@ -119,7 +119,10 @@ export interface ManifestClip {
  * ends); when an action ends the character returns to idle, except `hold` clips (death).
  */
 export interface CharacterManifest {
+  /** The character's id, as `defineCharacter` was given it ('ossuary-guard'). */
   name: string;
+  /** The name people read, for a game's menus, the viewer and the test bench ('Ossuary Guard'). */
+  label: string;
   skeleton: string;
   cell: { width: number; height: number };
   scale: number;
@@ -160,6 +163,12 @@ export interface EffectCue {
   at?: string;
   /** How it moves: 'fly' along the facing the action started with (projectiles), 'follow' the socket while it plays (auras, trails), or 'stay' where it started (default). */
   motion?: 'fly' | 'follow' | 'stay';
+}
+
+/** A name in words, for a character without a `label`: 'ossuary-guard' is 'Ossuary guard'. */
+function inWords(name: string): string {
+  const words = name.split(/[-_\s]+/).filter(Boolean).join(' ');
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
 /** Root motion per frame (and at the end) of a clip with `travel`, rounded to 0.1 world units. */
@@ -318,8 +327,10 @@ export interface ClipWields {
  * from the object literal, so `CharacterOptions` alone (`K` = `string`) is every character's options.
  */
 export interface CharacterOptions<K extends string = string> extends Omit<CharacterAssetOptions, 'clip' | 'frames' | 'character' | 'key' | 'skin'> {
-  /** Character name for players and the viewer (e.g. 'ossuary-guard'). */
+  /** The character's id for players and the viewer (e.g. 'ossuary-guard'). */
   name: string;
+  /** The name people read. Default: the name in words ('ossuary-guard' is 'Ossuary guard'). */
+  label?: string;
   /** How the character is drawn; with `outfit` and no skin, `outfitFromData(outfit.data, outfit.catalog)`. */
   skin?: Skin;
   /**
@@ -438,6 +449,7 @@ export function defineCharacter<K extends string = string>(o: CharacterOptions<K
   }
   const manifest: CharacterManifest = {
     name: o.name,
+    label: o.label ?? inWords(o.name),
     skeleton: o.skeleton.name,
     cell: { width: o.width, height: o.height },
     scale: o.scale ?? 2,
@@ -451,7 +463,7 @@ export function defineCharacter<K extends string = string>(o: CharacterOptions<K
     ...(wield ? { wield: { ...(wield.main ? { main: { part: wield.main.part, class: wield.main.class, hands: wield.main.hands } } : {}), ...(wield.off ? { off: { part: wield.off.part, class: wield.off.class, hands: wield.off.hands } } : {}) } } : {}),
     warnings,
   };
-  const { name: _name, clips: _clips, frames: _frames, controls: _controls, effects: _effects, outfit: _outfit, skin: _skin, sockets: _sockets, ...shared } = o;
+  const { name: _name, label: _label, clips: _clips, frames: _frames, controls: _controls, effects: _effects, outfit: _outfit, skin: _skin, sockets: _sockets, ...shared } = o;
   return {
     manifest,
     sheet(key: K): AssetDefinition {

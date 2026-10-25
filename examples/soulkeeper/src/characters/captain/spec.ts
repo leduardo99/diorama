@@ -25,6 +25,7 @@ const skeleton = humanoid();
 const PIVOT = { x: 54, y: 124 };
 
 export const CAPTAIN_RIG = {
+  label: 'Ossuary Captain',
   skeleton,
   camera: CAMERA,
   width: 108,
@@ -42,4 +43,4 @@ export const CAPTAIN_RIG = {
     hit: { clip: humanoidHit(skeleton), frames: 10 },
     death: { clip: humanoidDeath(skeleton), frames: 12 },
   },
-} satisfies Omit<OutfitCharacterInfo, 'id' | 'label' | 'outfit'>;
+} satisfies Omit<OutfitCharacterInfo, 'id' | 'outfit'>;

@@ -9,7 +9,7 @@
 ## 1. Files
 
 - **`src/characters/<name>/character.ts`** declares the character with `defineCharacter`:
-  - `name`, `skeleton`, `skin`, the theme's `CAMERA`;
+  - `name` (the character's id, e.g. `ossuary-guard`), `label` (the name people read, for a game's menus and the viewer; default the name in words, `Ossuary guard`), `skeleton`, `skin`, the theme's `CAMERA`;
   - the cell (`width`, `height`), the `pivot` (where the feet stand in the cell) and a `shadow` (`alpha(PALETTES.ink, 0.35)` in the examples; an ellipse sized from the rest feet and `skeleton.height`);
   - `frames` (default per clip) and `directions`;
   - `sockets` (named points for effects);
@@ -17,7 +17,7 @@
   Nothing in `src/` is exported by itself: the sheets are.
 - **`sheets/characters/<name>/<key>.ts`**, one per clip, is one line: `export default character.sheet('<key>')`, importing `character` from `src/characters/<name>/character.ts`. The key is the file name: lowercase letters, digits and dashes.
   - `defineCharacter` takes the keys from `clips`, so a key the character does not declare (a typo, a clip not added to `clips` yet) is a type error in the sheet file, reported by `npm run check`, and not a failure at export. `ClipKey<typeof character>` is the union of the keys.
-  - Keep the keys visible to TypeScript: write `clips` as an object literal, and end a shared rig object (`spec.ts`) with `satisfies Omit<OutfitCharacterInfo, 'id' | 'label' | 'outfit'>` instead of annotating it with that type. An annotation, or clips built with `Object.fromEntries` (as `new-outfit-character` does), widens the keys to `string`: every key type-checks and a wrong one fails only at export.
+  - Keep the keys visible to TypeScript: write `clips` as an object literal, and end a shared rig object (`spec.ts`) with `satisfies Omit<OutfitCharacterInfo, 'id' | 'outfit'>` instead of annotating it with that type. The rig then carries the `label`, so the gear kit's `CHARACTERS` and `defineCharacter` spread one name. An annotation, or clips built with `Object.fromEntries` (as `new-outfit-character` does), widens the keys to `string`: every key type-checks and a wrong one fails only at export.
 - **The skin** lives in its own file when it is long (`src/characters/shared/<name>.ts` or `<name>-skin.ts` when several characters use it), and so do skeleton and clip factories for a new body plan; a character's own clip factories go in `src/characters/<name>/clips/<clip>.ts`, its rig in `spec.ts` and a saved outfit in `outfit.ts`.
 - **Scaffolding:** `npm run new-asset -- <p> characters/<name>/<clip> --engine rig` writes `src/characters/<name>/character.ts` on the first clip, with a mannequin skin and the preset clip named by the file (or by `--clip`), and the clip's sheet. For later clips it writes the sheet and prints the entry to add to `clips`; until you add it, `npm run check` reports the sheet's key as a type error. For a new body plan, scaffold with any `--skeleton`, then replace the skeleton and clips with your own factories.
 - **Block out first:** use `mannequinSkin(VOLUMES.x)` (it draws any skeleton) to check proportions and motion in every facing. Write the real skin after.
