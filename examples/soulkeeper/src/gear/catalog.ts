@@ -82,7 +82,7 @@ const PARTS: PartInfo[] = [
   // Head: the skull, the living head and its hair, and what sits on a head.
   { id: 'bone-skull', label: 'Skull', group: 'head', kind: 'body', part: boneSkull, slots: ['head'], roles: ['bone', 'hollow', 'glow'] },
   { id: 'skull-sutures', label: 'Skull sutures', group: 'head', kind: 'body', part: skullSutures, slots: ['head'], roles: ['boneGroove', 'hollow'], requires: 'bone-skull' },
-  { id: 'flesh-head', label: 'Flesh head', group: 'head', kind: 'body', part: fleshHead, slots: ['head'], roles: ['flesh', 'hair', 'hollow'] },
+  { id: 'flesh-head', label: 'Flesh head', group: 'head', kind: 'body', part: fleshHead, slots: ['head'], roles: ['skin', 'hair', 'hollow'] },
   { id: 'hair-crop', label: 'Hair, cropped', group: 'head', kind: 'body', part: hairCrop, slots: ['head'], roles: ['hair'], requires: 'flesh-head' },
   { id: 'hair-tail', label: 'Hair, tied tail', group: 'head', kind: 'body', part: hairTail, slots: ['head'], roles: ['hair'], requires: 'flesh-head' },
   {
@@ -138,7 +138,7 @@ const PARTS: PartInfo[] = [
   // `length` is left out: by default it follows the skeleton (down to a hand above the ankles), so it has no fixed default to offer.
   { id: 'long-coat', label: 'Long coat (skirt)', group: 'torso', part: longCoat, slots: ['pelvis'], roles: ['cloth'], options: [variation('long-coat')] },
   // `length` is left out like the long coat's: by default the fall reaches the standing body's ankles.
-  { id: 'cloak', label: 'Cloak', group: 'torso', equip: 'cloak', part: cloak, slots: ['back'], roles: ['cloth', 'clothAccent'], options: [variation('cloak')] },
+  { id: 'cloak', label: 'Cloak', group: 'torso', equip: 'cloak', part: cloak, slots: ['back'], roles: ['cloak', 'cloth', 'clothAccent'], options: [variation('cloak')] },
   { id: 'shawl', label: 'Shawl', group: 'torso', equip: 'shawl', part: shawl, slots: ['chest'], roles: ['cloth', 'clothAccent'] },
   {
     id: 'apron', label: 'Work apron', group: 'torso', equip: 'apron', part: apron, slots: ['pelvis'], roles: ['cloth', 'leather'],
@@ -212,15 +212,15 @@ const PARTS: PartInfo[] = [
   { id: 'rib-cage', label: 'Rib cage', group: 'bodies', kind: 'body', part: ribCage, slots: ['chest'], roles: ['boneLimb', 'bone', 'hollow'] },
   { id: 'bone-arm', label: 'Bone arm', group: 'bodies', kind: 'body', part: boneArm, slots: ['shoulder'], roles: ['boneLimb', 'bone'] },
   { id: 'bone-hand', label: 'Open bone hand', group: 'bodies', kind: 'body', part: boneHand, slots: ['hand'], roles: ['boneLimb', 'bone'] },
-  { id: 'flesh-torso', label: 'Flesh torso', group: 'bodies', kind: 'body', part: fleshTorso, slots: ['chest'], roles: ['flesh'] },
-  { id: 'flesh-arm', label: 'Flesh arm', group: 'bodies', kind: 'body', part: fleshArm, slots: ['shoulder'], roles: ['flesh'] },
-  { id: 'flesh-hand', label: 'Flesh hand', group: 'bodies', kind: 'body', part: fleshHand, slots: ['hand'], roles: ['flesh'] },
-  { id: 'flesh-leg', label: 'Flesh leg', group: 'bodies', kind: 'body', part: fleshLeg, slots: ['thigh'], roles: ['flesh'] },
+  { id: 'flesh-torso', label: 'Flesh torso', group: 'bodies', kind: 'body', part: fleshTorso, slots: ['chest'], roles: ['skin'] },
+  { id: 'flesh-arm', label: 'Flesh arm', group: 'bodies', kind: 'body', part: fleshArm, slots: ['shoulder'], roles: ['skin'] },
+  { id: 'flesh-hand', label: 'Flesh hand', group: 'bodies', kind: 'body', part: fleshHand, slots: ['hand'], roles: ['skin'] },
+  { id: 'flesh-leg', label: 'Flesh leg', group: 'bodies', kind: 'body', part: fleshLeg, slots: ['thigh'], roles: ['skin'] },
 ];
 
 const BASES: BaseInfo[] = [
   { id: 'bone-legs', label: 'Bone legs', skin: boneLegs, roles: ['boneLimb', 'bone'] },
-  { id: 'flesh-legs', label: 'Flesh legs', skin: fleshLegs, roles: ['flesh'] },
+  { id: 'flesh-legs', label: 'Flesh legs', skin: fleshLegs, roles: ['skin'] },
 ];
 
 export const CATALOG: GearCatalog = {

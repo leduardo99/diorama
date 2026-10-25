@@ -34,22 +34,30 @@ export const hood: Part<HoodOptions> = (ctx, { size = 1, point = true }) => {
   const cam = kit.camera;
   const cloth = role(materials, 'cloth');
   const on = host ? { on: host } : {};
-  const cap = Round.ellipsoid(head.moved(-1.9, 0, 2.1), 5 * size, 4.9 * size, 5.2 * size);
+  // The cap sits back on the crown, so the face beneath reads: eyes, brows, nose and mouth all
+  // stand forward of its edge in the front and 3/4 facings, and the profile reads in W/E.
+  const cap = Round.ellipsoid(head.moved(-2.7, 0, 2.4), 4.9 * size, 4.85 * size, 5 * size);
   o.add(cap, cloth, on);
-  // The rim of the opening: the arc of the face-plane ellipse that faces the camera.
-  const rim = visibleArc(cam, head.at(3 * size, 0, 0.9), head.right, head.up, 5 * size, 5.1 * size);
-  if (rim.length) o.add(new Tube(rim, 1.1), materials.clothAccent ?? cloth, on);
-  // The cowl: cloth bunched round the neck onto the shoulders.
+  // The rim of the opening: the arc of the face-plane ellipse that faces the camera, set back
+  // behind the brow line and tall enough to frame the whole face.
+  const rim = visibleArc(cam, head.at(1.5 * size, 0, 0.7), head.right, head.up, 4.7 * size, 4.9 * size);
+  if (rim.length) o.add(new Tube(rim, 1.15), materials.clothAccent ?? cloth, on);
+  // The cowl: cloth bunched round the neck onto the shoulders in a deep open neckline — its top
+  // ring tilts down toward the chest, so the front edge clears the jaw and the face the rim
+  // frames stays open, while the back stays high against the skull; its lower edge is in the
+  // accent cloth so the hood separates from the coat it lies on.
   const s = trunkScale(ctx);
-  const cowl = Round.loft(
-    [[-3.2, 5.3, 4.7], [-6.5, 6.4, 5.3], [-10, 7.4, 5.7]].map(([h, rx, ry]) => ({
-      center: head.at(-0.2, 0, h * s),
-      rx,
-      ry,
-      axes: [head.right, head.forward] as [Vec3, Vec3],
-    })),
-  );
-  o.add(cowl, cloth, on);
+  const dip = norm3(sub3(head.forward, scale3(head.up, 0.55)));
+  const ring = (h: number, rx: number, ry: number, axes: [Vec3, Vec3]) => ({ center: head.at(-0.8, 0, h * s), rx, ry, axes });
+  const cowl = Round.loft([ring(-6.6, 4.9, 4.1, [head.right, dip]), ring(-8.8, 6.6, 5.4, [head.right, head.forward]), ring(-11.5, 7.6, 5.9, [head.right, head.forward])]);
+  // The cowl sorts by its own depth, not `on` the head: it wraps the neck, so the head's chin and
+  // face must draw over its front edge instead of the cowl painting over them.
+  o.add(cowl, cloth);
+  const trim = materials.clothAccent;
+  if (trim) {
+    const hem = visibleArc(cam, head.at(-0.2, 0, -9.6 * s), head.right, head.forward, 7.3 * s, 5.6 * s);
+    if (hem.length > 1) o.add(new Tube(hem, 0.75), trim, on);
+  }
   if (point) o.add(new Tube([head.at(-2, 0, 5.4 * size), head.at(-4.4, 0, 7.6 * size), head.at(-6.4, 0, 7.2 * size - 3.5 * lie)], { start: 2.4 * size, end: 0.5 }), cloth, on);
   return cap;
 };
@@ -64,14 +72,17 @@ export interface CloakOptions {
 
 /**
  * A cloak: a yoke over the shoulders, a long fall down the back that sways with the legs and
- * drapes flat along the floor once the body lies, and a small front collar the fall hangs from.
- * Slot: `back`. Roles: `cloth`, `clothAccent` (optional: the fall's edge). Returns the fall.
+ * drapes flat along the floor once the body lies, a small front collar the fall hangs from, and a
+ * hem of a few broad folds. The fall takes the `cloak` role when the outfit gives one, so a cloak
+ * can wear a cloth of its own value and hue next to the coat and the hood.
+ * Slot: `back`. Roles: `cloak` (fallback `cloth`), `clothAccent` (optional: the fall's edge).
+ * Returns the fall.
  */
 export const cloak: Part<CloakOptions> = (ctx, { length, seed = 'cloak' }) => {
   const { object: o, pose, kit, body, at, materials } = ctx;
   const { up, right: across, forward: chestFwd, hipRight, hipForward, lie } = body;
   const cam = kit.camera;
-  const cloth = role(materials, 'cloth');
+  const cloth = role(materials, 'cloak', 'cloth');
   const s = trunkScale(ctx);
   const chest = at.frame.origin;
   // The yoke wraps the shoulders at collar height.
@@ -112,15 +123,18 @@ export const cloak: Part<CloakOptions> = (ctx, { length, seed = 'cloak' }) => {
   const deeps: [number, number] = [2.6, 3.4];
   const mix = (pair: [number, number], u: number) => pair[0] + (pair[1] - pair[0]) * u;
   const fall = Round.loft(ends.map(u => ({ center: centre(u), rx: mix(widths, u), ry: mix(deeps, u), axes: [hipRight, hipForward] as [Vec3, Vec3] })));
-  o.add(fall, cloth, { on: collar });
-  // Torn hem tongues across the fall's end.
-  const tongues = 5;
-  for (let k = 0; k < tongues; k++) {
-    const frac = ((k + 0.5) / tongues) * 2 - 1;
-    const base = centre(0.8, frac * mix(widths, 0.8) * 0.9);
-    const tip = centre(1.04 + rng.float(0, 0.08), frac * mix(widths, 1) * 0.96 + rng.float(-0.5, 0.5));
-    const mid = lerp3(base, tip, 0.5);
-    o.add(new Tube([base, mid, tip], { start: ((mix(widths, 0.8) * 1.8) / tongues) * rng.float(1, 1.4), end: 0.35 }), cloth, { on: fall });
+  // The fall hangs down the back and sorts by its own depth: from the front it wraps the body's
+  // silhouette edges instead of covering the coat; from the back it is the body's coat-facing side.
+  o.add(fall, cloth);
+  // The hem: three broad folds that overlap and drape, each its own length — wide cloth masses,
+  // not a row of tongues.
+  const folds = 3;
+  for (let k = 0; k < folds; k++) {
+    const frac = ((k + 0.5) / folds) * 2 - 1;
+    const base = centre(0.62, frac * mix(widths, 0.62) * 0.72);
+    const tip = centre(1.02 + rng.float(0, 0.1), frac * mix(widths, 1) * 0.82 + rng.float(-0.4, 0.4));
+    const mid = lerp3(base, tip, 0.55);
+    o.add(new Tube([base, mid, tip], { start: mix(widths, 0.8) * 0.62 * rng.float(0.95, 1.15), end: 0.5 }), cloth, { on: fall });
   }
   // The fall's edge in the accent cloth, when the outfit gives one.
   const trim = materials.clothAccent;
@@ -149,7 +163,9 @@ export const boot: Part<NoOptions> = ctx => {
     Round.ellipsoid(partFrame(add3(foot, f.dir(2, 0, 0.9)), f.forward), 4.3, 2.4, 2),
     new Tube([add3(ankle, f.dir(0, 0, 6.5)), ankle], { start: 2.9, end: 2.4 }),
   ]);
-  o.add(boot, leather);
+  // The bias lifts the boot over the leg it covers: the leg's mass averages deeper than the
+  // foot-level boot, and without it the skin foot would paint over the leather.
+  o.add(boot, leather, { bias: 12 });
   return boot;
 };
 
@@ -169,16 +185,17 @@ export const glove: Part<GloveOptions> = (ctx, { cuff = 1 }) => {
   const leather = role(materials, 'leather');
   const f = at.frame;
   const band = new Tube([f.at(0.2, -2.9, 0.6), f.at(0.4, 0, 1.9), f.at(0.2, 2.9, 0.6), f.at(-0.2, 2.6, -1.3), f.at(-0.2, -2.6, -1.3), f.at(0.2, -2.9, 0.6)], 1.15 * cuff);
-  o.add(band, leather);
+  // The bias lifts the glove over the arm it covers: the arm's mass averages deeper than the hand.
+  o.add(band, leather, { bias: 6 });
   const palm = Round.ellipsoid(f.moved(2.3, 0, 0.15), 3, 2.7, 1.4);
-  o.add(palm, leather, { on: band });
+  o.add(palm, leather, { on: band, bias: 6 });
   for (let i = 0; i < 4; i++) {
     const y = (i - 1.5) * 1.4;
     const len = 4.5 - 0.45 * Math.abs(i - 1.5) * 1.2 + (i === 1 || i === 2 ? 0.4 : 0);
-    o.add(new Tube([f.at(3.8, y * 0.9, 0.4), f.at(3.8 + len * 0.55, y * 1.15, 0.9), f.at(3.8 + len, y * 1.3, 1.9)], { start: 1.25, end: 0.65 }), leather, { on: palm });
+    o.add(new Tube([f.at(3.8, y * 0.9, 0.4), f.at(3.8 + len * 0.55, y * 1.15, 0.9), f.at(3.8 + len, y * 1.3, 1.9)], { start: 1.25, end: 0.65 }), leather, { on: palm, bias: 6 });
   }
   const inner = -at.side;
-  o.add(new Tube([f.at(1.5, inner * 2, 0.2), f.at(3.1, inner * 3.4, 0.7), f.at(4.7, inner * 3.9, 1.5)], { start: 1.5, end: 0.7 }), leather, { on: palm });
+  o.add(new Tube([f.at(1.5, inner * 2, 0.2), f.at(3.1, inner * 3.4, 0.7), f.at(4.7, inner * 3.9, 1.5)], { start: 1.5, end: 0.7 }), leather, { on: palm, bias: 6 });
   return palm;
 };
 

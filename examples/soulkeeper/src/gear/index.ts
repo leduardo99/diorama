@@ -39,7 +39,7 @@
  * - `wood`: shield disc; `woodSeam` (optional): its plank seams, `woodDark` of the theme when not set;
  * - `bone`: skull, jaw, teeth, horns; `boneLimb`: limb bones, spine, ribs (falls back to `bone`);
  * - `boneGroove` (optional): the flat grooves carved into bone (cranial sutures), `hollow` when not set;
- * - `flesh`: the living body (skin); `hair`: brows and hair parts;
+ * - `skin`: the living body (flesh parts); `hair`: brows and hair parts;
  * - `hollow`: inside of the rib cage, mouth and sockets;
  * - `glow`: soul fire, for eyes, runes and the fire effects;
  * - the long coat also reads `cloth` (coat, collar, sleeves), `clothAccent` (sash tail, grimoire cover),

@@ -16,7 +16,7 @@ export const OUTFIT: OutfitData = {
   // Which theme material plays each role of the gear kit for the villager: olive work clothes,
   // leather straps and boots, chestnut hair.
   materials: {
-    flesh: 'flesh',
+    skin: 'skin',
     hair: 'leather',
     hollow: 'hollow',
     cloth: 'moss',

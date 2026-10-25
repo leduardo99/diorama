@@ -22,14 +22,17 @@ import type { OutfitData } from '@core/rig';
 
 export const OUTFIT: OutfitData = {
   base: 'flesh-legs',
-  // Which theme material plays each role of the gear kit for the warden: dark robe and cloak over
-  // living skin, brown hair for the brows, iron fittings, the kit's pale blade.
+  // Which theme material plays each role of the gear kit for the warden: violet cloth for the
+  // coat and hood with a lighter sash trim, a weathered grey-tan cloak (the `cloak` role) so the
+  // three masses separate in value and hue, living skin, brown hair, iron fittings, the kit's
+  // pale blade.
   materials: {
-    flesh: 'flesh',
+    skin: 'skin',
     hair: 'wood',
     hollow: 'hollow',
     cloth: 'robe',
-    clothAccent: 'sash',
+    cloak: 'timber',
+    clothAccent: 'sashLit',
     leather: 'leather',
     metal: 'iron',
     blade: 'blade',

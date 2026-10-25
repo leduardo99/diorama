@@ -17,14 +17,14 @@
  * mouth slackens; in an idle clip (`clip.kind === 'idle'`) the eyes blink once a loop.
  *
  * Materials by role:
- * - `flesh`: skin (head, neck, torso, arms, hands, legs, feet);
+ * - `skin`: the living body (head, neck, torso, arms, hands, legs, feet);
  * - `hair`: brows and the hair parts (no hair part: the brows only);
  * - `hollow`: the mouth's inside, the eyes' dark.
  */
 
 import { Polygon } from '@core/draw';
 import { bump, outfit, partFrame, type OutfitPiece, type OutfitSpec, type Part } from '@core/rig';
-import { Blob, Decal, Round, Tube, add3, norm3, scale3, sub3, vec3, type Vec3 } from '@core/volume';
+import { Blob, Decal, Round, Tube, add3, dot3, norm3, scale3, sub3, vec3, type Vec3 } from '@core/volume';
 import { headFrame } from './heads';
 import { trunkScale } from './torso';
 import { armOf, clamp01, legOf, role, tones, type NoOptions } from './util';
@@ -48,17 +48,19 @@ const quad = (a: { x: number; y: number }, b: { x: number; y: number }, width: n
 
 /**
  * A living head: cranium, jaw and ears as one mass, a neck down to the collar, and a face — two
- * eyes with lids, two brows, a nose and a mouth — laid as flat marks on the face's plane, with
- * profile twins of the eyes on the sides so the head is not blank in the profile facings. The
- * brows take the `hair` role, so they match whatever the hair parts wear.
- * Slot: `head`. Roles: `flesh`, `hair`, `hollow`. Channels: `extra.brow`, `extra.mouth`,
+ * eyes with lids, two brows, a nose and a mouth — laid as flat marks on the face's plane. Each
+ * mark shows only where its face turns to the camera: the front face carries both eyes while it
+ * dominates (through the 3/4 facings, so a facing never shows more than two eyes), and only near
+ * the profile facings does the turned side carry its single eye, brow and mouth edge. The brows
+ * take the `hair` role, so they match whatever the hair parts wear.
+ * Slot: `head`. Roles: `skin`, `hair`, `hollow`. Channels: `extra.brow`, `extra.mouth`,
  * `extra.eyes` (plus `extra.hurt` and `extra.dead`, which the face reads on its own).
  */
 export const fleshHead: Part<NoOptions> = ctx => {
   const { object: o, pose, kit, materials } = ctx;
   const { head, faceFwd, up, lie } = headFrame(ctx);
-  const flesh = role(materials, 'flesh');
-  const skin = flesh.ramp;
+  const skin = role(materials, 'skin');
+  const tone = skin.ramp;
   const hair = role(materials, 'hair');
   const hollow = tones(materials, 'hollow');
 
@@ -72,38 +74,58 @@ export const fleshHead: Part<NoOptions> = ctx => {
   const raise = Math.max(0, brow);
   const furrow = Math.max(0, -brow);
 
+  // Which side of the head turns to the camera. The marks draw only on the face they belong to:
+  // the front while the face dominates or ties (S through the 3/4 facings, so a facing never shows
+  // more than two eyes), the turned side only near the profile facings, and nothing once the back
+  // of the head shows — no stray marks at NW, NE or N.
+  const view = kit.camera.viewDir;
+  const ahead = dot3(view, faceFwd);
+  const aside = dot3(view, head.right);
+  const frontOn = ahead >= Math.abs(aside) - 0.02;
+  const sideOn = Math.abs(aside) >= 0.6 && ahead < 0.35 ? Math.sign(aside) : 0;
+
   // Cranium and the jaw/cheek mass under it, merged so the head reads as one volume.
   const skull = new Blob([
     Round.ellipsoid(head.moved(-0.4, 0, 0.7), 4.6, 4.25, 4.55),
     Round.ellipsoid(partFrame(head.at(2.3, 0, -2.7), faceFwd, up), 2.9, 3.3, 2.3),
   ]);
-  o.add(skull, flesh);
-  for (const s of [-1, 1]) o.add(Round.ellipsoid(head.moved(-0.6, s * 4.05, -0.9), 0.85, 0.5, 1.05), flesh, { on: skull });
-  // The nose reads in profile: a small bump on the face's front.
-  o.add(Round.ellipsoid(partFrame(head.at(4.1, 0, -1), faceFwd, up), 0.55, 0.5, 0.7), flesh, { on: skull });
+  o.add(skull, skin);
+  // Ears stay on the head's sides in every facing; the ear on the far side hides once the head
+  // turns enough for it to read as a stray oval instead of an ear.
+  for (const s of [-1, 1]) if (s * aside > -0.4) o.add(Round.ellipsoid(head.moved(-0.6, s * 4.05, -0.9), 0.8, 0.45, 0.95), skin, { on: skull });
+  // The nose reads in profile: a small bump on the face's front. Only while the face carries
+  // marks — at rear facings it would poke out of the silhouette as a stray lump.
+  if (frontOn || sideOn !== 0) o.add(Round.ellipsoid(partFrame(head.at(4.1, 0, -1), faceFwd, up), 0.55, 0.5, 0.7), skin, { on: skull });
 
-  for (const s of [-1, 1]) {
-    // Eye: the white (skin's lightest tone), the iris, the upper lid's crease; the lid closes by
-    // flattening the white and the iris until only the crease reads.
-    o.add(Decal.onFace(head, 'front', vec3(3.95, s * 1.55, -0.1), Polygon.ellipse(0.95, 0.68 * eyes + 0.08)), { fill: skin.lit }, { on: skull });
-    o.add(Decal.onFace(head, 'front', vec3(3.97, s * 1.55, -0.14), Polygon.ellipse(0.5, 0.56 * eyes + 0.05)), { fill: hollow.dark }, { on: skull });
-    o.add(Decal.onFace(head, 'front', vec3(3.95, s * 1.55, 0.62), Polygon.rect(1.2, 0.3)), { fill: skin.dark }, { on: skull });
-    // Brow: a hair run over the eye, drawn on the face's plane (decal space: x runs towards the
-    // character's left, y downwards); the inner end drops when the face furrows, lifts when it raises.
-    const browAt = (side: number, up2: number) => ({ x: -s * side, y: -up2 });
-    o.add(
-      Decal.onFace(head, 'front', vec3(4.5, 0, 0), Polygon.fromPoints(quad(browAt(2.6, 1.35 + 0.35 * raise), browAt(0.85, 1.75 + 0.5 * raise - 0.9 * furrow), 0.62))),
-      { fill: hair.ramp.base },
-      { on: skull },
-    );
-    // Profile twins: the eye and the brow on the side of the head, so profile facings keep a face.
-    const side = s > 0 ? 'right' : 'left';
-    o.add(Decal.onFace(head, side, vec3(2.75, s * 4.28, -0.1), Polygon.ellipse(0.55, 0.6 * eyes + 0.05)), { fill: hollow.dark }, { on: skull });
-    o.add(Decal.onFace(head, side, vec3(2.7, s * 4.28, 1.45 + 0.35 * raise - 0.45 * furrow), Polygon.rect(1.35, 0.55)), { fill: hair.ramp.base }, { on: skull });
+  if (frontOn) {
+    for (const s of [-1, 1]) {
+      // Eye: the white (skin's lightest tone), the iris, the upper lid's crease; the lid closes by
+      // flattening the white and the iris until only the crease reads.
+      o.add(Decal.onFace(head, 'front', vec3(3.95, s * 1.75, -0.15), Polygon.ellipse(1.25, 0.9 * eyes + 0.1)), { fill: tone.lit }, { on: skull });
+      o.add(Decal.onFace(head, 'front', vec3(3.97, s * 1.75, -0.2), Polygon.ellipse(0.7, 0.74 * eyes + 0.06)), { fill: hollow.dark }, { on: skull });
+      o.add(Decal.onFace(head, 'front', vec3(3.95, s * 1.75, 0.78), Polygon.rect(1.6, 0.4)), { fill: tone.dark }, { on: skull });
+      // Brow: a hair run over the eye, drawn on the face's plane (decal space: x runs towards the
+      // character's left, y downwards); the inner end drops when the face furrows, lifts when it raises.
+      const browAt = (side: number, up2: number) => ({ x: -s * side, y: -up2 });
+      o.add(
+        Decal.onFace(head, 'front', vec3(4.5, 0, 0), Polygon.fromPoints(quad(browAt(2.9, 1.45 + 0.35 * raise), browAt(0.75, 1.9 + 0.5 * raise - 0.95 * furrow), 0.75))),
+        { fill: hair.ramp.base },
+        { on: skull },
+      );
+    }
+    // Nose shadow and mouth on the face's front; the mouth is a thin line at rest that opens into an oval.
+    o.add(Decal.onFace(head, 'front', vec3(4.45, 0, -1.45), Polygon.triangle(1.2, 1.3)), { fill: tone.dark }, { on: skull });
+    o.add(Decal.onFace(head, 'front', vec3(5, 0, -2.4), Polygon.ellipse(1.15 + 0.4 * mouth, 0.22 + 0.75 * mouth)), { fill: hollow.dark }, { on: skull });
   }
-  // Nose shadow and mouth on the face's front; the mouth is a thin line at rest that opens into an oval.
-  o.add(Decal.onFace(head, 'front', vec3(4.45, 0, -1.35), Polygon.triangle(1, 1.1)), { fill: skin.dark }, { on: skull });
-  o.add(Decal.onFace(head, 'front', vec3(5, 0, -2.35), Polygon.ellipse(0.95 + 0.35 * mouth, 0.18 + 0.7 * mouth)), { fill: hollow.dark }, { on: skull });
+  if (sideOn) {
+    // The profile marks, on the one side of the head that faces the camera: a single eye and brow
+    // and the mouth's near corner (the nose's bump is a mass, and already reads).
+    const side = sideOn > 0 ? 'right' : 'left';
+    const y = sideOn * 4.25;
+    o.add(Decal.onFace(head, side, vec3(2.9, y, -0.05), Polygon.ellipse(0.7, 0.75 * eyes + 0.07)), { fill: hollow.dark }, { on: skull });
+    o.add(Decal.onFace(head, side, vec3(2.85, y, 1.55 + 0.35 * raise - 0.5 * furrow), Polygon.rect(1.6, 0.65)), { fill: hair.ramp.base }, { on: skull });
+    o.add(Decal.onFace(head, side, vec3(4.1, sideOn * 4.1, -2.15), Polygon.rect(1.1, 0.22 + 0.45 * mouth)), { fill: hollow.dark }, { on: skull });
+  }
   return skull;
 };
 
@@ -112,7 +134,7 @@ export const fleshHead: Part<NoOptions> = ctx => {
  * breadth to a neck that ends under the jaw, so the head never floats and garments sit on a body,
  * not on air. Follows the trunk, so a hit recoils it and a death lays it down. Returns the loft,
  * so garments can rest on it.
- * Slot: `chest`. Roles: `flesh`.
+ * Slot: `chest`. Roles: `skin`.
  */
 export const fleshTorso: Part<NoOptions> = ctx => {
   const { object: o, body, at, materials } = ctx;
@@ -121,7 +143,7 @@ export const fleshTorso: Part<NoOptions> = ctx => {
   const c = at.frame.origin;
   const ring = (h: number, rx: number, ry: number) => ({ center: add3(c, scale3(up, h * s)), rx, ry, axes: [across, chestFwd] as [Vec3, Vec3] });
   const torso = Round.loft([ring(-20.5, 5.2, 3.9), ring(-14, 4.9, 3.7), ring(-8, 5.5, 4), ring(-2.5, 6.7, 4.4), ring(0.8, 7.6, 4.3), ring(3.4, 6, 3.6), ring(6, 2.9, 2.6), ring(9, 2.35, 2.1)]);
-  o.add(torso, role(materials, 'flesh'));
+  o.add(torso, role(materials, 'skin'));
   return torso;
 };
 
@@ -147,8 +169,10 @@ export const hairCrop: Part<NoOptions> = ctx => {
 };
 
 /**
- * A sleek cap drawn back into a tail: the hair hugs the skull (a shorter fringe than the crop) and
- * a tied fall runs from the crown down past the nape, following the head, so it lies with it.
+ * Hair drawn back into a tail: a cap that hugs the skull with a low, tufted hairline across the
+ * forehead (so the front reads as hair, not a helmet), wisps before the ears, and the tied fall —
+ * swung a little to one side so it peeks out behind the shoulder in profile and hangs down the
+ * back in the rear facings. Follows the head, so it lies with it.
  * Rests on the head (`on: '<head id>'`, `requires` the flesh head).
  * Slot: `head`. Roles: `hair`.
  */
@@ -157,28 +181,34 @@ export const hairTail: Part<NoOptions> = ctx => {
   const { head, lie } = headFrame(ctx);
   const hair = role(materials, 'hair');
   const on = host ? { on: host } : {};
-  const cap = Round.ellipsoid(head.moved(-1.35, 0, 1.55), 4.7, 4.35, 4.4);
+  const cap = Round.ellipsoid(head.moved(-1.5, 0, 1.7), 4.65, 4.3, 4.35);
   o.add(cap, hair, on);
-  // The fall: gathered at the crown, it hangs past the nape and slackens when the head lies.
+  // The hairline: a low fringe running temple to temple, dipping at the middle.
+  o.add(new Tube([head.at(4.35, -2.9, 1.9), head.at(4.6, -1.3, 1.4), head.at(4.7, 0, 1.1), head.at(4.6, 1.3, 1.4), head.at(4.35, 2.9, 1.9)], { start: 0.95, end: 0.95 }), hair, on);
+  for (const s of [-1, 1]) {
+    // A wisp before the ear.
+    o.add(new Tube([head.at(4.3, s * 3, 1.6), head.at(4.45, s * 2.2, 0.8), head.at(4.2, s * 1.7, 0.1)], { start: 0.7, end: 0.4 }), hair, on);
+  }
+  // The fall: tied at the crown's back, it slips to the right of the nape so the tail reads from
+  // the side and the back, and slackens when the head lies.
   const drop = 1 - 0.4 * lie;
-  const tie = Round.ellipsoid(head.moved(-4.5, 0, 2.6), 1.1, 1, 1.1);
+  const tie = Round.ellipsoid(head.moved(-4.3, 0.9, 2.7), 1, 0.95, 1.05);
   o.add(tie, hair, on);
   o.add(
     new Tube(
-      [head.at(-4.9, 0, 2.2), head.at(-5.4, 0.6, -1.8 * drop), head.at(-4.4, 0.4, -6.2 * drop)],
-      { start: 1.9, end: 0.8 },
+      [head.at(-4.6, 0.9, 2.1), head.at(-5.5, 1.8, -1.4 * drop), head.at(-4.6, 1.5, -6.4 * drop)],
+      { start: 1.8, end: 0.75 },
     ),
     hair,
     on,
   );
-  for (const s of [-1, 1]) o.add(new Tube([head.at(4.2, s * 2.4, 2.1), head.at(4.45, s * 1.2, 2.5), head.at(4.3, s * 0.2, 2.6)], { start: 0.7, end: 0.45 }), hair, on);
   return cap;
 };
 
 /**
  * One fleshed arm: a rounded shoulder, upper arm, elbow, forearm and a wrist nub as one mass,
  * thicker than the bone arm's bare bones. Returns the arm so a bracer or a sleeve can rest on it.
- * Slot: `shoulder` (side -1 left, 1 right). Roles: `flesh`.
+ * Slot: `shoulder` (side -1 left, 1 right). Roles: `skin`.
  */
 export const fleshArm: Part<NoOptions> = ctx => {
   const { object: o, pose, body, at } = ctx;
@@ -191,37 +221,35 @@ export const fleshArm: Part<NoOptions> = ctx => {
     new Tube([el, ha], { start: 2.4, end: 1.9 }),
     Round.ellipsoid(partFrame(add3(ha, scale3(d, 0.5)), d), 2, 1.7, 1.5),
   ]);
-  o.add(arm, role(ctx.materials, 'flesh'));
+  o.add(arm, role(ctx.materials, 'skin'));
   return arm;
 };
 
 /**
- * A relaxed flesh hand: a palm a little thicker than the bone hand's, four fingers curled a
- * little, and a thumb on the inner side; it sits at the wrist and points along the forearm.
- * Pair it with a `glove` (the glove's cuff covers the wrist) or a held item.
- * Slot: `hand` (side -1 left, 1 right). Roles: `flesh`.
+ * A relaxed flesh hand: a palm with the fingers kept as one soft, slightly tapered mass — at 1×
+ * four separate fingers only read as claws — plus a thumb nub on the inner side. It sits at the
+ * wrist and points along the forearm. Pair it with a `glove` (the glove's cuff covers the wrist)
+ * or a held item.
+ * Slot: `hand` (side -1 left, 1 right). Roles: `skin`.
  */
 export const fleshHand: Part<NoOptions> = ctx => {
   const { object: o, at, materials } = ctx;
-  const flesh = role(materials, 'flesh');
+  const skin = role(materials, 'skin');
   const f = at.frame;
-  const palm = Round.ellipsoid(f.moved(2.2, 0, 0.1), 2.8, 2.5, 1.2);
-  o.add(palm, flesh);
-  for (let i = 0; i < 4; i++) {
-    const y = (i - 1.5) * 1.35;
-    const len = 4.5 - 0.45 * Math.abs(i - 1.5) * 1.2 + (i === 1 || i === 2 ? 0.4 : 0);
-    o.add(new Tube([f.at(3.7, y * 0.9, 0.4), f.at(3.7 + len * 0.55, y * 1.15, 0.9), f.at(3.7 + len, y * 1.3, 1.9)], { start: 1.15, end: 0.6 }), flesh, { on: palm });
-  }
-  // The thumb on the side towards the body, kicked out and up.
+  const palm = Round.ellipsoid(f.moved(1.9, 0, 0.05), 2.2, 2, 0.95);
+  o.add(palm, skin);
+  // The fingers together: a short, softly tapering curl.
+  o.add(new Tube([f.at(3, 0, 0.25), f.at(4.9, 0, 0.7), f.at(5.9, 0, 1.6)], { start: 1.7, end: 0.85 }), skin, { on: palm });
+  // The thumb on the side towards the body, a short nub kicked a little out.
   const inner = -at.side;
-  o.add(new Tube([f.at(1.4, inner * 1.9, 0.2), f.at(3, inner * 3.3, 0.7), f.at(4.6, inner * 3.8, 1.5)], { start: 1.4, end: 0.65 }), flesh, { on: palm });
+  o.add(new Tube([f.at(1.7, inner * 1.5, 0.1), f.at(3.1, inner * 2.6, 0.6)], { start: 1.05, end: 0.6 }), skin, { on: palm });
   return palm;
 };
 
 /**
  * One fleshed leg: thigh, knee, shin and a shod-able foot as one mass, the flesh counterpart of
  * `boneLeg`. The foot is the bare foot a `boot` covers.
- * Slot: `thigh` (side -1 left, 1 right). Roles: `flesh`.
+ * Slot: `thigh` (side -1 left, 1 right). Roles: `skin`.
  */
 export const fleshLeg: Part<NoOptions> = ctx => {
   const { object: o, pose, at } = ctx;
@@ -230,7 +258,7 @@ export const fleshLeg: Part<NoOptions> = ctx => {
   const f = pose.frame;
   const foot = Round.ellipsoid(partFrame(add3(pose.joints[`${leg}.foot`], f.dir(1.9, 0, 0.8)), f.forward), 3.9, 2.05, 1.5);
   const mass = new Blob([new Tube([hip, knee], { start: 3.4, end: 2.5 }), Round.ellipsoid(partFrame(knee, f.forward), 2.3, 2.3, 2.4), new Tube([knee, ankle], { start: 2.5, end: 1.85 }), foot]);
-  o.add(mass, role(ctx.materials, 'flesh'));
+  o.add(mass, role(ctx.materials, 'skin'));
   return mass;
 };
 
@@ -239,7 +267,7 @@ const fleshHip: Part<NoOptions> = ctx => {
   const { object: o, body, at, materials } = ctx;
   const { up, hipRight, hipForward } = body;
   const hip = Round.ellipsoid(partFrame(add3(at.frame.origin, scale3(up, 1)), hipForward, up), 4.4, 5.9, 4);
-  o.add(hip, role(materials, 'flesh'));
+  o.add(hip, role(materials, 'skin'));
   return hip;
 };
 
@@ -252,7 +280,7 @@ const FLESH_BASE: OutfitPiece[] = [
 /**
  * The base body of a living figure: the hips and both flesh legs. It is an outfit's `base`
  * (`BaseInfo.skin`): the outfit hands it its own materials as the fourth argument, so the legs and
- * hips wear the same `flesh` as the rest of the body.
- * Roles: `flesh`.
+ * hips wear the same `skin` as the rest of the body.
+ * Roles: `skin`.
  */
 export const fleshLegs: NonNullable<OutfitSpec['base']> = (object, pose, kit, materials) => outfit({ materials, pieces: FLESH_BASE })(object, pose, kit);
