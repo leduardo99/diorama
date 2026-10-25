@@ -129,7 +129,7 @@ const PARTS: PartInfo[] = [
     options: [num('length', 'Length', 14, 8, 24, 1), num('width', 'Width', 6.4, 4, 12, 0.2)],
   },
   { id: 'baldric', label: 'Baldric', group: 'torso', part: baldric, slots: ['shoulder'], roles: ['leather'], options: [num('width', 'Width', 1.5, 0.8, 2.6, 0.1)] },
-  { id: 'coat-torso', label: 'Coat (torso)', group: 'torso', equip: 'coat', part: coatTorso, slots: ['chest'], roles: ['cloth'] },
+  { id: 'coat-torso', label: 'Coat (torso)', group: 'torso', equip: 'coat', part: coatTorso, slots: ['chest'], roles: ['cloth'], options: [num('ease', 'Ease', 0, 0, 4, 0.1)] },
   {
     id: 'rib-breastplate', label: 'Rib breastplate', group: 'torso', part: ribBreastplate, slots: ['chest'], roles: ['boneLimb', 'bone', 'hollow'], requires: 'coat-torso',
     options: [num('ribs', 'Rib pairs', 5, 3, 6, 1)],

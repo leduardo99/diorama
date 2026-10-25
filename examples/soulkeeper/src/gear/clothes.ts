@@ -123,18 +123,22 @@ export const cloak: Part<CloakOptions> = (ctx, { length, seed = 'cloak' }) => {
   const deeps: [number, number] = [2.6, 3.4];
   const mix = (pair: [number, number], u: number) => pair[0] + (pair[1] - pair[0]) * u;
   const fall = Round.loft(ends.map(u => ({ center: centre(u), rx: mix(widths, u), ry: mix(deeps, u), axes: [hipRight, hipForward] as [Vec3, Vec3] })));
-  // The fall hangs down the back and sorts by its own depth: from the front it wraps the body's
-  // silhouette edges instead of covering the coat; from the back it is the body's coat-facing side.
-  o.add(fall, cloth);
+  // The fall hangs down the back. Its centroid sits high enough on the trunk to sort in front of
+  // the legs, so while the chest faces the camera a bias drops it behind the body: from the front
+  // it wraps the silhouette's edges instead of covering the coat and the legs; from the back its
+  // own depth already makes it the body's coat-facing side.
+  const frontness = Math.max(0, dot3(chestFwd, cam.viewDir));
+  const behind = { bias: -52 * frontness };
+  o.add(fall, cloth, behind);
   // The hem: three broad folds that overlap and drape, each its own length — wide cloth masses,
-  // not a row of tongues.
+  // not a row of tongues. They ride `on` the fall, so the same bias keeps them behind the body.
   const folds = 3;
   for (let k = 0; k < folds; k++) {
     const frac = ((k + 0.5) / folds) * 2 - 1;
     const base = centre(0.62, frac * mix(widths, 0.62) * 0.72);
     const tip = centre(1.02 + rng.float(0, 0.1), frac * mix(widths, 1) * 0.82 + rng.float(-0.4, 0.4));
     const mid = lerp3(base, tip, 0.55);
-    o.add(new Tube([base, mid, tip], { start: mix(widths, 0.8) * 0.62 * rng.float(0.95, 1.15), end: 0.5 }), cloth, { on: fall });
+    o.add(new Tube([base, mid, tip], { start: mix(widths, 0.8) * 0.62 * rng.float(0.95, 1.15), end: 0.5 }), cloth, { on: fall, ...behind });
   }
   // The fall's edge in the accent cloth, when the outfit gives one.
   const trim = materials.clothAccent;
@@ -142,7 +146,7 @@ export const cloak: Part<CloakOptions> = (ctx, { length, seed = 'cloak' }) => {
     for (const side of [-1, 1]) {
       const run = ends.map(u => centre(u, side * mix(widths, u) * 0.97));
       const arc = run.filter(p => cam.faces(norm3(sub3(p, j.chest))));
-      if (arc.length > 1) o.add(new Tube(arc, 0.8), trim, { on: fall });
+      if (arc.length > 1) o.add(new Tube(arc, 0.8), trim, { on: fall, ...behind });
     }
   }
   return fall;
