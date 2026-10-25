@@ -11,6 +11,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useT } from '@/i18n';
 import { cn } from '@/lib/utils';
 import { buildRows, entrySubtitle, ROOT, type Entry, type KindFilter } from '@/lib/playground/catalog';
+import { SEARCH_KEYS } from '@/lib/playground/keys';
 import type { Armed } from '@/lib/playground/library';
 
 const HEADER_HEIGHT = 28;
@@ -83,10 +84,10 @@ export function PlacementList({ entries, recent, armedKey, playerId, onArm, onCo
             setActiveKey(null);
           }}
           onKeyDown={(e) => {
-            if (e.key === 'ArrowDown') move(1);
-            else if (e.key === 'ArrowUp') move(-1);
-            else if (e.key === 'Enter' && active && active.row.type === 'entry') arm(active.row.entry);
-            else if (e.key === 'Escape') {
+            if (e.key === SEARCH_KEYS.next) move(1);
+            else if (e.key === SEARCH_KEYS.previous) move(-1);
+            else if (e.key === SEARCH_KEYS.arm && active && active.row.type === 'entry') arm(active.row.entry);
+            else if (e.key === SEARCH_KEYS.clear) {
               if (query) setQuery('');
               else e.currentTarget.blur();
             } else return;

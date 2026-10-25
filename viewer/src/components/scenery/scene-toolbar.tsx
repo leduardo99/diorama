@@ -1,17 +1,17 @@
 import type { ReactNode } from 'react';
 import { EyeIcon, EyeOffIcon, GridIcon, KeyboardIcon, MinusIcon, RouteIcon, PanelRightCloseIcon, PanelRightOpenIcon, PlusIcon, Redo2Icon, SaveIcon, ScanIcon, Undo2Icon } from 'lucide-react';
+import { ShortcutList } from '@/components/shortcut-list';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup, ButtonGroupText } from '@/components/ui/button-group';
-import { Kbd, KbdGroup } from '@/components/ui/kbd';
+import { Kbd } from '@/components/ui/kbd';
 import { Popover, PopoverContent, PopoverHeader, PopoverTitle, PopoverTrigger } from '@/components/ui/popover';
 import { Toggle } from '@/components/ui/toggle';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Rich, useT } from '@/i18n';
-import type { Key } from '@/i18n';
 import type { Layer } from '@/lib/scenery/edit';
-import { TOOLS, TOOL_KEYS } from '@/lib/scenery/labels';
 import { stepZoom, type Zoom } from '@/lib/scenery/render';
+import { SHORTCUTS } from '@/lib/shortcuts';
 
 const LAYERS: Layer[] = ['floor', 'walls', 'props'];
 
@@ -38,24 +38,6 @@ interface Props {
   panelOpen: boolean;
   onPanel: (open: boolean) => void;
 }
-
-/** The keys are the same in every language, apart from the ones that are words (`space`). */
-const SHORTCUTS: { keys: string[]; what: Key }[] = [
-  { keys: ['⌘Z'], what: 'scenery.toolbar.keys.undo' },
-  { keys: ['⇧⌘Z'], what: 'scenery.toolbar.keys.redo' },
-  { keys: ['R'], what: 'scenery.toolbar.keys.rotate' },
-  { keys: ['⌫'], what: 'scenery.toolbar.keys.delete' },
-  { keys: ['⌘D'], what: 'scenery.toolbar.keys.duplicate' },
-  { keys: ['←', '↑', '→', '↓'], what: 'scenery.toolbar.keys.nudge' },
-  { keys: ['Esc'], what: 'scenery.toolbar.keys.escape' },
-  { keys: ['G'], what: 'scenery.toolbar.keys.grid' },
-  { keys: ['Tab'], what: 'scenery.toolbar.keys.tab' },
-  { keys: ['−', '+'], what: 'scenery.toolbar.keys.zoom' },
-  { keys: ['0'], what: 'scenery.toolbar.keys.fit' },
-  { keys: ['space'], what: 'scenery.toolbar.keys.pan' },
-  { keys: ['⇧'], what: 'scenery.toolbar.keys.shift' },
-  { keys: ['⌥'], what: 'scenery.toolbar.keys.alt' },
-];
 
 /** The scene, undo, which layers are shown, zoom (with Fit), grid, the piece panel, the shortcut list and save. The tools themselves are in the rail. A single line of a fixed height: the canvas below never moves. When the bar is narrow the layers, Fit and save lose their words, and what still does not fit scrolls. */
 export function SceneToolbar(p: Props) {
@@ -150,28 +132,11 @@ export function SceneToolbar(p: Props) {
             </TooltipTrigger>
             <TooltipContent>{t('scenery.toolbar.shortcuts')}</TooltipContent>
           </Tooltip>
-          <PopoverContent align="end" className="max-h-(--radix-popover-content-available-height) w-80 overflow-y-auto">
+          <PopoverContent align="end" className="max-h-(--radix-popover-content-available-height) w-96 overflow-y-auto">
             <PopoverHeader>
               <PopoverTitle>{t('scenery.toolbar.shortcutsTitle')}</PopoverTitle>
             </PopoverHeader>
-            <dl className="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-1.5">
-              {TOOLS.map((tool) => (
-                <div key={tool} className="col-span-2 grid grid-cols-subgrid items-center">
-                  <dt><Kbd>{TOOL_KEYS[tool]}</Kbd></dt>
-                  <dd className="text-muted-foreground">{t(`scenery.tools.${tool}`)}</dd>
-                </div>
-              ))}
-              {SHORTCUTS.map(({ keys, what }) => (
-                <div key={what} className="col-span-2 grid grid-cols-subgrid items-center">
-                  <dt><KbdGroup>{keys.map((key) => <Kbd key={key}>{key === 'space' ? t('keys.space') : key}</Kbd>)}</KbdGroup></dt>
-                  <dd className="text-muted-foreground">{t(what)}</dd>
-                </div>
-              ))}
-              <div className="col-span-2 grid grid-cols-subgrid items-center">
-                <dt><Kbd>{t('scenery.toolbar.rightButton')}</Kbd></dt>
-                <dd className="text-muted-foreground">{t('scenery.toolbar.rightButtonDoes')}</dd>
-              </div>
-            </dl>
+            {SHORTCUTS.scenery.map((list) => <ShortcutList key={list.title} section={list} />)}
           </PopoverContent>
         </Popover>
 
