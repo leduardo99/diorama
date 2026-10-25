@@ -5,7 +5,7 @@ Diorama makes 2.5D game assets as code: AI coding agents write TypeScript, and t
 ## Two kinds of work
 
 - **Making assets in a project** (`projects/<name>/`, yours, not versioned). Follow the skills in [.agents/skills/](.agents/skills/). Start with `diorama-setup` and `diorama`, then `diorama-volume` or `diorama-rig` for the asset at hand. Check your work with `npm run check -- <project>`, `npm run inspect` and contact sheets. Nothing here goes through a pull request.
-- **Changing Diorama itself**: the engine (`core/`), the packages (`packages/`), the commands (`tools/`), the viewer (`viewer/`), the sample (`examples/soulkeeper/`), the docs. Use the workflow below.
+- **Changing Diorama itself**: the engine (`core/`), the packages (`packages/`), the commands (`tools/`), the viewer (`viewer/`), the sample project (`examples/`), the docs. Use the workflow below.
 
 ## Read before you write
 
@@ -34,19 +34,19 @@ Diorama makes 2.5D game assets as code: AI coding agents write TypeScript, and t
    | You touched | Run |
    | :--- | :--- |
    | Anything | `npx tsc --noEmit -p .`, `npx tsc --noEmit -p viewer`, `npm test` |
-   | `core/`, `tools/export.ts`, the runner, or `examples/soulkeeper/` | The export proof below |
-   | The sample's files | `npm run check -- examples/soulkeeper --strict`, after `npm run export -- examples/soulkeeper` |
+   | `core/`, `tools/export.ts`, the runner, or the sample project in `examples/` | The export proof below |
+   | The sample's files | `npm run check:sample`, after `npm run export:sample` |
    | The viewer's interface | Look at it in `npm run view`, in English and Portuguese, and put screenshots in the pull request |
    | `packages/phaser` | `npm run test:phaser`, and the test bench at `/packages/phaser/demo/` |
    | A public API or its doc comments | `npm run docs:api`, and commit the regenerated `docs/api/` |
    | Docs | `npm run test:docs` (links, paths, snippets) |
 
    **The export proof.** A change must not alter generated images unless that is its point:
-   1. On `main`, before your change, run `npm run export -- examples/soulkeeper`, then `npm run compare-exports -- --save`.
-   2. On your branch, run `npm run export -- examples/soulkeeper`, then `npm run compare-exports`.
+   1. On `main`, before your change, run `npm run export:sample`, then `npm run compare-exports -- --save`.
+   2. On your branch, run `npm run export:sample`, then `npm run compare-exports`.
    3. It must say "The exports are unchanged." If your change alters images on purpose, say which and why in the pull request.
 
-   Use a full export of the sample itself for the proof (about 45 seconds), not `--changed`: an engine change makes no sheet look out of date. `npm run example` is not the proof: it copies the sample into `projects/soulkeeper` (the viewer shows `projects/` only) and, when that copy is there, exports it with `--changed`. While you work, `npm run export -- <project> --changed` re-exports only what your edits touched.
+   Use a full export of the sample itself for the proof, not `--changed`: an engine change makes no sheet look out of date. `npm run example` is not the proof: it copies the sample into `projects/` (the viewer shows `projects/` only) and, when that copy is there, exports it with `--changed`. While you work, `npm run export -- <project> --changed` re-exports only what your edits touched.
 5. **Open a pull request** with the template:
    - what changed and why, with `Closes #<issue>`;
    - the checks you ran and their result;
