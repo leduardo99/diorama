@@ -10,11 +10,12 @@
  *   (a crest on a helm, a smear on a blade). `kind: 'body'` marks the bones under the gear (skull,
  *   ribs, limbs, the fist on the scythe); `equip` names the equipment slot a part takes alone (helm,
  *   pauldron, weapon, shield, greave, bracer, belt, coat), so swapping and equipping replace it.
- *   `wield` says how the sword (blade), the scythe (polearm) and the shield are held, and gives the
- *   sword and the scythe their sockets (`tip`, `lantern`), so a character's tip follows its weapon.
+ *   `wield` says how the sword (blade), the scythe and the spear (polearm) and the shield are held, and
+ *   gives the sword, the scythe and the spear their sockets (`tip`, `lantern`), so a character's tip
+ *   follows its weapon.
  * - `CATALOG.bases`: the base bodies an outfit is drawn over (the bone legs, the flesh legs).
  * - `CATALOG.materials`: the theme's `VOLUMES`, by name.
- * - `CHARACTERS`: the guard, Malvek, the captain, the warden and the villager: each one's rig (label,
+ * - `CHARACTERS`: the guard, Malvek, the captain, the warden, the villager and Ingrid: each one's rig (label,
  *   skeleton, clips with their frames, camera, cell, pivot, shadow, sockets: `characters/<name>/spec.ts`)
  *   and the outfit it wears (`characters/<name>/outfit.ts`). Each character's `character.ts` spreads
  *   that same rig, so the customizer and the exported manifest show one name, and draws that same
@@ -26,7 +27,7 @@
  * characters' rigs, which import the kit.
  *
  * Groups: head (skulls, living heads and hair, helms, crowns, crests, hoods), shoulders, torso
- * (coats, tunics, tabards, collars, cloaks, shawls, aprons), garments (belts, limb wear, sleeves,
+ * (coats, cuirasses, tunics, tabards, tassets, collars, cloaks, wings, shawls, aprons), garments (belts, limb wear, sleeves,
  * hip pieces, boots, gloves), weapons, shields, effects (what a weapon or a hand leaves in the
  * air), bodies (bone limbs, spine, rib cage, hands, and the flesh family).
  */

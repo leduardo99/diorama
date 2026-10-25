@@ -11,8 +11,9 @@
  * - `bodies.ts`: `boneLeg` (thigh), `boneSpine` and `ribCage` (chest), `boneArm` (shoulder), `boneHand`
  *   (hand, open palm), and `boneLegs`, the base body of both legs (it receives the outfit's materials);
  * - `flesh.ts`: `fleshHead` (head, with a face that reads `extra.brow`, `extra.mouth` and
- *   `extra.eyes`), `fleshTorso` (chest), `fleshArm` (shoulder), `fleshHand` (hand), `fleshLeg`
- *   (thigh), `hairCrop` and `hairTail` (head), and `fleshLegs`, the base body of a living figure;
+ *   `extra.eyes`, and a resting face set by its options), `fleshTorso` (chest), `fleshArm`
+ *   (shoulder), `fleshHand` (hand), `fleshLeg` (thigh), `hairCrop`, `hairTail` and `hairWaves`
+ *   (head), and `fleshLegs`, the base body of a living figure; all of it follows the skeleton's scale;
  * - `clothes.ts`: `hood` (head), `cloak` (back), `apron` (pelvis), `shawl` (chest), `boot` (foot)
  *   and `glove` (hand), the soft garments a living body wears;
  * - `heads.ts`: `boneSkull`, `skullSutures`, `hornedHelm` and `fireCrown` (head), `headFrame`;
@@ -22,26 +23,33 @@
  *   `ribBreastplate` and `highCollar` (chest), `coatRing`, the coat's section at a height;
  * - `garments.ts`: `belt`, `pouch`, `sashTail`, `skullBuckle` and `grimoire` (pelvis), `greave` and
  *   `legWraps` (shin), `bracer` (forearm), `coatSleeve` (shoulder);
+ * - `plate.ts`: `wingedHelm` (head, resting on the hair or the head), `cuirass` (chest), `platePauldron`
+ *   (shoulder), `tassets` (pelvis) and `plateGreave` (shin), plate with gilded edges for the flesh body;
  * - `shields.ts`: `roundShield` (forearm), `shieldDisc`;
  * - `weapons.ts`: `notchedSword` (hand), `swordHeld`; `reaperScythe`, `scytheFist` and `soulLantern`
- *   (hand), `scytheHeld` and the `SCYTHE_REST_*` constants;
+ *   (hand), `scytheHeld` and the `SCYTHE_REST_*` constants; `spear` (hand), `spearHeld`, `SPEAR` and
+ *   the `SPEAR_REST_*` constants;
  * - `effects.ts`: `weaponSmear`, `chargedEdge`, `groundShockwave` (hand, resting on the blade),
  *   `scytheSmear` (hand, resting on the snath) and `palmFlame` (hand), `palmPoint`;
+ * - `wings.ts`: `spiritWings` (back), spectral wings of soul fire, spread by `extra.wings`;
  * - `fire.ts`: the flat soul flame every fire part paints (`paintFlame`, `flamePath`, `paintEmber`);
  * - `catalog.ts`: `CATALOG` (parts, bases, materials) and `CHARACTERS`, as editors see the kit.
  *
  * Material roles the parts read (an outfit maps each to a theme material):
- * - `metal`: helm, crest comb, pauldron, greave, bracer, shield rim and boss, sword guard and pommel, buckle;
+ * - `metal`: helm, crest comb, pauldron, greave, bracer, shield rim and boss, sword guard and pommel, buckle,
+ *   the plate of `plate.ts`, the spear's ferrule and socket;
+ * - `trim` (optional): the gilded edges of the plate and the spear's bands (`metal` when not set);
  * - `plume` (optional): the crest's horsehair (`clothAccent`, then `cloth`, when not set);
- * - `blade`: the blade (falls back to `metalAccent`, then `metal`);
+ * - `blade`: the blade and the spear's head (falls back to `metalAccent`, then `metal`);
  * - `cloth`: tunic; `clothAccent`: tabard, the painted band of the shield;
- * - `leather`: belt, pouch, baldric, wraps, sword grip;
- * - `wood`: shield disc; `woodSeam` (optional): its plank seams, `woodDark` of the theme when not set;
+ * - `leather`: belt, pouch, baldric, wraps, sword grip, boots, gloves;
+ * - `cloak` (optional): the cloak's fall (`cloth` when not set);
+ * - `wood`: shield disc, the spear's shaft; `woodSeam` (optional): its plank seams, `woodDark` of the theme when not set;
  * - `bone`: skull, jaw, teeth, horns; `boneLimb`: limb bones, spine, ribs (falls back to `bone`);
  * - `boneGroove` (optional): the flat grooves carved into bone (cranial sutures), `hollow` when not set;
  * - `skin`: the living body (flesh parts); `hair`: brows and hair parts;
  * - `hollow`: inside of the rib cage, mouth and sockets;
- * - `glow`: soul fire, for eyes, runes and the fire effects;
+ * - `glow`: soul fire, for eyes, runes, the fire effects and the spirit wings;
  * - the long coat also reads `cloth` (coat, collar, sleeves), `clothAccent` (sash tail, grimoire cover),
  *   `leather` (the belt it wears), `wood` (the snath) and `metal` (pauldron shell, scythe fittings,
  *   lantern cage, chain).
