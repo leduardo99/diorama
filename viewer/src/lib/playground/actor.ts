@@ -1,4 +1,4 @@
-import { advance as advanceActor, createActor, frameIndex, play, shown, shownFrame, steer, takeEvents, toFloor, type ClipEvent as RuntimeClipEvent, type Floor } from '@diorama/runtime';
+import { advance as advanceActor, createActor, frameIndex, play, reset as resetActor, shown, shownFrame, steer, takeEvents, toFloor, type ClipEvent as RuntimeClipEvent, type Floor, type LastEvent } from '@diorama/runtime';
 import type { Character, Clip } from './library';
 import { floorAt, inView, viewOf, viewOfActor, viewPointOf, type Actor, type AssetRef } from './view';
 
@@ -8,7 +8,7 @@ import { floorAt, inView, viewOf, viewOfActor, viewPointOf, type Actor, type Ass
  * runtime moves actors on the floor, and the view keeps them between its sides and the scene's walls.
  */
 
-export { facingOf, reset, type Input } from '@diorama/runtime';
+export { facingOf, type Input } from '@diorama/runtime';
 export type { Actor };
 
 /**
@@ -68,13 +68,30 @@ function viewFloor(actor: Actor, bounds: Bounds): Floor {
   };
 }
 
+/** A stride of the looping base clip (`step:<leg>`): it fires on every step, so the HUD names strides only when asked. */
+export const isStep = (name: string) => name === 'step' || name.startsWith('step:');
+
+/** The last event each actor fired that is not a stride: what the HUD shows while strides are hidden. */
+const lastNotStep = new WeakMap<Actor, LastEvent>();
+
 const emitAll = (events: RuntimeClipEvent<AssetRef>[], emit: Emit) => {
-  for (const event of events) emit(event as ClipEvent);
+  for (const event of events) {
+    // Each event is seen, not only the runtime's last one: a call that fires a hit and then a stride keeps the hit. `start` and
+    // `end` are not events of the sheet (the runtime never makes them its `lastEvent`), so the HUD leaves them out too.
+    if (!isStep(event.name) && event.name !== 'start' && event.name !== 'end') lastNotStep.set(event.actor as Actor, { name: event.name, clip: event.clip.key, frame: event.frame });
+    emit(event as ClipEvent);
+  }
 };
 
 /** A character (or a sprite, without one) standing at a point of the view, showing `clip`. */
 export function newActor(id: number, clip: Clip, x: number, y: number, character: Character | null = null, row = 0): Actor {
   return inView(createActor(character ?? clip, toFloor(viewOf(character, clip.scale), { x, y }), { id, clip, row }), { x, y });
+}
+
+/** Back to idle (the runtime's `reset`), forgetting the events the HUD shows, strides or not. */
+export function reset(actor: Actor) {
+  resetActor(actor);
+  lastNotStep.delete(actor);
 }
 
 /** Starts an action if priority and cancel let it; its `start` and first-frame events are emitted at once. */
@@ -103,6 +120,7 @@ export interface HudInfo {
   frames: number;
   /** The direction row being shown (S, SE, W...). */
   direction: string;
+  /** The last event it fired, as `name · clip f3`; a stride only when asked. */
   event: string | null;
   /** A scene stands behind the actors. */
   world: boolean;
@@ -112,10 +130,11 @@ export interface HudInfo {
   use: string | null;
 }
 
-export function hudOf(actor: Actor, moving: boolean): Omit<HudInfo, 'world' | 'scene' | 'use'> {
+/** What the HUD shows of an actor; with `stepEvents` off, its event is the last one that is not a stride. */
+export function hudOf(actor: Actor, moving: boolean, stepEvents: boolean): Omit<HudInfo, 'world' | 'scene' | 'use'> {
   const { clip, row, time, loops } = shown(actor);
   const state = actor.held ? 'hold' : actor.act ? 'action' : moving ? 'moving' : 'idle';
-  const last = actor.lastEvent;
+  const last = stepEvents ? actor.lastEvent : (lastNotStep.get(actor) ?? null);
   return {
     character: actor.character?.name ?? clip.key,
     clip: clip.key,

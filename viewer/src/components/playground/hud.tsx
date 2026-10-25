@@ -1,16 +1,19 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Kbd } from '@/components/ui/kbd';
 import { useT } from '@/i18n';
 import type { HudInfo } from '@/lib/playground/actor';
 
-/** What the controlled character is playing: the clip, its frame and the last event it fired; with a scene, the last thing a piece of it did, and what E would use. */
+/** What the controlled character is playing: the clip, its frame and the last event it fired (a stride only when asked); with a scene, the last thing a piece of it did, and what E would use. */
 export function Hud({ info, onUse }: { info: HudInfo | null; onUse: () => void }) {
   const { t } = useT();
   if (!info) return null;
   return (
     <Card size="sm" className="pointer-events-none absolute bottom-3 left-3 w-56 gap-1 bg-card/60">
+      <CardHeader>
+        <CardTitle>{t('playground.hud.title')}</CardTitle>
+      </CardHeader>
       <CardContent>
         <dl className="flex flex-col gap-1">
           <div className="flex items-center justify-between gap-2">
