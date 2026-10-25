@@ -188,8 +188,11 @@ export const fleshHead: Part<FleshHeadOptions> = (
   const view = kit.camera.viewDir;
   const ahead = dot3(view, faceFwd);
   const aside = dot3(view, head.right);
-  const frontOn = ahead >= Math.abs(aside) - 0.02;
-  const sideOn = Math.abs(aside) >= 0.6 && ahead < 0.35 ? Math.sign(aside) : 0;
+  // A face that turns to the camera (`turn`) keeps its front marks until the head is nearly side-on:
+  // the profile marks sit on the side of the skull, where long hair covers them, so a head swung
+  // part of the way in a walk or a lunge would otherwise show a blank face.
+  const frontOn = ahead >= Math.abs(aside) - 0.02 || (turn > 0 && ahead > 0.12);
+  const sideOn = !frontOn && Math.abs(aside) >= 0.6 && ahead < 0.35 ? Math.sign(aside) : 0;
   // The frame the front marks (and the nose) are laid on: the head's own, or with `turn` swung part
   // of the way towards the camera round the head's up, so a 3/4 view keeps both eyes on the face.
   let face = head;
