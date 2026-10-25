@@ -5,9 +5,9 @@ import {
   placeProp, propsAt, moveFigure, moveWall, nudgeSelected, removeFigure, removeMany, removeProp, removeSelected, resize, rolesInScene, rotateProp, setDirection, setPropOption, setSceneMaterial, setVariant, setWallHeight, setWallOption, setWallVariant, toggleFigure, validSelection, vertexPath, wallAt, wallsOnBorders, withLayers,
 } from '../../viewer/src/lib/scenery/edit';
 import { advance, advanceDoor, draggedGhost, isCarrying, resultOf, startMove, startMoveDoor, startMoveFigure, startMoveWall, startPaint, startSweep, sweepSpots } from '../../viewer/src/lib/scenery/gesture';
-import { edgeFromPoint, edgeLine, renderScale, vertexFromPoint } from '../../viewer/src/lib/scenery/render';
+import { edgeFromPoint, edgeLine, fitZoom, geometryOf, renderScale, stepZoom, vertexFromPoint, ZOOMS } from '../../viewer/src/lib/scenery/render';
 
-console.log('🧪 Checking the scene painter\'s edits (cells, props, footprints, resize, layers)...\n');
+console.log('🧪 Checking the scene painter\'s edits (cells, props, footprints, resize, layers) and its zoom (Fit, steps)...\n');
 
 const piece = (id: string, group: ScenePieceInfo['group'], extra: Partial<ScenePieceInfo> = {}): ScenePieceInfo =>
   ({ id, label: id, group, piece: () => {}, connect: 'none', roles: ['stone'], ...extra });
@@ -410,5 +410,21 @@ assert.deepEqual(edgeFromPoint(sheetGeo, edgeLeft + 60, edgeTop + 29).edge, { co
 assert.equal(edgeFromPoint(sheetGeo, edgeLeft + 60, edgeTop + 31).distance < 0.1, true);
 assert.deepEqual(edgeLine(sheetGeo, { col: 1, row: 1, edge: 'N' }), { x1: edgeLeft + 40, y1: edgeTop + 30, x2: edgeLeft + 80, y2: edgeTop + 30 });
 assert.deepEqual(edgeLine(sheetGeo, { col: 2, row: 0, edge: 'W' }), { x1: edgeLeft + 80, y1: edgeTop, x2: edgeLeft + 80, y2: edgeTop + 30 });
+
+// 28. The painter opens fitted: Fit is the largest zoom step at which the whole drawing (the room for tall pieces included) fits the canvas box.
+// Only `grid.screen` is read: Soulkeeper's cells are 48 × 36.
+const kit48 = { grid: { screen: { w: 48, h: 36 } } } as unknown as SceneryCatalog;
+const drawing = geometryOf({ cols: 16, rows: 12 }, kit48);
+assert.deepEqual([drawing.width, drawing.height], [960, 672], 'the default scene and its room for tall pieces');
+assert.equal(fitZoom(drawing, { width: 1072, height: 600 }), 0.75, 'a laptop canvas: at 1× the drawing would scroll (672 > 568)');
+assert.equal(fitZoom(drawing, { width: 2200, height: 1500 }), 2, 'the largest step that fits');
+assert.equal(fitZoom(geometryOf({ cols: 4, rows: 3 }, kit48), { width: 1600, height: 1200 }), 3, 'a small scene is shown large (384 × 348 at 4× is too tall)');
+assert.equal(fitZoom(geometryOf({ cols: 64, rows: 64 }, kit48), { width: 1000, height: 600 }), ZOOMS[0], 'when nothing fits, the smallest step');
+// Fit only ever takes a step, so a resize changes the drawing scale (and empties the renderer's cache) only at a step.
+for (const [width, height] of [[300, 200], [1072, 600], [1366, 700], [2560, 1400]]) {
+  assert.ok((ZOOMS as readonly number[]).includes(fitZoom(drawing, { width, height })), `${width} × ${height} fits at a step`);
+}
+// − and + step from the zoom on screen, Fit's included, and hold at both ends.
+assert.deepEqual([stepZoom(0.75, 1), stepZoom(1, -1), stepZoom(2, 1), stepZoom(4, 1), stepZoom(0.25, -1)], [1, 0.75, 3, 4, 0.25]);
 
 console.log('✅ viewer scenery edit checks passed');

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 import { keepPreviousData, useQueries, useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import { Gamepad2Icon, GamepadIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,7 @@ import { assetsQuery, atlasQuery, projectsQuery } from '@/lib/queries';
 import { sceneWorldQuery } from '@/lib/scenery/background';
 import { FIXTURE_SCENE_NAME } from '@/lib/scenery/catalog';
 import { playgroundRoute } from '@/lib/routes';
-import { listEntries, pushRecent } from '@/lib/playground/catalog';
+import { listEntries, pushRecent, sceneToPlay } from '@/lib/playground/catalog';
 import { buildLibrary, type Armed } from '@/lib/playground/library';
 import type { HudInfo } from '@/lib/playground/actor';
 import { DEFAULT_ZOOM, fitZoom, type Zoom } from '@/lib/playground/view';
@@ -27,7 +27,8 @@ import { Scene, type SceneHandle, type SceneOptions, type Selection } from './sc
 export function PlaygroundView() {
   const { project } = playgroundRoute.useParams();
   const { t } = useT();
-  const { fixture = false } = playgroundRoute.useSearch();
+  const { fixture = false, scene: linked } = playgroundRoute.useSearch();
+  const navigate = playgroundRoute.useNavigate();
   const { data: allAssets } = useSuspenseQuery(assetsQuery);
   const assets = useMemo(() => allAssets.filter((a) => a.project === project), [allAssets, project]);
   const withAtlas = useMemo(() => assets.filter((a) => a.atlas), [assets]);
@@ -60,12 +61,22 @@ export function PlaygroundView() {
   // `?fixture=true` stands the built-in kit's scene behind the actors, to try the scenery without a project kit that has one.
   const scenes = fixture ? [FIXTURE_SCENE_NAME] : meta?.hasSceneryKit ? meta.scenes : [];
   const [chosenScene, setChosenScene] = usePref<string>(`playground.scene.${project}`, '');
-  const sceneName = scenes.includes(chosenScene) ? chosenScene : '';
   /** A chosen scene opens fitted: the whole of it in view. A scene remembered from the last visit keeps the zoom stored with it. */
   const chooseScene = (name: string) => {
     setChosenScene(name);
     if (name) setZoom('fit');
   };
+  // A link that names a scene (Save scene's "Play it in the Playground") plays it from the first frame, makes it the one chosen
+  // (fitted, like a scene picked in the select) and leaves the address: from there the select alone decides, and the
+  // Playground tab or a reload keeps it.
+  const sceneName = sceneToPlay(scenes, linked, chosenScene);
+  const takeLink = useEffectEvent((name: string) => {
+    if (scenes.includes(name)) chooseScene(name);
+    void navigate({ search: (prev) => ({ ...prev, scene: undefined }), replace: true });
+  });
+  useEffect(() => {
+    if (linked !== undefined) takeLink(linked);
+  }, [linked]);
   // The scene's ground is drawn once, at the export scale: a zoom only scales it, so it never blinks. The previous scene stays until the next is drawn.
   const { data: world } = useQuery({ ...sceneWorldQuery(project, sceneName, fixture), enabled: sceneName !== '', placeholderData: keepPreviousData });
   const shownWorld = sceneName ? (world ?? null) : null;

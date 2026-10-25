@@ -14,6 +14,7 @@ import { sceneryRoute } from '@/lib/routes';
 import { savedScenesQuery, sceneryQuery } from '@/lib/scenery/catalog';
 import { canFlip, countCells, duplicateProp, emptyScene, nudgeSelected, pieceOf, removeSelected, rotateProp, validSelection, type EraseLayer, type Layer, type Picked, type Selection } from '@/lib/scenery/edit';
 import { TOOL_KEYS, brushOf, type PieceGroup, type Tool } from '@/lib/scenery/labels';
+import { fitZoom, geometryOf, stepZoom, ZOOMS, type Zoom } from '@/lib/scenery/render';
 import { createCanvasStatus } from '@/lib/scenery/status';
 import { useHistory } from '@/lib/scenery/use-history';
 import { cn } from '@/lib/utils';
@@ -94,7 +95,8 @@ function Painter({ project, catalog, fixture, sceneNames }: { project: string; c
   const [wallHeight, setWallHeight] = useState<SpaceHeight | undefined>(undefined);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [visible, setVisible] = useState<Record<Layer, boolean>>({ floor: true, walls: true, props: true });
-  const [zoom, setZoom] = usePref<number>('scenery.zoom', 2);
+  // Every scene opens fitted to the canvas; − / + leave Fit until it is chosen again. Not remembered: a zoom that suits one scene and window is wrong for the next.
+  const [zoomChoice, setZoom] = useState<Zoom>('fit');
   const [grid, setGrid] = usePref<boolean>('scenery.grid', true);
   // Where characters can go (the engine's navigation), drawn over the scene.
   const [navigation, setNavigation] = usePref<boolean>('scenery.navigation', false);
@@ -102,6 +104,10 @@ function Painter({ project, catalog, fixture, sceneNames }: { project: string; c
   // What the canvas reports at every pointer move or drawing lives outside this component's state: it would re-render it.
   const [status] = useState(createCanvasStatus);
   const drawError = useSelector(status, (s) => s.error);
+  // Fit is the step the canvas box holds the whole drawing at. The step is selected, not the box: a resize re-renders the painter only when it changes the step.
+  const geo = useMemo(() => geometryOf({ cols: scene.cols, rows: scene.rows }, catalog), [scene.cols, scene.rows, catalog]);
+  const fitted = useSelector(status, (s) => (s.view ? fitZoom(geo, s.view) : null));
+  const zoom = zoomChoice === 'fit' ? (fitted ?? ZOOMS[0]) : zoomChoice;
 
   const problems = useMemo(() => validateScene(scene, catalog), [scene, catalog]);
   const empty = useMemo(() => scene.props.length === 0 && countCells(scene.floor) === 0 && countCells(scene.walls) === 0, [scene]);
@@ -219,10 +225,12 @@ function Painter({ project, catalog, fixture, sceneNames }: { project: string; c
       setSelection(null);
     } else if (key === 'g') {
       setGrid(!grid);
-    } else if (key === '=' || key === '+') {
-      setZoom(Math.min(4, zoom + 1));
-    } else if (key === '-') {
-      setZoom(Math.max(1, zoom - 1));
+    } else if (key === '=' || key === '+' || key === '-') {
+      // As the disabled buttons and the wheel: a step past either end changes nothing, so it does not leave Fit either.
+      const next = stepZoom(zoom, key === '-' ? -1 : 1);
+      if (next !== zoom) setZoom(next);
+    } else if (key === '0') {
+      setZoom('fit');
     } else if (ARROWS[key] && (selected?.kind === 'prop' || selected?.kind === 'figure' || selected?.kind === 'wall')) {
       const [dc, dr] = ARROWS[key];
       const key2 = selected.kind === 'wall' ? `${selected.at.col},${selected.at.row}` : selected.index;
@@ -240,6 +248,8 @@ function Painter({ project, catalog, fixture, sceneNames }: { project: string; c
     setLoaded(name);
     setBaseline(next);
     setSelection(null);
+    // An opened or new blank scene is seen whole.
+    setZoom('fit');
   };
 
   const save = () =>
@@ -247,6 +257,7 @@ function Painter({ project, catalog, fixture, sceneNames }: { project: string; c
       project,
       scene,
       defaultName: loaded ?? '',
+      fixture,
       onSaved: (name: string) => {
         setLoaded(name);
         setBaseline(scene);
@@ -263,6 +274,7 @@ function Painter({ project, catalog, fixture, sceneNames }: { project: string; c
           visible={visible}
           onVisible={setLayer}
           zoom={zoom}
+          fit={zoomChoice === 'fit'}
           onZoom={setZoom}
           grid={grid}
           onGrid={setGrid}

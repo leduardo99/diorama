@@ -366,6 +366,7 @@ export const en = {
       saved: 'Scene {name} saved and exported',
       savedExportFailed: 'Scene {name} saved, but the export failed',
       seeAssets: 'See in assets',
+      play: 'Play it in the Playground',
     },
     addPiece: {
       title: 'Add piece',
@@ -865,6 +866,7 @@ export const en = {
       zoomOut: 'Zoom out',
       zoomIn: 'Zoom in',
       zoomHint: 'Zoom · <kbd>Ctrl</kbd> + wheel',
+      fit: 'Fit',
       grid: 'Grid',
       navigation: 'Navigation',
       navigationHint: 'Navigation: where characters walk (red blocks, amber is slow)',
@@ -885,6 +887,7 @@ export const en = {
         grid: 'Show or hide the grid',
         tab: 'Show or hide the piece panel',
         zoom: 'Zoom',
+        fit: 'Fit the scene to the canvas',
         pan: 'Hold and drag to pan the view',
         shift: 'With the brush: straight line from the last point',
         alt: 'With any tool: eyedropper',

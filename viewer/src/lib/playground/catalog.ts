@@ -118,6 +118,10 @@ export function buildRows(entries: Entry[], { query, filter, collapsed, recent }
 
 export const RECENT_LIMIT = 6;
 
+/** The scene the playground plays: the one a link names when the project has it, else the one chosen last time, else none. */
+export const sceneToPlay = (scenes: readonly string[], linked: string | undefined, remembered: string): string =>
+  linked !== undefined && scenes.includes(linked) ? linked : scenes.includes(remembered) ? remembered : '';
+
 /** Puts a key first, drops repeats and keeps the list short. */
 export function pushRecent(recent: readonly string[], key: string): string[] {
   return [key, ...recent.filter((k) => k !== key)].slice(0, RECENT_LIMIT);
