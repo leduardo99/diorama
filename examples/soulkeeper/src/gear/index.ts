@@ -57,6 +57,7 @@ export * from './crests';
 export * from './shoulders';
 export * from './torso';
 export * from './garments';
+export * from './plate';
 export * from './shields';
 export * from './weapons';
 export * from './effects';

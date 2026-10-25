@@ -35,6 +35,14 @@ export const PALETTES = {
   skinLit: '#e3bfa3',
   skin: '#b08d79',
   skinDark: '#5e443c',
+  // Warm golden-brown skin: a step deeper and warmer than `skin`, still muted for the dusk palette.
+  skinWarmLit: '#dcab82',
+  skinWarm: '#a2714f',
+  skinWarmDark: '#52342a',
+  // Dark brown hair, almost black: a warm near-black with a lit step that still reads as brown.
+  hairLit: '#5a4034',
+  hair: '#2e211c',
+  hairDark: '#140e0c',
   woodLit: '#715749',
   wood: '#47362e',
   woodDark: '#2a1f1b',
@@ -127,6 +135,8 @@ export const RAMPS = {
   bone: { lit: PALETTES.boneLit, base: PALETTES.bone, dark: PALETTES.boneDark },
   flesh: { lit: PALETTES.fleshLit, base: PALETTES.flesh, dark: PALETTES.fleshDark },
   skin: { lit: PALETTES.skinLit, base: PALETTES.skin, dark: PALETTES.skinDark },
+  skinWarm: { lit: PALETTES.skinWarmLit, base: PALETTES.skinWarm, dark: PALETTES.skinWarmDark },
+  hair: { lit: PALETTES.hairLit, base: PALETTES.hair, dark: PALETTES.hairDark },
   wood: { lit: PALETTES.woodLit, base: PALETTES.wood, dark: PALETTES.woodDark },
   iron: { lit: PALETTES.ironLit, base: PALETTES.iron, dark: PALETTES.ironDark },
   soul: { lit: PALETTES.soulLit, base: PALETTES.soul, dark: PALETTES.soulDark },
@@ -273,6 +283,10 @@ export const VOLUMES = {
   flesh: { ramp: RAMPS.flesh, stroke: inner(RAMPS.flesh), edge, form: { highlight: { ratio: 0.14, min: 0.5, max: 1.4 } } },
   // Skin for living people: the same matte treatment as the flesh volume, on the warm skin ramp.
   skin: { ramp: RAMPS.skin, stroke: inner(RAMPS.skin), edge, form: { highlight: { ratio: 0.14, min: 0.5, max: 1.4 } } },
+  // Warm golden-brown skin, the same matte treatment on a deeper, warmer ramp.
+  skinWarm: { ramp: RAMPS.skinWarm, stroke: inner(RAMPS.skinWarm), edge, form: { highlight: { ratio: 0.14, min: 0.5, max: 1.4 } } },
+  // Dark hair: a soft sheen on the lit side, inner lines a shade darker than the hair so the locks separate.
+  hair: { ramp: RAMPS.hair, stroke: inner(RAMPS.hair, 0.8), edge: inner(RAMPS.hair, 0.6), form: { highlight: { ratio: 0.12, min: 0.4, max: 1 } } },
   // Matte cloth: no highlight, a wider core shadow.
   robe: { ramp: RAMPS.robe, stroke: inner(RAMPS.robe, 1), edge, form: { highlight: false, core: { ratio: 0.36, min: 1.2, max: 4 } } },
   sash: { ramp: RAMPS.sash, stroke: inner(RAMPS.sash), edge: inner(RAMPS.sash, 0.6), form: { highlight: false } },

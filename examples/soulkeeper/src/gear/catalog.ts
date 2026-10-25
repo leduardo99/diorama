@@ -46,9 +46,9 @@ import { OUTFIT as WARDEN_OUTFIT } from '../characters/warden/outfit';
 import {
   SHIELD_RADIUS, SWORD_BLADE,
   apron, baldric, belt, boneArm, boneHand, boneLeg, boneLegs, boneSkull, boneSpine, boot, bracer, chargedEdge, cloak, coatSleeve, coatTorso, fireCrown,
-  fleshArm, fleshHand, fleshHead, fleshLeg, fleshLegs, fleshTorso, glove, greave, grimoire, groundShockwave, hairCrop, hairTail, helmCrest, highCollar,
+  fleshArm, fleshHand, fleshHead, fleshLeg, fleshLegs, fleshTorso, glove, greave, grimoire, groundShockwave, hairCrop, hairTail, hairWaves, helmCrest, highCollar,
   hood, hornedHelm, lamedPauldron, legWraps, longCoat, notchedSword, palmFlame, pouch, reaperScythe, ribBreastplate, ribCage, roundShield, sashTail,
-  scytheFist, scytheHeld, scytheSmear, shawl, skullBuckle, skullPauldron, skullSutures, soulLantern, swordHeld, tabard, tunic, weaponSmear,
+  scytheFist, scytheHeld, scytheSmear, shawl, skullBuckle, skullPauldron, skullSutures, soulLantern, swordHeld, tabard, tunic, weaponSmear, wingedHelm,
 } from '.';
 
 // ----------------------------------------------------------------------------------------------
@@ -84,9 +84,16 @@ const PARTS: PartInfo[] = [
   // Head: the skull, the living head and its hair, and what sits on a head.
   { id: 'bone-skull', label: 'Skull', group: 'head', kind: 'body', part: boneSkull, slots: ['head'], roles: ['bone', 'hollow', 'glow'] },
   { id: 'skull-sutures', label: 'Skull sutures', group: 'head', kind: 'body', part: skullSutures, slots: ['head'], roles: ['boneGroove', 'hollow'], requires: 'bone-skull' },
-  { id: 'flesh-head', label: 'Flesh head', group: 'head', kind: 'body', part: fleshHead, slots: ['head'], roles: ['skin', 'hair', 'hollow'] },
+  {
+    id: 'flesh-head', label: 'Flesh head', group: 'head', kind: 'body', part: fleshHead, slots: ['head'], roles: ['skin', 'hair', 'hollow'],
+    options: [num('smile', 'Resting smile', 0, 0, 1), num('arch', 'Brow arch', 0, 0, 1), flag('lashes', 'Lash line', false)],
+  },
   { id: 'hair-crop', label: 'Hair, cropped', group: 'head', kind: 'body', part: hairCrop, slots: ['head'], roles: ['hair'], requires: 'flesh-head' },
   { id: 'hair-tail', label: 'Hair, tied tail', group: 'head', kind: 'body', part: hairTail, slots: ['head'], roles: ['hair'], requires: 'flesh-head' },
+  {
+    id: 'hair-waves', label: 'Hair, long waves', group: 'head', kind: 'body', part: hairWaves, slots: ['head'], roles: ['hair'], requires: 'flesh-head',
+    options: [num('parting', 'Parting (left to right)', 0.3, -1, 1), num('length', 'Length', 1, 0.6, 1.4), num('volume', 'Volume at the sides', 1, 0.5, 1.4)],
+  },
   {
     id: 'horned-helm', label: 'Horned helm', group: 'head', equip: 'helm', part: hornedHelm, slots: ['head'], roles: ['metal', 'bone'], requires: 'bone-skull',
     options: [
@@ -108,6 +115,10 @@ const PARTS: PartInfo[] = [
       num('sway', 'Sway', 0.5, 0, 1.2),
       flag('comb', 'Metal comb'),
     ],
+  },
+  {
+    id: 'winged-helm', label: 'Winged helm', group: 'head', equip: 'helm', part: wingedHelm, slots: ['head'], roles: ['metal', 'trim'],
+    options: [size(1, 0.85, 1.25, 0.01), flag('wings', 'Wings'), num('wingSize', 'Wing size', 1, 0.5, 1.5), flag('ridge', 'Ridge')],
   },
   {
     id: 'hood', label: 'Hood', group: 'head', equip: 'helm', part: hood, slots: ['head'], roles: ['cloth', 'clothAccent'],
