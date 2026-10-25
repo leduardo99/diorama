@@ -328,8 +328,13 @@ export const soulLantern: Part<SoulLanternOptions> = ctx => {
  */
 export const SPEAR = { reach: 62, butt: 46, blade: 13 };
 
-/** Direction of the spear in the creature's frame when the clip sets no weapon angle: upright, a hair forward and out. */
-export const SPEAR_REST: [number, number, number] = [0.06, 0.04, 1];
+/**
+ * Direction of the spear in the creature's frame when the clip sets no weapon angle: nearly upright,
+ * planted by the foot and leaning a little forward and out, so the shaft and the head stand clear
+ * of the face and the helm from every facing (ahead of the face in profile, outside the head in the
+ * 3/4 views).
+ */
+export const SPEAR_REST: [number, number, number] = [0.08, 0.15, 1];
 /** `weaponYaw` and `weaponPitch` of `SPEAR_REST`: a clip that sets the weapon angle starts and ends here. */
 export const SPEAR_REST_YAW = Math.atan2(SPEAR_REST[1], SPEAR_REST[0]);
 export const SPEAR_REST_PITCH = Math.asin(SPEAR_REST[2] / Math.hypot(...SPEAR_REST));

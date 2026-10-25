@@ -78,8 +78,15 @@ export interface FleshHeadOptions {
   smile?: number;
   /** Arched brows: each brow rises to a peak over the middle of the eye (0 straight .. 1 a high arch). Default 0. */
   arch?: number;
-  /** A dark lash line along the upper lids, flicked up at the outer corners. Default false. */
+  /** A dark lash line along the upper lids, flicked out at the outer corners. Default false. */
   lashes?: boolean;
+  /**
+   * How far the face's marks turn towards the camera in the 3/4 views (0 true to the head .. 1
+   * square to the camera). Seen at 45 degrees the far eye of a round head sits on its outline and is
+   * lost; turned part of the way, the face shows both eyes and the mouth while the head keeps its
+   * 3/4 silhouette. Default 0.
+   */
+  turn?: number;
 }
 
 /**
@@ -91,10 +98,10 @@ export interface FleshHeadOptions {
  * take the `hair` role, so they match whatever the hair parts wear.
  * Slot: `head`. Roles: `skin`, `hair`, `hollow`. Channels: `extra.brow`, `extra.mouth`,
  * `extra.eyes` (plus `extra.hurt` and `extra.dead`, which the face reads on its own).
- * Options (`FleshHeadOptions`): `smile`, `arch`, `lashes`, the resting face; at their defaults the
- * face is the plain one.
+ * Options (`FleshHeadOptions`): `smile`, `arch`, `lashes`, the resting face, and `turn`, how far the
+ * face turns to the camera in the 3/4 views; at their defaults the face is the plain one.
  */
-export const fleshHead: Part<FleshHeadOptions> = (ctx, { smile = 0, arch = 0, lashes = false } = {}) => {
+export const fleshHead: Part<FleshHeadOptions> = (ctx, { smile = 0, arch = 0, lashes = false, turn = 0 } = {}) => {
   const { object: o, pose, kit, materials } = ctx;
   const { head, faceFwd, up, lie } = headFrame(ctx);
   const k = scaleOf(ctx);
@@ -124,6 +131,13 @@ export const fleshHead: Part<FleshHeadOptions> = (ctx, { smile = 0, arch = 0, la
   const aside = dot3(view, head.right);
   const frontOn = ahead >= Math.abs(aside) - 0.02;
   const sideOn = Math.abs(aside) >= 0.6 && ahead < 0.35 ? Math.sign(aside) : 0;
+  // The frame the front marks (and the nose) are laid on: the head's own, or with `turn` swung part
+  // of the way towards the camera round the head's up, so a 3/4 view keeps both eyes on the face.
+  let face = head;
+  if (turn > 0 && frontOn) {
+    const swing = Math.atan2(aside, ahead) * clamp01(turn);
+    face = partFrame(head.origin, norm3(add3(scale3(head.forward, Math.cos(swing)), scale3(head.right, Math.sin(swing)))), head.up);
+  }
 
   // Cranium and the jaw/cheek mass under it, merged so the head reads as one volume.
   const skull = new Blob([
@@ -136,42 +150,45 @@ export const fleshHead: Part<FleshHeadOptions> = (ctx, { smile = 0, arch = 0, la
   for (const s of [-1, 1]) if (s * aside > -0.4) o.add(Round.ellipsoid(head.moved(-0.6 * k, s * 4.05 * k, -0.9 * k), 0.8 * k, 0.45 * k, 0.95 * k), skin, { on: skull });
   // The nose reads in profile: a small bump on the face's front. Only while the face carries
   // marks — at rear facings it would poke out of the silhouette as a stray lump.
-  if (frontOn || sideOn !== 0) o.add(Round.ellipsoid(partFrame(head.at(4.1 * k, 0, -1 * k), faceFwd, up), 0.55 * k, 0.5 * k, 0.7 * k), skin, { on: skull });
+  if (frontOn || sideOn !== 0) o.add(Round.ellipsoid(partFrame(face.at(4.1 * k, 0, -1 * k), face === head ? faceFwd : face.forward, up), 0.55 * k, 0.5 * k, 0.7 * k), skin, { on: skull });
 
   if (frontOn) {
     for (const s of [-1, 1]) {
       // Eye: the white (skin's lightest tone), the iris, the upper lid's crease; the lid closes by
       // flattening the white and the iris until only the crease reads. The iris rests on the white:
       // it sits a hair lower, so by depth alone the white would paint over it.
-      const white = Decal.onFace(head, 'front', vec3(3.95 * k, s * 1.75 * k, -0.15 * k), Polygon.ellipse(1.25 * k, (0.9 * eyes + 0.1) * k));
+      const white = Decal.onFace(face, 'front', vec3(3.95 * k, s * 1.75 * k, -0.15 * k), Polygon.ellipse(1.25 * k, (0.9 * eyes + 0.1) * k));
       o.add(white, { fill: tone.lit }, { on: skull });
-      o.add(Decal.onFace(head, 'front', vec3(3.97 * k, s * 1.75 * k, -0.2 * k), Polygon.ellipse(0.7 * k, (0.74 * eyes + 0.06) * k)), { fill: hollow.dark }, { on: white });
+      o.add(Decal.onFace(face, 'front', vec3(3.97 * k, s * 1.75 * k, -0.2 * k), Polygon.ellipse(0.7 * k, (0.74 * eyes + 0.06) * k)), { fill: hollow.dark }, { on: white });
       if (lashes) {
-        // The lash line rides the top of the white as the lid closes, and flicks up at the outer
-        // corner (decal space: x runs towards the character's left, so the outer corner is at -s).
+        // The lash line rides the top of the white as the lid closes, over the upper lid only, and
+        // flicks out at the outer corner, level, not up: a flick that climbs meets the brow's tail and
+        // closes a ring round the eye in the 3/4 views (decal space: x runs towards the character's
+        // left, so the outer corner is at -s).
         const lid = -0.15 + (0.9 * eyes + 0.1) * 0.95;
         const line = [
-          { x: s * 1.05, y: 0.12 }, { x: s * 0.3, y: -0.1 }, { x: -s * 0.5, y: -0.08 }, { x: -s * 1.2, y: 0.02 }, { x: -s * 1.55, y: -0.42 },
+          { x: s * 1.05, y: 0.12 }, { x: s * 0.3, y: -0.1 }, { x: -s * 0.5, y: -0.08 }, { x: -s * 1.2, y: 0.02 }, { x: -s * 1.5, y: -0.1 },
           { x: -s * 1.15, y: 0.36 }, { x: -s * 0.45, y: 0.26 }, { x: s * 0.35, y: 0.24 }, { x: s * 1.05, y: 0.36 },
         ].map(p => ({ x: p.x * k, y: p.y * k }));
-        o.add(Decal.onFace(head, 'front', vec3(3.97 * k, s * 1.75 * k, lid * k), Polygon.fromPoints(line)), { fill: hollow.dark }, { on: white });
+        o.add(Decal.onFace(face, 'front', vec3(3.97 * k, s * 1.75 * k, lid * k), Polygon.fromPoints(line)), { fill: hollow.dark }, { on: white });
       } else {
-        o.add(Decal.onFace(head, 'front', vec3(3.95 * k, s * 1.75 * k, 0.78 * k), Polygon.rect(1.6 * k, 0.4 * k)), { fill: tone.dark }, { on: skull });
+        o.add(Decal.onFace(face, 'front', vec3(3.95 * k, s * 1.75 * k, 0.78 * k), Polygon.rect(1.6 * k, 0.4 * k)), { fill: tone.dark }, { on: skull });
       }
       // Brow: a hair run over the eye, drawn on the face's plane (decal space: x runs towards the
       // character's left, y downwards); the inner end drops when the face furrows, lifts when it
-      // raises. Arched, it rises to a peak over the eye and thins towards the temple.
+      // raises. Arched, it rises to a peak over the eye and thins towards the temple, its tail kept
+      // high and short of the eye's outer corner, so it never curls down round the eye.
       const browAt = (side: number, up2: number) => ({ x: -s * side * k, y: -up2 * k });
       const outer = 1.45 + 0.35 * raise;
       const inner = 1.9 + 0.5 * raise - 0.95 * furrow;
       const run = arch > 0
-        ? strip([browAt(3, outer - 0.1 * arch), browAt(2.05, (outer + inner) / 2 + 0.5 * arch), browAt(0.75, inner)], [0.5 * k, 0.8 * k, 0.78 * k])
+        ? strip([browAt(2.8, outer + 0.3 * arch), browAt(1.95, (outer + inner) / 2 + 0.75 * arch), browAt(0.75, inner + 0.1 * arch)], [0.5 * k, 0.8 * k, 0.78 * k])
         : quad(browAt(2.9, outer), browAt(0.75, inner), 0.75 * k);
-      o.add(Decal.onFace(head, 'front', vec3(4.5 * k, 0, 0), Polygon.fromPoints(run)), { fill: hair.ramp.base }, { on: skull });
+      o.add(Decal.onFace(face, 'front', vec3(4.5 * k, 0, 0), Polygon.fromPoints(run)), { fill: hair.ramp.base }, { on: skull });
     }
     // Nose shadow and mouth on the face's front; the mouth is a thin line at rest that opens into an
     // oval, and with a smile its corners lift into a soft crescent.
-    o.add(Decal.onFace(head, 'front', vec3(4.45 * k, 0, -1.45 * k), Polygon.triangle(1.2 * k, 1.3 * k)), { fill: tone.dark }, { on: skull });
+    o.add(Decal.onFace(face, 'front', vec3(4.45 * k, 0, -1.45 * k), Polygon.triangle(1.2 * k, 1.3 * k)), { fill: tone.dark }, { on: skull });
     if (grin > 0) {
       const w = 1.15 + 0.4 * mouth + 0.15 * grin;
       const lift = 0.55 * grin;
@@ -183,9 +200,9 @@ export const fleshHead: Part<FleshHeadOptions> = (ctx, { smile = 0, arch = 0, la
       };
       const top = Array.from({ length: n }, (_, i) => at(i)).map(p => ({ x: p.x * k, y: (p.c - p.t / 2) * k }));
       const bottom = Array.from({ length: n }, (_, i) => at(n - 1 - i)).map(p => ({ x: p.x * k, y: (p.c + p.t / 2) * k }));
-      o.add(Decal.onFace(head, 'front', vec3(5 * k, 0, -2.4 * k), Polygon.fromPoints([...top, ...bottom])), { fill: hollow.dark }, { on: skull });
+      o.add(Decal.onFace(face, 'front', vec3(5 * k, 0, -2.4 * k), Polygon.fromPoints([...top, ...bottom])), { fill: hollow.dark }, { on: skull });
     } else {
-      o.add(Decal.onFace(head, 'front', vec3(5 * k, 0, -2.4 * k), Polygon.ellipse((1.15 + 0.4 * mouth) * k, (0.22 + 0.75 * mouth) * k)), { fill: hollow.dark }, { on: skull });
+      o.add(Decal.onFace(face, 'front', vec3(5 * k, 0, -2.4 * k), Polygon.ellipse((1.15 + 0.4 * mouth) * k, (0.22 + 0.75 * mouth) * k)), { fill: hollow.dark }, { on: skull });
     }
   }
   if (sideOn) {
@@ -311,13 +328,14 @@ export const hairWaves: Part<HairWavesOptions> = (ctx, { parting = 0.3, length =
   const fall = length * (1 - 0.35 * lie);
   const v = volume;
   // The cap over the crown and the back of the head, set high and back: seen from the camera's
-  // height its outline ends above the brows, so the whole face reads under it.
-  const cap = Round.ellipsoid(head.moved(-2 * k, 0, 2.5 * k), 4.1 * k, 4.4 * k, 3.9 * k);
+  // height its outline ends a little above the brows, so a strip of forehead and the brows read
+  // under it.
+  const cap = Round.ellipsoid(head.moved(-2.2 * k, 0, 3 * k), 4.1 * k, 4.4 * k, 3.5 * k);
   o.add(cap, hair, on);
   // The parting: a groove from the hairline back over the crown, where the cap's top turns to the camera.
   const py = 2.4 * Math.max(-1, Math.min(1, parting));
   const groove = { ramp: { lit: hair.ramp.dark, base: hair.ramp.dark, dark: hair.ramp.dark } };
-  const partRun = [H(1.9, py, 4.95), H(0.4, py * 1.02, 6), H(-1.4, py * 1.04, 6.35)].filter(p => cam.faces(norm3(sub3(p, H(-2, 0, 2.5)))));
+  const partRun = [H(1.5, py, 4.9), H(0.4, py * 1.02, 6), H(-1.4, py * 1.04, 6.45)].filter(p => cam.faces(norm3(sub3(p, H(-2.2, 0, 3)))));
   if (partRun.length > 1) o.add(new Tube(partRun, 0.32 * k), groove, { on: cap });
   // The fringe: the hair sweeps from the parting over the forehead, the long side to the far temple,
   // the short side to the near one, high enough to leave the brows clear.

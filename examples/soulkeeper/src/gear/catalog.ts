@@ -90,7 +90,7 @@ const PARTS: PartInfo[] = [
   { id: 'skull-sutures', label: 'Skull sutures', group: 'head', kind: 'body', part: skullSutures, slots: ['head'], roles: ['boneGroove', 'hollow'], requires: 'bone-skull' },
   {
     id: 'flesh-head', label: 'Flesh head', group: 'head', kind: 'body', part: fleshHead, slots: ['head'], roles: ['skin', 'hair', 'hollow'],
-    options: [num('smile', 'Resting smile', 0, 0, 1), num('arch', 'Brow arch', 0, 0, 1), flag('lashes', 'Lash line', false)],
+    options: [num('smile', 'Resting smile', 0, 0, 1), num('arch', 'Brow arch', 0, 0, 1), flag('lashes', 'Lash line', false), num('turn', 'Face turned to the camera', 0, 0, 1)],
   },
   { id: 'hair-crop', label: 'Hair, cropped', group: 'head', kind: 'body', part: hairCrop, slots: ['head'], roles: ['hair'], requires: 'flesh-head' },
   { id: 'hair-tail', label: 'Hair, tied tail', group: 'head', kind: 'body', part: hairTail, slots: ['head'], roles: ['hair'], requires: 'flesh-head' },

@@ -51,11 +51,12 @@ export const spiritWings: Part<SpiritWingsOptions> = (ctx, { spread = 0.08, stre
     const back = scale3(forward, -1);
     const down = scale3(up, -1);
     const local = (o0: number, u0: number, b0: number): Vec3 => add3(scale3(out, o0 * k), add3(scale3(up, u0 * k), scale3(back, b0 * k)));
-    // Folded, the wrist rides just above and outside the shoulder and the long feathers hang from it
-    // down the back; spread, the arm reaches up and out and the feathers fan from it.
+    // Folded, the wrist rides above and outside the shoulder, so a feathered tip shows over each
+    // pauldron, and the long feathers hang from it down the back; spread, the arm reaches up and out
+    // and the feathers fan from it.
     const root = add3(at.frame.origin, local(3, 2.6, 0.3));
-    const elbow = add3(root, lerp3(local(3.2, 2.6, 1.5), local(10, 8.5, 2.5), open));
-    const wrist = add3(root, lerp3(local(5.2, 5.4 + 0.5 * shimmer, 2), local(22, 15 + 0.6 * shimmer, 3.5), open));
+    const elbow = add3(root, lerp3(local(3.4, 4, 1.5), local(10, 8.5, 2.5), open));
+    const wrist = add3(root, lerp3(local(5.4, 7.2 + 0.5 * shimmer, 2), local(22, 15 + 0.6 * shimmer, 3.5), open));
     const arm = (u: number) => (u < 0.4 ? lerp3(root, elbow, u / 0.4) : lerp3(elbow, wrist, (u - 0.4) / 0.6));
     const along = norm3(sub3(wrist, elbow));
     const trail = norm3(add3(down, add3(scale3(back, 0.1), scale3(out, 0.18))));

@@ -45,7 +45,7 @@ const DOME: [number, number, number][] = [[0, 5, 4.8], [1.2, 4.9, 4.7], [2.6, 4.
  * A wing's feathers, leading first: [elevation from the sweep towards the crown, how far the feather
  * turns out from straight back (radians, 0 back, π/2 out to the side), length, width].
  */
-const WING_FEATHERS: [number, number, number, number][] = [[1.25, 0.75, 8.6, 2.1], [0.85, 1, 7.8, 2], [0.45, 1.2, 6.8, 1.9], [0.08, 1.35, 5.6, 1.7]];
+const WING_FEATHERS: [number, number, number, number][] = [[0.6, 0.3, 8.6, 2.1], [0.4, 0.5, 7.8, 2], [0.2, 0.75, 6.8, 1.9], [0, 1, 5.6, 1.7]];
 /** How far the dome's axis leans back (radians): the rim rides above the brows and dips over the nape. */
 const DOME_TILT = 0.32;
 
@@ -53,7 +53,8 @@ const DOME_TILT = 0.32;
  * A winged helm: a rounded steel dome whose rim rides high over the brow and low over the nape, so
  * the whole face reads under it and the hair falls out from under it at the sides and the back; a
  * gilded band round the rim, a raised ridge over the crown, and a wing at each temple — four steel
- * feathers fanned back and up, the leading one edged in gilt, from a gilded boss.
+ * feathers swept back from the temple and fanned up, so they slant back in profile and open out
+ * from the front, the leading one edged in gilt, from a gilded boss.
  * Rests on the hair (`on: '<hair id>'`) or the head: it is drawn over the hair it covers. The far
  * wing sorts by depth, so it hides behind the dome.
  * Slot: `head`. Roles: `metal`, `trim` (optional: the band, the bosses and the leading feathers' edge).
@@ -95,6 +96,9 @@ export const wingedHelm: Part<WingedHelmOptions> = (ctx, { size = 1, wings = tru
   }
   if (wings) {
     const w = k * wingSize;
+    // The feathers without the crease lines: four thin plates in a fan would stack their edges into
+    // a dark tangle, so each wing reads as one steel shape with a gilded leading edge.
+    const featherMetal = { ...metal, edge: undefined };
     for (const s of [-1, 1]) {
       // Each wing is a fan that curves like a bird's: the low feathers spread out sideways, the high
       // ones sweep back, all flaring away from the crown, so the fan opens from the front and from
@@ -115,7 +119,7 @@ export const wingedHelm: Part<WingedHelmOptions> = (ctx, { size = 1, wings = tru
           { x: 0, y: 0.42 * W }, { x: 0.5 * L, y: 0.5 * W }, { x: 0.86 * L, y: 0.34 * W }, { x: L, y: 0.12 * W },
           { x: 0.72 * L, y: -0.34 * W }, { x: 0.32 * L, y: -0.5 * W }, { x: 0, y: -0.42 * W },
         ]), thick);
-        o.add(feather, metal, { bias: 2 * k });
+        o.add(feather, featherMetal, { bias: 2 * k });
         if (i === 0) {
           const edge = [0.08, 0.5, 0.86, 0.98].map(u => add3(root, add3(scale3(dir, u * L), scale3(lead, (u < 0.6 ? 0.47 : u < 0.9 ? 0.36 : 0.16) * W))));
           o.add(new Tube(edge, { start: 0.28 * w, end: 0.12 * w }), trim, { on: feather });
