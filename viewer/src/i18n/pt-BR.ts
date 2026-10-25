@@ -205,6 +205,12 @@ export const ptBR: Shape<typeof en> = {
       animations: { one: '{count} animação', other: '{count} animações' },
       frameCount: '{count}f',
       directionCount: '{count}d',
+      framesPerDirection: { one: '{count} frame por direção', other: '{count} frames por direção' },
+      directionsHint: 'Desenhado em {count} direções',
+    },
+    engineHint: {
+      rig: 'Desenhado pela engine rig: um esqueleto que muda de pose a cada frame',
+      volume: 'Desenhado pela engine volume: formas sólidas vistas por uma câmera',
     },
     stale: {
       label: 'Desatualizado',

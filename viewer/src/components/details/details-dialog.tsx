@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { FrameCount } from '@/components/frame-counts';
 import { Kbd } from '@/components/ui/kbd';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { roleOf } from '@/lib/asset-role';
@@ -143,7 +144,8 @@ function PlayerBody({ asset, clips, projectAssets, peers, directionIndex, onDire
               {clips.map((clip) => (
                 <TabsTrigger key={clip.subpath} value={clip.subpath}>
                   {basename(stripExtension(clip.subpath))}
-                  {clip.atlasInfo && <span className="text-muted-foreground tabular-nums">{t('assets.card.frameCount', { count: clip.atlasInfo.frameCount })}</span>}
+                  {/* The tooltip sits on the count inside the tab: a TooltipTrigger round the tab would take its data-state. */}
+                  {clip.atlasInfo && <FrameCount info={clip.atlasInfo} className="text-muted-foreground tabular-nums" />}
                 </TabsTrigger>
               ))}
             </TabsList>

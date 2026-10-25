@@ -2,7 +2,6 @@ import { useEffect, useState, type RefObject } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Card, CardAction, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import type { TFn } from '@/i18n';
 import { cn } from '@/lib/utils';
 import { useT } from '@/i18n';
 import { dirname } from '@/lib/format';
@@ -15,6 +14,7 @@ import type { AssetFileMeta } from '@/lib/types';
 import { AssetContextMenu, AssetMenuButton, GroupContextMenu, GroupMenuButton } from './asset-menu';
 import { AssetThumb, GroupThumb } from './asset-thumb';
 import { EngineBadge } from './engine-badge';
+import { FrameSummary } from './frame-counts';
 import { StaleBadge } from './stale-badge';
 
 /** An item icon's rarity tier, in the color the project gave it, and how many fit in a slot. */
@@ -34,15 +34,6 @@ function ItemBadges({ asset }: { asset: AssetFileMeta }) {
       {info.stack !== null && info.stack > 1 && <span title={t('assets.card.itemsPerSlot')}>×{info.stack}</span>}
     </>
   );
-}
-
-/** "8f · 8d" for an animation with 8 frames facing 8 directions; empty for stills and sheets. */
-function frameSummary({ atlasInfo: info }: AssetFileMeta, t: TFn): string {
-  if (!info || info.mode === 'sheet') return '';
-  return [
-    info.frameCount > 1 && t('assets.card.frameCount', { count: info.frameCount }),
-    info.directions.length > 1 && t('assets.card.directionCount', { count: info.directions.length }),
-  ].filter(Boolean).join(' · ');
 }
 
 interface CardProps {
@@ -74,7 +65,7 @@ function AssetCard({ asset, active, position, onOpen }: CardProps & { asset: Ass
         {roleOf(asset) === 'icon' && <ItemBadges asset={asset} />}
         {asset.engine && <EngineBadge engine={asset.engine} />}
         {asset.width && <span>{asset.width}×{asset.height}</span>}
-        <span>{frameSummary(asset, t)}</span>
+        <FrameSummary info={asset.atlasInfo} />
         <span className="ml-auto">{bytes(asset.size)}</span>
       </EntryCard>
     </AssetContextMenu>

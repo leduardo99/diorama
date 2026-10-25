@@ -207,6 +207,12 @@ export const en = {
       animations: { one: '{count} animation', other: '{count} animations' },
       frameCount: '{count}f',
       directionCount: '{count}d',
+      framesPerDirection: { one: '{count} frame per direction', other: '{count} frames per direction' },
+      directionsHint: 'Drawn in {count} directions',
+    },
+    engineHint: {
+      rig: 'Drawn by the rig engine: a skeleton posed in each frame',
+      volume: 'Drawn by the volume engine: solid shapes seen through a camera',
     },
     stale: {
       label: 'Out of date',
