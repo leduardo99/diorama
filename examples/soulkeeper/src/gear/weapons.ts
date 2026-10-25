@@ -316,3 +316,93 @@ export const soulLantern: Part<SoulLanternOptions> = ctx => {
   }
   o.add(Round.cylinder(axisFrame(along(5.2), up), 3, 2.2, 0.8), metal, { on: glass, bias: 3 });
 };
+
+// ----------------------------------------------------------------------------------------------
+// The spear
+// ----------------------------------------------------------------------------------------------
+
+/**
+ * Measures of the spear, in world units: `reach` from the grip to the tip, `butt` behind the grip
+ * (the foot stands on the floor when the hand hangs at its rest height), `blade` the leaf head at the
+ * tip, from its socket.
+ */
+export const SPEAR = { reach: 62, butt: 46, blade: 13 };
+
+/** Direction of the spear in the creature's frame when the clip sets no weapon angle: upright, a hair forward and out. */
+export const SPEAR_REST: [number, number, number] = [0.06, 0.04, 1];
+/** `weaponYaw` and `weaponPitch` of `SPEAR_REST`: a clip that sets the weapon angle starts and ends here. */
+export const SPEAR_REST_YAW = Math.atan2(SPEAR_REST[1], SPEAR_REST[0]);
+export const SPEAR_REST_PITCH = Math.asin(SPEAR_REST[2] / Math.hypot(...SPEAR_REST));
+
+/**
+ * Grip, direction, tip and butt of a spear in the hand of `side` (-1 left, 1 right, default the
+ * right): upright at rest, laid along the clip's `weaponYaw` / `weaponPitch` (the off hand's
+ * channels in the left hand), resting on the floor in a death, its butt shortened where it would
+ * go below the floor. The catalog's `wield.sockets.tip` calls it with the piece's options, so a
+ * character's `tip` follows the spear it holds.
+ */
+export function spearHeld(pose: Pose, skeleton: SkeletonSpec, side: -1 | 1 = 1, reach = SPEAR.reach, butt = SPEAR.butt): Held {
+  const arm = (skeleton.arms ?? []).find(a => a.side === side);
+  if (!arm) throw new Error(`gear: skeleton "${skeleton.name}" has no ${side < 0 ? 'left' : 'right'} arm to hold a spear`);
+  return held(pose, skeleton, arm.name, { length: reach, butt, floor: 1.2, rest: SPEAR_REST, channel: weaponChannel(side) });
+}
+
+/** Options of `spear`. */
+export interface SpearOptions {
+  /** Length from the grip to the tip. Default 62. */
+  length?: number;
+  /** Length of the shaft behind the grip. Default 46. */
+  butt?: number;
+  /** Two small lugs, the wings of a winged spear, at the foot of the head. Default true. */
+  lugs?: boolean;
+  /** Gilded bands round the shaft under the head. Default true. */
+  bands?: boolean;
+}
+
+/**
+ * A spear: a long ash shaft through the hand with an iron ferrule at the butt, gilded bands under
+ * the head, an iron socket with two lugs, and a leaf-shaped steel head with a pale ridge down the
+ * face that turns to the camera. Held along `spearHeld`; returns the shaft, so a hand or an effect
+ * can rest on it (`id` it in the outfit).
+ * Slot: `hand` (side 1 right, -1 left). Roles: `wood` (shaft), `metal` (ferrule, socket, lugs),
+ * `blade` (the head; falls back to `metalAccent`, then `metal`), `trim` (optional: the bands; falls
+ * back to `metal`). Channels: `extra.weaponYaw`, `extra.weaponPitch`.
+ */
+export const spear: Part<SpearOptions> = (ctx, { length = SPEAR.reach, butt = SPEAR.butt, lugs = true, bands = true }) => {
+  const { object: o, pose, kit, at, materials } = ctx;
+  const cam = kit.camera;
+  const g = spearHeld(pose, kit.skeleton, at.side === 0 ? 1 : at.side, length, butt);
+  const wood = role(materials, 'wood');
+  const metal = role(materials, 'metal');
+  const steel = role(materials, 'blade', 'metalAccent', 'metal');
+  const along = (d: number) => add3(g.grip, scale3(g.dir, d));
+  const socket = length - SPEAR.blade;
+  const shaft = new Tube([g.butt, g.grip, along(socket - 1)], { start: 1.9, end: 1.6 });
+  o.add(shaft, wood);
+  const buttLength = len3(sub3(g.grip, g.butt));
+  if (buttLength > 3) o.add(new Tube([along(-buttLength + 2.4), along(-buttLength - 0.5)], { start: 2.2, end: 1.1 }), metal, { on: shaft });
+  if (bands) {
+    const trim = role(materials, 'trim', 'metal');
+    for (const d of [socket - 7.5, socket - 5.6]) o.add(new Tube([along(d - 0.55), along(d + 0.55)], 2.5), trim, { on: shaft });
+  }
+  const sleeve = new Tube([along(socket - 3.6), along(socket + 0.8)], { start: 2.5, end: 1.7 });
+  o.add(sleeve, metal, { on: shaft });
+  const f = g.frame;
+  if (lugs) {
+    for (const s of [-1, 1]) o.add(new Tube([along(socket - 2.8), add3(along(socket - 2.2), scale3(f.right, s * 2.4))], { start: 1.1, end: 0.6 }), metal, { on: shaft });
+  }
+  const bladeFrame = new Frame3(along(socket), f.forward, f.right, f.up);
+  const leaf = Solid.extrude(bladeFrame.moved(0, 0, -0.4), Polygon.fromPoints([
+    { x: 0, y: -0.9 }, { x: 2.6, y: -1.95 }, { x: 5.6, y: -2.05 }, { x: 9.2, y: -1.3 }, { x: SPEAR.blade, y: 0 },
+    { x: 9.2, y: 1.3 }, { x: 5.6, y: 2.05 }, { x: 2.6, y: 1.95 }, { x: 0, y: 0.9 },
+  ]), 0.8);
+  o.add(leaf, steel, { on: sleeve });
+  const lit = tones(materials, 'blade', 'metalAccent', 'metal').lit;
+  for (const s of [1, -1]) {
+    const n = scale3(f.up, s);
+    if (!cam.faces(n)) continue;
+    const face = bladeFrame.moved(0, 0, s * 0.42);
+    o.add(new Decal(face.origin, face.forward, face.right, Polygon.rect(SPEAR.blade - 2.4, 0.45, { cx: 1 + (SPEAR.blade - 2.4) / 2 }), n), { fill: lit }, { on: leaf });
+  }
+  return shaft;
+};

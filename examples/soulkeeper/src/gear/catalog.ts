@@ -39,16 +39,19 @@ import { GUARD_RIG } from '../characters/guard/spec';
 import { OUTFIT as GUARD_OUTFIT } from '../characters/guard/outfit';
 import { MALVEK_RIG } from '../characters/malvek/spec';
 import { OUTFIT as MALVEK_OUTFIT } from '../characters/malvek/outfit';
+import { INGRID_RIG } from '../characters/ingrid/spec';
+import { OUTFIT as INGRID_OUTFIT } from '../characters/ingrid/outfit';
 import { VILLAGER_RIG } from '../characters/villager/spec';
 import { OUTFIT as VILLAGER_OUTFIT } from '../characters/villager/outfit';
 import { WARDEN_RIG } from '../characters/warden/spec';
 import { OUTFIT as WARDEN_OUTFIT } from '../characters/warden/outfit';
 import {
-  SHIELD_RADIUS, SWORD_BLADE,
+  SHIELD_RADIUS, SPEAR, SWORD_BLADE,
   apron, baldric, belt, boneArm, boneHand, boneLeg, boneLegs, boneSkull, boneSpine, boot, bracer, chargedEdge, cloak, coatSleeve, coatTorso, fireCrown,
-  fleshArm, fleshHand, fleshHead, fleshLeg, fleshLegs, fleshTorso, glove, greave, grimoire, groundShockwave, hairCrop, hairTail, hairWaves, helmCrest, highCollar,
+  fleshArm, fleshHand, fleshHead, fleshLeg, fleshLegs, fleshTorso, cuirass, glove, greave, grimoire, groundShockwave, hairCrop, hairTail, hairWaves, helmCrest, highCollar,
   hood, hornedHelm, lamedPauldron, legWraps, longCoat, notchedSword, palmFlame, pouch, reaperScythe, ribBreastplate, ribCage, roundShield, sashTail,
   scytheFist, scytheHeld, scytheSmear, shawl, skullBuckle, skullPauldron, skullSutures, soulLantern, swordHeld, tabard, tunic, weaponSmear, wingedHelm,
+  platePauldron, plateGreave, spear, spearHeld, spiritWings, tassets,
 } from '.';
 
 // ----------------------------------------------------------------------------------------------
@@ -131,6 +134,10 @@ const PARTS: PartInfo[] = [
     options: [num('lames', 'Lames', 2, 1, 4, 1), flag('spike', 'Spike'), flag('rivets', 'Rivets'), size()],
   },
   {
+    id: 'plate-pauldron', label: 'Plate pauldron', group: 'shoulders', equip: 'pauldron', part: platePauldron, slots: ['shoulder'], roles: ['metal', 'trim'],
+    options: [num('lames', 'Lames', 1, 0, 2, 1), size()],
+  },
+  {
     id: 'skull-pauldron', label: 'Skull pauldron', group: 'shoulders', equip: 'pauldron', part: skullPauldron, slots: ['shoulder'], roles: ['metal', 'bone', 'hollow'],
     options: [size(), flag('spikes', 'Spikes')],
   },
@@ -147,11 +154,23 @@ const PARTS: PartInfo[] = [
     id: 'rib-breastplate', label: 'Rib breastplate', group: 'torso', part: ribBreastplate, slots: ['chest'], roles: ['boneLimb', 'bone', 'hollow'], requires: 'coat-torso',
     options: [num('ribs', 'Rib pairs', 5, 3, 6, 1)],
   },
+  {
+    id: 'cuirass', label: 'Cuirass', group: 'torso', equip: 'cuirass', part: cuirass, slots: ['chest'], roles: ['metal', 'trim'],
+    options: [num('ease', 'Ease', 0.6, 0, 3, 0.1), flag('keel', 'Keel')],
+  },
+  {
+    id: 'tassets', label: 'Tassets', group: 'torso', equip: 'tassets', part: tassets, slots: ['pelvis'], roles: ['metal', 'trim'],
+    options: [num('length', 'Length', 12, 8, 18, 0.5), flag('back', 'Plate behind')],
+  },
   { id: 'high-collar', label: 'High collar', group: 'torso', part: highCollar, slots: ['chest'], roles: ['cloth', 'clothAccent'], options: [num('height', 'Height', 1, 0.7, 1.5)] },
   // `length` is left out: by default it follows the skeleton (down to a hand above the ankles), so it has no fixed default to offer.
   { id: 'long-coat', label: 'Long coat (skirt)', group: 'torso', part: longCoat, slots: ['pelvis'], roles: ['cloth'], options: [variation('long-coat')] },
   // `length` is left out like the long coat's: by default the fall reaches the standing body's ankles.
   { id: 'cloak', label: 'Cloak', group: 'torso', equip: 'cloak', part: cloak, slots: ['back'], roles: ['cloak', 'cloth', 'clothAccent'], options: [variation('cloak')] },
+  {
+    id: 'spirit-wings', label: 'Spirit wings', group: 'torso', equip: 'wings', part: spiritWings, slots: ['back'], roles: ['glow'],
+    options: [num('spread', 'Spread at rest', 0.08, 0, 1), num('strength', 'Opacity at rest', 0.45, 0.15, 0.9), num('span', 'Span', 1, 0.6, 1.4)],
+  },
   { id: 'shawl', label: 'Shawl', group: 'torso', equip: 'shawl', part: shawl, slots: ['chest'], roles: ['cloth', 'clothAccent'] },
   {
     id: 'apron', label: 'Work apron', group: 'torso', equip: 'apron', part: apron, slots: ['pelvis'], roles: ['cloth', 'leather'],
@@ -162,6 +181,7 @@ const PARTS: PartInfo[] = [
   { id: 'belt', label: 'Belt', group: 'garments', equip: 'belt', part: belt, slots: ['pelvis'], roles: ['leather', 'metal'], options: [flag('buckle', 'Buckle')] },
   { id: 'pouch', label: 'Pouch', group: 'garments', part: pouch, slots: ['pelvis'], roles: ['leather'], options: [hip('Hip')] },
   { id: 'greave', label: 'Greave', group: 'garments', equip: 'greave', part: greave, slots: ['shin'], roles: ['metal'], options: [flag('kneeCop', 'Knee cop')] },
+  { id: 'plate-greave', label: 'Plate greave', group: 'garments', equip: 'greave', part: plateGreave, slots: ['shin'], roles: ['metal', 'trim'], options: [flag('kneeCop', 'Knee cop')] },
   { id: 'bracer', label: 'Bracer', group: 'garments', equip: 'bracer', part: bracer, slots: ['forearm'], roles: ['metal'], options: [size(1, 0.8, 1.4)] },
   { id: 'leg-wraps', label: 'Leg wraps', group: 'garments', equip: 'greave', part: legWraps, slots: ['shin'], roles: ['leather'], options: [num('count', 'Wraps', 2, 0, 3, 1)] },
   { id: 'coat-sleeve', label: 'Coat sleeve', group: 'garments', part: coatSleeve, slots: ['shoulder'], roles: ['cloth', 'clothAccent'] },
@@ -192,6 +212,10 @@ const PARTS: PartInfo[] = [
     options: [flag('etched', 'Etchings'), flag('bands', 'Iron bands')],
   },
   { id: 'scythe-fist', label: 'Fist on the scythe', group: 'weapons', kind: 'body', part: scytheFist, slots: ['hand'], roles: ['boneLimb', 'bone'], requires: 'reaper-scythe' },
+  {
+    id: 'spear', label: 'Spear', group: 'weapons', equip: 'weapon', wield: { class: 'polearm', sockets: { tip: (pose, skeleton, p) => spearHeld(pose, skeleton, p.side, (p.options.length as number | undefined) ?? SPEAR.reach, (p.options.butt as number | undefined) ?? SPEAR.butt).tip } }, part: spear, slots: ['hand'], roles: ['wood', 'metal', 'blade', 'metalAccent', 'trim'],
+    options: [num('length', 'Reach (grip to tip)', SPEAR.reach, 40, 80, 1), num('butt', 'Shaft behind the grip', SPEAR.butt, 10, 60, 1), flag('lugs', 'Lugs'), flag('bands', 'Gilded bands')],
+  },
   { id: 'soul-lantern', label: 'Soul lantern', group: 'weapons', part: soulLantern, slots: ['hand'], roles: ['metal', 'glow'], requires: 'reaper-scythe' },
 
   // Shields.
@@ -252,4 +276,5 @@ export const CHARACTERS: OutfitCharacterInfo[] = [
   { id: 'captain', ...CAPTAIN_RIG, outfit: CAPTAIN_OUTFIT },
   { id: 'warden', ...WARDEN_RIG, outfit: WARDEN_OUTFIT },
   { id: 'villager', ...VILLAGER_RIG, outfit: VILLAGER_OUTFIT },
+  { id: 'ingrid', ...INGRID_RIG, outfit: INGRID_OUTFIT },
 ];

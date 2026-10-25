@@ -4,7 +4,8 @@
  *
  * All of it follows the trunk through `ctx.body` (and the head through the shared `headFrame`), so
  * a hit recoils it and a death lays it down; only the cloak's fall looks at world up to drape on
- * the floor once the body lies.
+ * the floor once the body lies. The cloak, the boots and the gloves follow the skeleton's scale
+ * (`scaleOf`) like the flesh body they cover.
  */
 
 import { createRng } from '@core';
@@ -12,7 +13,7 @@ import { partFrame, type Part } from '@core/rig';
 import { Blob, Round, Tube, UP, add3, dot3, lerp3, norm3, scale3, sub3, vec3, visibleArc, type Vec3 } from '@core/volume';
 import { headFrame } from './heads';
 import { trunkScale } from './torso';
-import { legOf, plate, role, tornPanel, type NoOptions } from './util';
+import { legOf, plate, role, scaleOf, tornPanel, type NoOptions } from './util';
 
 /** Options of `hood`. */
 export interface HoodOptions {
@@ -94,13 +95,14 @@ export const cloak: Part<CloakOptions> = (ctx, { length, seed = 'cloak' }) => {
   const cam = kit.camera;
   const cloth = role(materials, 'cloak', 'cloth');
   const s = trunkScale(ctx);
+  const k = scaleOf(ctx);
   const chest = at.frame.origin;
   // The yoke wraps the shoulders at collar height.
   const collar = Round.loft(
     [[2.5, 7.2, 4.8], [4.6, 6.9, 4.5], [6.4, 5, 3.4]].map(([h, rx, ry]) => ({
       center: add3(chest, scale3(up, h * s)),
-      rx,
-      ry,
+      rx: rx * k,
+      ry: ry * k,
       axes: [across, chestFwd] as [Vec3, Vec3],
     })),
   );
@@ -119,25 +121,25 @@ export const cloak: Part<CloakOptions> = (ctx, { length, seed = 'cloak' }) => {
   // facings or the profiles.
   const rear = rearness(dot3(hipForward, norm3(sub3(cam.viewDir, scale3(UP, dot3(cam.viewDir, UP)))))) * (1 - lie);
   swing = sub3(swing, scale3(chestFwd, rear * Math.max(0, dot3(swing, chestFwd))));
-  const L = (length ?? j.pelvis.z + 9) * (1 - 0.36 * lie);
-  const top = add3(chest, add3(scale3(up, 5.2 * s), scale3(chestFwd, -3.2)));
+  const L = (length ?? j.pelvis.z + 9 * k) * (1 - 0.36 * lie);
+  const top = add3(chest, add3(scale3(up, 5.2 * s), scale3(chestFwd, -3.2 * k)));
   const hang = norm3(add3(scale3(up, -1), scale3(chestFwd, -0.16)));
   let dir = norm3(add3(hang, swing));
   if (lie > 0) {
     const back = vec3(-up.x, -up.y, 0);
     const flat = norm3(Math.hypot(back.x, back.y) > 1e-3 ? back : scale3(pose.frame.forward, -1));
-    const drop = Math.max(0, Math.min(0.95, (top.z - 0.6) / L));
+    const drop = Math.max(0, Math.min(0.95, (top.z - 0.6 * k) / L));
     dir = norm3(lerp3(hang, add3(scale3(flat, Math.sqrt(1 - drop * drop)), vec3(0, 0, -drop)), lie));
   }
   const centre = (u: number, lat = 0) => {
     const c = add3(top, add3(scale3(dir, L * u), scale3(hipRight, lat)));
-    const floor = 1.6 + 2.4 * u;
+    const floor = (1.6 + 2.4 * u) * k;
     return c.z < floor ? vec3(c.x, c.y, floor) : c;
   };
   const rng = createRng(seed);
   const ends = [0, 0.35, 0.7, 1];
-  const widths: [number, number] = [7.4, 11.8];
-  const deeps: [number, number] = [2.6, 3.4];
+  const widths: [number, number] = [7.4 * k, 11.8 * k];
+  const deeps: [number, number] = [2.6 * k, 3.4 * k];
   const mix = (pair: [number, number], u: number) => pair[0] + (pair[1] - pair[0]) * u;
   const fall = Round.loft(ends.map(u => ({ center: centre(u), rx: mix(widths, u), ry: mix(deeps, u), axes: [hipRight, hipForward] as [Vec3, Vec3] })));
   // The fall hangs down the back. Its centroid sits high enough on the trunk to sort in front of
@@ -148,17 +150,17 @@ export const cloak: Part<CloakOptions> = (ctx, { length, seed = 'cloak' }) => {
   // back it hangs from and it drapes over the coat instead of hiding under it.
   const frontness = Math.max(0, dot3(chestFwd, cam.viewDir));
   const hungFrom = Math.max(0, cam.depth(chest) - fall.depth(cam));
-  const behind = { bias: rear * hungFrom - 52 * frontness };
+  const behind = { bias: rear * hungFrom - 52 * frontness * k };
   o.add(fall, cloth, behind);
   // The hem: three broad folds that overlap and drape, each its own length — wide cloth masses,
   // not a row of tongues. They ride `on` the fall, so the same bias keeps them behind the body.
   const folds = 3;
-  for (let k = 0; k < folds; k++) {
-    const frac = ((k + 0.5) / folds) * 2 - 1;
+  for (let f = 0; f < folds; f++) {
+    const frac = ((f + 0.5) / folds) * 2 - 1;
     const base = centre(0.62, frac * mix(widths, 0.62) * 0.72);
-    const tip = centre(1.02 + rng.float(0, 0.1), frac * mix(widths, 1) * 0.82 + rng.float(-0.4, 0.4));
+    const tip = centre(1.02 + rng.float(0, 0.1), frac * mix(widths, 1) * 0.82 + rng.float(-0.4, 0.4) * k);
     const mid = lerp3(base, tip, 0.55);
-    o.add(new Tube([base, mid, tip], { start: mix(widths, 0.8) * 0.62 * rng.float(0.95, 1.15), end: 0.5 }), cloth, { on: fall, ...behind });
+    o.add(new Tube([base, mid, tip], { start: mix(widths, 0.8) * 0.62 * rng.float(0.95, 1.15), end: 0.5 * k }), cloth, { on: fall, ...behind });
   }
   // The fall's edge in the accent cloth, when the outfit gives one: the whole edge from behind, and
   // from the other facings the part of it that faces the camera.
@@ -167,7 +169,7 @@ export const cloak: Part<CloakOptions> = (ctx, { length, seed = 'cloak' }) => {
     for (const side of [-1, 1]) {
       const run = ends.map(u => centre(u, side * mix(widths, u) * 0.97));
       const arc = rear > 0.5 ? run : run.filter(p => cam.faces(norm3(sub3(p, j.chest))));
-      if (arc.length > 1) o.add(new Tube(arc, 0.8), trim, { on: fall, ...behind });
+      if (arc.length > 1) o.add(new Tube(arc, 0.8 * k), trim, { on: fall, ...behind });
     }
   }
   return fall;
@@ -180,17 +182,18 @@ export const cloak: Part<CloakOptions> = (ctx, { length, seed = 'cloak' }) => {
 export const boot: Part<NoOptions> = ctx => {
   const { object: o, pose, at, materials } = ctx;
   const leather = role(materials, 'leather');
+  const k = scaleOf(ctx);
   const leg = legOf(ctx, at.side).name;
   const [, , ankle] = pose.chains[leg];
   const f = pose.frame;
   const foot = pose.joints[`${leg}.foot`];
   const boot = new Blob([
-    Round.ellipsoid(partFrame(add3(foot, f.dir(2, 0, 0.9)), f.forward), 4.3, 2.4, 2),
-    new Tube([add3(ankle, f.dir(0, 0, 6.5)), ankle], { start: 2.9, end: 2.4 }),
+    Round.ellipsoid(partFrame(add3(foot, f.dir(2 * k, 0, 0.9 * k)), f.forward), 4.3 * k, 2.4 * k, 2 * k),
+    new Tube([add3(ankle, f.dir(0, 0, 6.5 * k)), ankle], { start: 2.9 * k, end: 2.4 * k }),
   ]);
   // The bias lifts the boot over the leg it covers: the leg's mass averages deeper than the
   // foot-level boot, and without it the skin foot would paint over the leather.
-  o.add(boot, leather, { bias: 12 });
+  o.add(boot, leather, { bias: 12 * k });
   return boot;
 };
 
@@ -208,19 +211,20 @@ export interface GloveOptions {
 export const glove: Part<GloveOptions> = (ctx, { cuff = 1 }) => {
   const { object: o, at, materials } = ctx;
   const leather = role(materials, 'leather');
+  const k = scaleOf(ctx);
   const f = at.frame;
-  const band = new Tube([f.at(0.2, -2.9, 0.6), f.at(0.4, 0, 1.9), f.at(0.2, 2.9, 0.6), f.at(-0.2, 2.6, -1.3), f.at(-0.2, -2.6, -1.3), f.at(0.2, -2.9, 0.6)], 1.15 * cuff);
+  const band = new Tube([f.at(0.2 * k, -2.9 * k, 0.6 * k), f.at(0.4 * k, 0, 1.9 * k), f.at(0.2 * k, 2.9 * k, 0.6 * k), f.at(-0.2 * k, 2.6 * k, -1.3 * k), f.at(-0.2 * k, -2.6 * k, -1.3 * k), f.at(0.2 * k, -2.9 * k, 0.6 * k)], 1.15 * cuff * k);
   // The bias lifts the glove over the arm it covers: the arm's mass averages deeper than the hand.
-  o.add(band, leather, { bias: 6 });
-  const palm = Round.ellipsoid(f.moved(2.3, 0, 0.15), 3, 2.7, 1.4);
-  o.add(palm, leather, { on: band, bias: 6 });
+  o.add(band, leather, { bias: 6 * k });
+  const palm = Round.ellipsoid(f.moved(2.3 * k, 0, 0.15 * k), 3 * k, 2.7 * k, 1.4 * k);
+  o.add(palm, leather, { on: band, bias: 6 * k });
   for (let i = 0; i < 4; i++) {
     const y = (i - 1.5) * 1.4;
     const len = 4.5 - 0.45 * Math.abs(i - 1.5) * 1.2 + (i === 1 || i === 2 ? 0.4 : 0);
-    o.add(new Tube([f.at(3.8, y * 0.9, 0.4), f.at(3.8 + len * 0.55, y * 1.15, 0.9), f.at(3.8 + len, y * 1.3, 1.9)], { start: 1.25, end: 0.65 }), leather, { on: palm, bias: 6 });
+    o.add(new Tube([f.at(3.8 * k, y * 0.9 * k, 0.4 * k), f.at((3.8 + len * 0.55) * k, y * 1.15 * k, 0.9 * k), f.at((3.8 + len) * k, y * 1.3 * k, 1.9 * k)], { start: 1.25 * k, end: 0.65 * k }), leather, { on: palm, bias: 6 * k });
   }
   const inner = -at.side;
-  o.add(new Tube([f.at(1.5, inner * 2, 0.2), f.at(3.1, inner * 3.4, 0.7), f.at(4.7, inner * 3.9, 1.5)], { start: 1.5, end: 0.7 }), leather, { on: palm, bias: 6 });
+  o.add(new Tube([f.at(1.5 * k, inner * 2 * k, 0.2 * k), f.at(3.1 * k, inner * 3.4 * k, 0.7 * k), f.at(4.7 * k, inner * 3.9 * k, 1.5 * k)], { start: 1.5 * k, end: 0.7 * k }), leather, { on: palm, bias: 6 * k });
   return palm;
 };
 

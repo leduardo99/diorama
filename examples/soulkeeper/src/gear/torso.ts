@@ -11,7 +11,7 @@ import { createRng } from '@core';
 import { Polygon } from '@core/draw';
 import { partFrame, type Part, type PartContext } from '@core/rig';
 import { Frame3, Round, Solid, Tube, UP, add3, cross3, dot3, lerp3, norm3, scale3, sub3, vec3, type Placed, type Vec3 } from '@core/volume';
-import { legOf, plate, role, tornPanel } from './util';
+import { legOf, plate, role, scaleOf, tornPanel } from './util';
 
 /** Options of `tunic`. */
 export interface TunicOptions {
@@ -21,13 +21,16 @@ export interface TunicOptions {
 
 /**
  * A short tunic: a loft that widens from the waist to the hem. Lying down, the hem rides up a
- * little so the skirt does not trail past the cell. Returns the tunic, so a belt can rest on it.
+ * little so the skirt does not trail past the cell. It follows the skeleton's scale (`scaleOf`),
+ * `hem` included. Returns the tunic, so a belt can rest on it.
  * Slot: `pelvis`. Roles: `cloth`.
  */
-export const tunic: Part<TunicOptions> = ({ object: o, body, at, materials }, { hem = 9 }) => {
+export const tunic: Part<TunicOptions> = (ctx, { hem = 9 }) => {
+  const { object: o, body, at, materials } = ctx;
   const { up, hipRight, hipForward, lie } = body;
+  const k = scaleOf(ctx);
   const pelvis = at.frame.origin;
-  const ring = (dz: number, side: number, depth: number) => ({ center: add3(pelvis, scale3(up, dz)), rx: side, ry: depth, axes: [hipRight, hipForward] as [Vec3, Vec3] });
+  const ring = (dz: number, side: number, depth: number) => ({ center: add3(pelvis, scale3(up, dz * k)), rx: side * k, ry: depth * k, axes: [hipRight, hipForward] as [Vec3, Vec3] });
   const skirt = Round.loft([ring(3, 6.2, 4.7), ring(-3, 7.2, 5.6), ring(-hem + 3 * lie, 8, 6.4)]);
   o.add(skirt, role(materials, 'cloth'));
   return skirt;

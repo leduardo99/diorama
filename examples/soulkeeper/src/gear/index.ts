@@ -61,5 +61,6 @@ export * from './plate';
 export * from './shields';
 export * from './weapons';
 export * from './effects';
+export * from './wings';
 export { paintEmber, paintFlame, flamePath, type FlameOptions } from './fire';
 export { role, type NoOptions } from './util';

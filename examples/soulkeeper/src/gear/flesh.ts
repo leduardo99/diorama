@@ -345,8 +345,8 @@ export const hairWaves: Part<HairWavesOptions> = (ctx, { parting = 0.3, length =
   };
   for (const s of [-1, 1]) {
     // The side mass over the ear, and the locks that fall from it: front, middle and back.
-    o.add(Round.ellipsoid(head.moved(-1.6 * k, s * (4.2 + 0.7 * v) * k, -1.6 * k), 3 * k, (1.3 + 0.6 * v) * k, 3.9 * k), hair);
-    o.add(lock(0.1, s * 4.3, s, 1.2 * v, 0.75, 2.6), hair);
+    o.add(Round.ellipsoid(head.moved(-2 * k, s * (4.2 + 0.7 * v) * k, -1.6 * k), 2.9 * k, (1.3 + 0.6 * v) * k, 3.9 * k), hair);
+    o.add(lock(-0.5, s * 4.3, s, 1.2 * v, 0.75, 2.6), hair);
     o.add(lock(-1.4, s * 4.5, s, 1.7 * v, 0.85, 3.1, 1.3), hair);
     o.add(lock(-3.6, s * 3.7, s, 1.4 * v, 0.8, 3, 2.4), hair);
   }
