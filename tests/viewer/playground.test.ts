@@ -93,6 +93,11 @@ const withGear = buildLibrary([...assets, asset('gear', 'helm')], new Map([...wi
 assert.deepEqual(withGear.characters.map((c) => c.name), ['mage'], 'the item does not join a character');
 assert.deepEqual(withGear.sprites.map((s) => s.id), ['gear/helm.png'], 'it is a sprite');
 assert.equal(listEntries(withGear).find((e) => e.key === 'sprite:gear/helm.png')?.name, 'Elmo', 'named by its label');
+// While a character's atlases load, the first to arrive can be its hit clip alone, which the runtime binds as no action: it is
+// listed and pictured by that clip, never a crash (the Playground used to fail on it about one cold load in three).
+const partial = buildLibrary([asset('characters/mage', 'hit')], new Map([['characters/mage/hit.png', sheet(specs[6], manifest)]]));
+assert.ok(partial.characters.length === 1 && partial.characters[0].idle === null && partial.characters[0].locomotion.length === 0 && partial.characters[0].actions.length === 0, 'a character of its hit clip alone has nothing to start from but that clip');
+assert.equal(listEntries(partial)[0]?.cover.subpath, 'characters/mage/hit.png', 'it is listed, pictured by the clip it has');
 const props = buildLibrary([asset('props', 'chest')], new Map([['props/chest.png', (() => { const a = sheet(specs[0]); a.meta.data = { role: 'prop' }; return a; })()]]));
 assert.equal(props.characters.length, 0, 'a prop is not a character');
 assert.equal(props.sprites.length, 1);
