@@ -128,8 +128,10 @@
       /**
        * Renders one sheet into a fresh #asset-root and returns its metadata. The body is reset first, so a page
        * renders many sheets one after another and each starts from the DOM of a page that was just loaded.
+       * `scale` is the device scale the exporter shoots at: canvases are drawn at it (`context.scale`), so the
+       * PNG is a native render, never a resampled one. Without it, the sheet's own scale.
        */
-      async function render({ project, dir, file, preview }) {
+      async function render({ project, dir, file, preview, scale: shotScale }) {
         window.__ASSET_READY__ = false;
         window.__ASSET_ERROR__ = null;
         window.__ASSET_METADATA__ = null;
@@ -138,7 +140,9 @@
         document.body.replaceChildren(root);
 
         const asset = await importAsset(dir, file);
-        const { width, height, scale, frameCount, directionCount, totalWidth, totalHeight } = declaredSize(asset);
+        const declared = declaredSize(asset);
+        const { width, height, frameCount, directionCount, totalWidth, totalHeight } = declared;
+        const scale = Number(shotScale) || declared.scale;
         const format = asset.format || 'png';
         const quality = typeof asset.quality === 'number' ? asset.quality : 90;
         const background = asset.background ?? (format === 'jpeg' ? '#ffffff' : 'transparent');

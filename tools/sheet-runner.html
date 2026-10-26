@@ -103,6 +103,8 @@
         const cols = params.get('cols') ? Number(params.get('cols')) : undefined;
         const background = params.get('background') || 'transparent';
         const preview = params.get('preview') === 'true';
+        // The device scale the exporter shoots at: canvases are drawn at it, so the sheet is a native render.
+        const scale = Number(params.get('scale')) || 1;
 
         if (!project || !filesJson) {
           throw new Error('Missing "project" or "files" query parameter in sheet runner');
@@ -161,7 +163,7 @@
           const context = {
             width: item.width,
             height: item.height,
-            scale: 1,
+            scale,
             format: 'png',
             project,
             sourcePath: item.file,

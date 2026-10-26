@@ -464,6 +464,33 @@ export const VOLUMES: Record<string, VolumeStyle> = {};
     assert.notEqual(run(`npm run --silent export -- ${project} badge ${flag}`).code, 0, `${flag} must be rejected`);
   }
 
+  // 5b. A sheet is drawn at the scale it is exported at, alone and in a group sheet: its pixels are a native render, not a
+  // resampled one. The sheet pins scale 2 and fills every other column one device pixel wide; exported at 3, a canvas drawn
+  // at 2 and stretched to 3 blurs the stripes and leaves far fewer than half the pixels transparent.
+  mkdirSync(resolve(projectDir, 'src', 'scale'), { recursive: true });
+  mkdirSync(resolve(projectDir, 'sheets', 'scale'), { recursive: true });
+  writeFileSync(resolve(projectDir, 'src', 'scale', 'stripes.ts'), `import { defineAsset } from '@core';
+
+export const stripes = defineAsset({
+  width: 8,
+  height: 8,
+  scale: 2,
+  render({ ctx, width, height, scale }) {
+    ctx.fillStyle = '#ff0000';
+    for (let x = 0; x < width * scale; x += 2) ctx.fillRect(x / scale, 0, 1 / scale, height);
+  },
+});
+`, 'utf8');
+  writeFileSync(resolve(projectDir, 'sheets', 'scale', 'stripes.ts'), "export { stripes as default } from '../../src/scale/stripes';\n", 'utf8');
+  for (const [args, png] of [['scale/stripes', 'scale/stripes.png'], ['scale/ --grid --sheet-name=stripes-grid', 'scale/stripes-grid.png']]) {
+    assert.equal(run(`npm run --silent export -- ${project} ${args} --scale=3`).code, 0, `export ${args} at scale 3`);
+    const shot = JSON.parse(run(`npm run --silent inspect -- projects/${project}/assets/${png} --json`).stdout);
+    assert.deepEqual([shot.width, shot.transparentShare, shot.distinctOpaqueColors], [24, 0.5, 1], `${png} is drawn at scale 3, not stretched to it`);
+  }
+  rmSync(resolve(projectDir, 'sheets', 'scale'), { recursive: true });
+  rmSync(resolve(projectDir, 'src', 'scale'), { recursive: true });
+  rmSync(resolve(projectDir, 'assets', 'scale'), { recursive: true });
+
   // 6. inspect returns numbers for an official output.
   const inspected = JSON.parse(run(`npm run --silent inspect -- projects/${project}/assets/badge.png --json`).stdout);
   assert.equal(inspected.width, 32);

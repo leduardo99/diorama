@@ -493,7 +493,7 @@ async function exportSingleAsset(
   await page.setViewportSize(finalScale === defaultScale ? DEFAULT_VIEWPORT : sheetViewport);
 
   const rendered = await withTimeout(
-    page.evaluate((request) => window.__ASSET_RUNNER__!.render(request), { project: task.project, ...sheet, preview: Boolean(args.mockup) }),
+    page.evaluate((request) => window.__ASSET_RUNNER__!.render(request), { project: task.project, ...sheet, preview: Boolean(args.mockup), scale: finalScale }),
     RENDER_TIMEOUT_MS,
     'rendering the sheet'
   );
@@ -681,11 +681,12 @@ async function exportGroupSheet(
 
   const mockupParam = args.mockup ? '&preview=true' : '';
   const colsParam = args.cols ? `&cols=${encodeURIComponent(String(args.cols))}` : '';
+  const scaleParam = `&scale=${encodeURIComponent(String(scale))}`;
   const runnerUrl = `${serverOrigin}/tools/sheet-runner.html?project=${encodeURIComponent(
     tasks[0].project
   )}&dir=${encodeURIComponent(tasks[0].projectDir)}&mode=${encodeURIComponent(sheetMode)}&gap=${encodeURIComponent(String(gap))}${colsParam}&files=${encodeURIComponent(
     JSON.stringify(files)
-  )}${mockupParam}`;
+  )}${mockupParam}${scaleParam}`;
 
   const context = await browser.newContext({
     deviceScaleFactor: scale,
@@ -1205,7 +1206,7 @@ declare global {
     /** The calls of tools/runner.html, made once per sheet in a page that stays open. */
     __ASSET_RUNNER__?: {
       declare(request: { dir: string; file: string }): Promise<{ declared?: DeclaredSize; error?: string }>;
-      render(request: { project: string; dir: string; file: string; preview: boolean }): Promise<{ metadata?: NonNullable<Window['__ASSET_METADATA__']>; error?: string }>;
+      render(request: { project: string; dir: string; file: string; preview: boolean; scale: number }): Promise<{ metadata?: NonNullable<Window['__ASSET_METADATA__']>; error?: string }>;
     };
     __ASSET_READY__?: boolean;
     __ASSET_ERROR__?: string | null;
