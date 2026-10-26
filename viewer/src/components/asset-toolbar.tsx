@@ -30,7 +30,7 @@ export function AssetToolbar({ folders, gridSize, onGridSize }: Props) {
   const setSearch = (patch: Partial<typeof search>) => void navigate({ search: (prev) => ({ ...prev, ...patch }), replace: true });
 
   return (
-    <div className="flex flex-wrap items-center gap-2 px-4 pt-3">
+    <div data-tour="find" className="flex flex-wrap items-center gap-2 px-4 pt-3">
       <InputGroup className="w-72">
         <InputGroupAddon>
           <SearchIcon />

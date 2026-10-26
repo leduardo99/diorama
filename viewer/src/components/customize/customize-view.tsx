@@ -100,7 +100,7 @@ function Customizer({ project, kit, character }: { project: string; kit: GearKit
 
   // The outfit's column can be widened for long piece names and deep slot trees; the preview takes the rest.
   const outfitPanel = (
-    <aside className="flex min-h-0 flex-1 flex-col" aria-label={t('customize.outfitLabel')}>
+    <aside data-tour="customize" className="flex min-h-0 flex-1 flex-col" aria-label={t('customize.outfitLabel')}>
       <div className="flex flex-col gap-3 border-b p-3">
         <Field>
           <FieldLabel htmlFor="customize-character">{t('customize.character')}</FieldLabel>

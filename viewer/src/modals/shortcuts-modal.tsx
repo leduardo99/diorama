@@ -1,16 +1,23 @@
 import NiceModal from '@ebay/nice-modal-react';
-import { useLocation } from '@tanstack/react-router';
+import { useLocation, useParams } from '@tanstack/react-router';
+import { SignpostIcon } from 'lucide-react';
 import { ShortcutList } from '@/components/shortcut-list';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { startTour } from '@/components/tour/tour-control';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useT } from '@/i18n';
 import { sectionOf } from '@/lib/sections';
 import { ANYWHERE, SHORTCUT_TABS, SHORTCUTS } from '@/lib/shortcuts';
 import { useModalDialog } from '@/lib/use-modal-dialog';
 
-/** The keys of every page on top, then one tab per section of a project, open on the section the user is in. */
+/**
+ * The keys of every page on top, then one tab per section of a project, open on the section the user is in. On a project
+ * page, "Take the tour" closes the window and starts the tour of the page (which waits for the window to be gone).
+ */
 export const ShortcutsModal = NiceModal.create(() => {
-  const { rootProps, contentProps } = useModalDialog();
+  const { modal, rootProps, contentProps } = useModalDialog();
+  const { project } = useParams({ strict: false });
   const { t } = useT();
   // The modal is mounted afresh on every show, so the tab it opens on is always the page's.
   const section = useLocation({ select: (location) => sectionOf(location.pathname) });
@@ -36,6 +43,21 @@ export const ShortcutsModal = NiceModal.create(() => {
             ))}
           </div>
         </Tabs>
+        {project && (
+          <DialogFooter>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                void modal.hide();
+                startTour();
+              }}
+            >
+              <SignpostIcon data-icon="inline-start" />
+              {t('tour.start')}
+            </Button>
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );

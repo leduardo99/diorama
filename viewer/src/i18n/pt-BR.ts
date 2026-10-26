@@ -71,6 +71,59 @@ export const ptBR: Shape<typeof en> = {
     refresh: 'Atualizar catálogo',
     shortcuts: 'Atalhos',
   },
+  tour: {
+    offer: {
+      title: 'Primeira vez aqui?',
+      description: 'Um tour curto por esta página.',
+      take: 'Fazer o tour',
+      later: 'Agora não',
+    },
+    start: 'Fazer o tour',
+    counter: '{current} de {total}',
+    next: 'Próximo',
+    back: 'Voltar',
+    done: 'Concluir',
+    skip: 'Pular o tour',
+    close: 'Fechar o tour',
+    project: {
+      title: 'Seus projetos',
+      body: 'Cada projeto é uma pasta de <code>projects/</code>, escrita como código por você ou por um agente de código. Troque de projeto aqui (<kbd>⌘K</kbd>); o menu ⋯ ao lado copia o caminho, exporta ou apaga o projeto.',
+    },
+    create: {
+      title: 'Criar e exportar',
+      body: 'Novo asset começa um asset neste projeto; <kbd>N</kbd> ou Novo, no alto, abre a mesma janela em qualquer lugar, também para um projeto novo. Exportar desenha os sheets em <code>assets/</code>, as imagens que um jogo carrega.',
+    },
+    find: {
+      title: 'Encontrar um asset',
+      body: 'Filtre a lista por nome ou caminho (<kbd>/</kbd>) e restrinja-a por engine, tipo ou pasta em Filtros.',
+    },
+    asset: {
+      title: 'Abrir um asset',
+      body: 'Este é um asset; um personagem é um card só, com todas as suas animações. Clique nele, ou escolha-o com as setas e aperte <kbd>↵</kbd>, para abrir os Detalhes: eles tocam o asset frame a frame, com as direções, os dados e os arquivos.',
+    },
+    playground: {
+      title: 'Playground',
+      body: 'Jogue com seus personagens numa cena. Escolha um aqui para controlá-lo pelo teclado, ou escolha outra coisa para pôr na cena.',
+      tab: 'Toca seus personagens numa cena, cada um com as suas teclas, com coisas postas em volta.',
+      empty: 'Toca numa cena os personagens que você exporta, cada um com as suas teclas. Quando este projeto tiver assets, eles aparecem lá.',
+    },
+    customize: {
+      title: 'Customizar',
+      body: 'Vista um personagem com o kit de gear, slot por slot, e veja o resultado ao vivo em todas as direções. Salve-o como um personagem novo.',
+      tab: 'Veste um personagem com o kit de gear, slot por slot, e o salva como um personagem novo.',
+      noKit: 'Veste personagens com um kit de gear, que este projeto ainda não tem. A aba mostra o comando que começa um.',
+    },
+    scenery: {
+      title: 'Cenário',
+      body: 'Pinte cenas com as peças do kit de cenário: escolha aqui um chão, uma parede ou um prop, pinte-o na tela e salve a cena.',
+      tab: 'Pinta cenas com as peças do kit de cenário, para o Playground e para o seu jogo.',
+      noKit: 'Pinta cenas com um kit de cenário, que este projeto ainda não tem. A aba mostra o comando que começa um.',
+    },
+    shortcuts: {
+      title: 'As teclas e este tour',
+      body: 'Todas as teclas de todas as páginas estão na janela de atalhos (<kbd>?</kbd>). Faça este tour de novo por lá ou pelo menu ⋯ do projeto.',
+    },
+  },
   projects: {
     none: {
       title: 'Nenhum projeto ainda',

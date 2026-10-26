@@ -14,6 +14,7 @@ Direct dependencies of the exporter, the CLI and the viewer (`dependencies` in `
 | @dnd-kit/sortable | 10.0.0 | MIT |
 | @dnd-kit/utilities | 3.2.2 | MIT |
 | @ebay/nice-modal-react | 1.2.13 | MIT |
+| @floating-ui/react-dom | 2.1.9 | MIT |
 | @fontsource-variable/inter | 5.3.0 | OFL-1.1 |
 | @tailwindcss/vite | 4.3.3 | MIT |
 | @tanstack/react-query | 5.104.5 | MIT |
@@ -65,6 +66,7 @@ Third-party files kept in the source tree, each with a comment naming its origin
 | `viewer/src/components/ui/scroller.tsx` | Dice UI's `scroller` registry item for `radix-mira` (`sadmann7/diceui` on GitHub), added with `npx shadcn@4.22.1 add https://diceui.com/r/radix-mira/scroller.json`; the changes are marked `Diorama:` | MIT |
 | `viewer/src/components/ui/compare-slider.tsx`, `viewer/src/hooks/use-value-as-ref.ts`, `viewer/src/hooks/use-ref-with-init.ts` | Dice UI's `compare-slider` registry item for `radix-mira` and the two hooks it brings (`sadmann7/diceui` on GitHub), added with `npx shadcn@4.22.1 add https://diceui.com/r/radix-mira/compare-slider.json`; the changes are marked `Diorama:` | MIT |
 | `viewer/src/components/ui/color-swatch.tsx` | Dice UI's `color-swatch` registry item for `radix-mira` (`sadmann7/diceui` on GitHub), added with `npx shadcn@4.22.1 add https://diceui.com/r/radix-mira/color-swatch.json`; the changes are marked `Diorama:` | MIT |
+| `viewer/src/components/ui/tour.tsx` | Dice UI's `tour` registry item for `radix-mira` (`sadmann7/diceui` on GitHub), added with `npx shadcn@4.22.1 add https://diceui.com/r/radix-mira/tour.json` (it uses the `use-value-as-ref` and `use-ref-with-init` hooks `compare-slider` brought); the changes are marked `Diorama:` | MIT |
 | `viewer/src/components/ui/sortable.tsx` | Dice UI's `sortable` registry item for `radix-mira` (`sadmann7/diceui` on GitHub), added with `npx shadcn@4.22.1 add https://diceui.com/r/radix-mira/sortable.json`; the changes are marked `Diorama:` | MIT |
 
 The shadcn CLI that adds components to the viewer is not a dependency: it is run with `npx` when needed (see `viewer/AGENTS.md`).

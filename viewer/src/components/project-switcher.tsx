@@ -8,7 +8,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Kbd } from '@/components/ui/kbd';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useT } from '@/i18n';
-import { APP_KEYS, useWindowKeydown } from '@/lib/hotkeys';
+import { APP_KEYS, isModalOpen, useWindowKeydown } from '@/lib/hotkeys';
 import { projectsQuery } from '@/lib/queries';
 import { SECTION_PATHS, type Section } from '@/lib/sections';
 import { NewModal } from '@/modals/new-modal';
@@ -31,6 +31,8 @@ export function ProjectSwitcher({ project, section }: { project: string | undefi
 
   useWindowKeydown((e) => {
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === APP_KEYS.switchProject) {
+      // A dialog, a menu or the tour keeps the page's keys: ⌘K does not open the switcher under it (it still closes it).
+      if (!open && isModalOpen()) return;
       e.preventDefault();
       setOpen((now) => !now);
     }

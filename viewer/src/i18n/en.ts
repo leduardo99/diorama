@@ -73,6 +73,59 @@ export const en = {
     refresh: 'Refresh catalog',
     shortcuts: 'Shortcuts',
   },
+  tour: {
+    offer: {
+      title: 'New here?',
+      description: 'A short tour of this page.',
+      take: 'Take the tour',
+      later: 'Not now',
+    },
+    start: 'Take the tour',
+    counter: '{current} of {total}',
+    next: 'Next',
+    back: 'Back',
+    done: 'Done',
+    skip: 'Skip tour',
+    close: 'Close the tour',
+    project: {
+      title: 'Your projects',
+      body: 'Each project is a folder of <code>projects/</code>, written as code by you or a coding agent. Switch projects here (<kbd>⌘K</kbd>); the ⋯ menu beside it copies its path, exports it or deletes it.',
+    },
+    create: {
+      title: 'Make and export',
+      body: 'New asset starts an asset in this project; <kbd>N</kbd> or New at the top opens the same window anywhere, for a new project too. Export draws the sheets into <code>assets/</code>, the images a game loads.',
+    },
+    find: {
+      title: 'Find an asset',
+      body: 'Filter the list by name or path (<kbd>/</kbd>), and narrow it by engine, type or folder with Filters.',
+    },
+    asset: {
+      title: 'Open an asset',
+      body: 'This is one asset; a character is one card with all its animations. Click it, or pick it with the arrows and press <kbd>↵</kbd>, to open Details: it plays the asset frame by frame, with its directions, its data and its files.',
+    },
+    playground: {
+      title: 'Playground',
+      body: 'Play your characters in a scene. Pick one here to control it with the keyboard, or pick something else to place in the scene.',
+      tab: 'Plays your characters in a scene, each with its own keys, with things placed around them.',
+      empty: 'Plays the characters you export in a scene, each with its own keys. Once this project has assets, they show up there.',
+    },
+    customize: {
+      title: 'Customize',
+      body: 'Dress a character from the gear kit, slot by slot, and watch it live in every direction. Save the result as a new character.',
+      tab: 'Dresses a character from the gear kit, slot by slot, and saves the result as a new character.',
+      noKit: 'Dresses characters from a gear kit, which this project has not got yet. The tab shows the command that starts one.',
+    },
+    scenery: {
+      title: 'Scenery',
+      body: 'Paint scenes with the pieces of the scenery kit: pick a floor, a wall or a prop here, paint it on the canvas, and save the scene.',
+      tab: 'Paints scenes with the pieces of the scenery kit, for the Playground and for your game.',
+      noKit: 'Paints scenes from a scenery kit, which this project has not got yet. The tab shows the command that starts one.',
+    },
+    shortcuts: {
+      title: 'Keys and this tour',
+      body: "Every key of every page is in the Shortcuts window (<kbd>?</kbd>). Take this tour again from there or from the project's ⋯ menu.",
+    },
+  },
   projects: {
     none: {
       title: 'No projects yet',

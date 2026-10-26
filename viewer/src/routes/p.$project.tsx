@@ -12,6 +12,7 @@ import { projectTotals } from '@/lib/export-state';
 import { projectUrl } from '@/lib/project-paths';
 import { sectionOf } from '@/lib/sections';
 import { NewModal } from '@/modals/new-modal';
+import { TourHost } from '@/components/tour/tour-host';
 
 /** What `beforeLoad` hands the not-found page when the project itself is missing. */
 const MISSING_PROJECT = 'missing-project';
@@ -71,18 +72,18 @@ function ProjectLayout() {
       <header className="flex items-center gap-4 border-b px-4 pt-1.5">
         <Tabs value={section} className="min-w-0 overflow-x-auto">
           <TabsList variant="line" aria-label={t('sections.label')}>
-            <TabsTrigger value="assets" asChild>
+            <TabsTrigger value="assets" data-tour="tab-assets" asChild>
               <Link to="/p/$project" params={{ project }}>
                 {t('sections.assets')} <span className="text-muted-foreground tabular-nums">{count}</span>
               </Link>
             </TabsTrigger>
-            <TabsTrigger value="playground" asChild>
+            <TabsTrigger value="playground" data-tour="tab-playground" asChild>
               <Link to="/p/$project/playground" params={{ project }}>{t('sections.playground')}</Link>
             </TabsTrigger>
-            <TabsTrigger value="customize" asChild>
+            <TabsTrigger value="customize" data-tour="tab-customize" asChild>
               <Link to="/p/$project/customize" params={{ project }}>{t('sections.customize')}</Link>
             </TabsTrigger>
-            <TabsTrigger value="scenery" asChild>
+            <TabsTrigger value="scenery" data-tour="tab-scenery" asChild>
               <Link to="/p/$project/scenery" params={{ project }}>{t('sections.scenery')}</Link>
             </TabsTrigger>
           </TabsList>
@@ -90,7 +91,7 @@ function ProjectLayout() {
         <span className="ml-auto text-xs whitespace-nowrap text-muted-foreground tabular-nums max-xl:hidden">
           {projectTotals(meta, count, i18n)}
         </span>
-        <div className="flex shrink-0 items-center gap-2 pb-1.5 max-xl:ml-auto">
+        <div data-tour="actions" className="flex shrink-0 items-center gap-2 pb-1.5 max-xl:ml-auto">
           {meta.hasGame && (
             // The game is a page of its own (game/index.html, rule 8), not a route of the viewer: a plain link, in a new tab.
             <Tooltip>
@@ -124,6 +125,7 @@ function ProjectLayout() {
       <div className="flex min-h-0 flex-1 flex-col">
         <Outlet />
       </div>
+      <TourHost key={project} project={project} />
     </>
   );
 }

@@ -1,6 +1,6 @@
 import NiceModal from '@ebay/nice-modal-react';
 import { useSuspenseQuery } from '@tanstack/react-query';
-import { CopyIcon, Gamepad2Icon, MoreHorizontalIcon, PlusIcon, Trash2Icon, UploadIcon } from 'lucide-react';
+import { CopyIcon, Gamepad2Icon, MoreHorizontalIcon, PlusIcon, SignpostIcon, Trash2Icon, UploadIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -12,10 +12,11 @@ import { projectDir, projectUrl } from '@/lib/project-paths';
 import { projectsQuery } from '@/lib/queries';
 import { DeleteProjectModal } from '@/modals/delete-project-modal';
 import { NewModal } from '@/modals/new-modal';
+import { startTour } from './tour/tour-control';
 
 /**
  * What can be done with the project in use: add an asset, export it, open its game (when it has `game/index.html`), copy
- * its path, delete it (to the trash, with Undo). Every project here is one of `projects/`.
+ * its path, take the tour of its page, delete it (to the trash, with Undo). Every project here is one of `projects/`.
  */
 export function ProjectMenu({ project }: { project: string }) {
   const { data: projects } = useSuspenseQuery(projectsQuery);
@@ -55,6 +56,14 @@ export function ProjectMenu({ project }: { project: string }) {
           <DropdownMenuItem onSelect={() => void copyText(projectDir(project), t('projects.menu.pathLabel'))}>
             <CopyIcon />
             {t('projects.menu.copyPath')}
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+          {/* Started once the menu is gone: the tour waits for it to close. */}
+          <DropdownMenuItem onSelect={startTour}>
+            <SignpostIcon />
+            {t('tour.start')}
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />

@@ -128,6 +128,8 @@ function EntryCard({ id, active, position, onOpen, onHover, thumb, flag, title, 
       aria-selected={active}
       aria-posinset={position.index + 1}
       aria-setsize={position.total}
+      // The first card is the one the tour points at to say what Details shows.
+      data-tour={position.index === 0 ? 'asset' : undefined}
       onClick={onOpen}
       onMouseEnter={() => onHover(true)}
       onMouseLeave={() => onHover(false)}

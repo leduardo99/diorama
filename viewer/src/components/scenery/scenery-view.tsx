@@ -271,7 +271,7 @@ function Painter({ project, catalog, fixture, sceneNames }: { project: string; c
       open={panelOpen}
       onOpen={setPanelOpen}
       panel={
-        <aside className="flex min-h-0 flex-1 flex-col" aria-label={t('scenery.piecesLabel')}>
+        <aside data-tour="scenery" className="flex min-h-0 flex-1 flex-col" aria-label={t('scenery.piecesLabel')}>
           <div className="min-h-0 flex-1 overflow-y-auto p-3">
             <SceneryPalette catalog={catalog} brush={brush} tool={tool} onChoose={choose} onTool={setTool} />
           </div>

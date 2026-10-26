@@ -16,8 +16,12 @@ export function isTyping(target: EventTarget | null): boolean {
 /** A modal dialog or sheet (the shortcuts window, a confirmation), or an open menu (its arrows and letters pick an item); not a popover, which can stay open while the page is used. */
 const MODAL = '[role="dialog"]:not([data-slot="popover-content"]), [role="alertdialog"], [role="menu"]';
 
-/** True while a modal dialog or a menu is open: it owns the keyboard, and the page behind it must not act on a key. */
-export const isModalOpen = () => document.querySelector(MODAL) !== null;
+/**
+ * True while a modal dialog or a menu is open: it owns the keyboard, and the page behind it must not act on a key. The
+ * tour's card is a dialog too, so the page's keys wait while it shows; the tour itself asks about the others (`own`).
+ */
+export const isModalOpen = (own?: Element | null) =>
+  own ? [...document.querySelectorAll(MODAL)].some((layer) => layer !== own) : document.querySelector(MODAL) !== null;
 
 /**
  * The keys every page answers to, as `KeyboardEvent.key` names them in lower case: N opens the New dialog and ? the
