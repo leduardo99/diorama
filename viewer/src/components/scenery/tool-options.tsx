@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import { heightsOf, type SceneryCatalog, type SpaceHeight } from '@core/volume';
+import { Scroller } from '@/components/ui/scroller';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useT } from '@/i18n';
@@ -37,7 +38,7 @@ interface Props {
 /**
  * The bar under the toolbar: what the tool in use is armed with (the piece, its facing and variant, the eraser's layer)
  * and how to use it. One line of a fixed height whatever the tool: the canvas below must not move when the tool changes,
- * or the cell under the pointer changes with it. A narrow panel scrolls the controls and cuts the hint (in full in its tooltip).
+ * or the cell under the pointer changes with it. A narrow panel scrolls the controls (edges faded, a button at each side that has more) and cuts the hint (in full in its tooltip).
  */
 export const ToolOptions = memo(function ToolOptions({ catalog, tool, brush, eraseLayer, onEraseLayer, propDir, propVariant, onPropDir, onPropVariant, placeState, onPlaceState, doorFlip, onDoorFlip, wallHeight, onWallHeight }: Props) {
   const { t } = useT();
@@ -52,47 +53,49 @@ export const ToolOptions = memo(function ToolOptions({ catalog, tool, brush, era
   const heights = tool === 'wall' && info?.heights && info.heights.length > 1 ? info.heights : [];
 
   return (
-    <div className="flex h-12 shrink-0 items-center gap-4 overflow-x-auto border-b bg-muted/20 px-3 [scrollbar-width:none]">
-      <div className="flex shrink-0 items-center gap-4">
-      <span className="flex items-center gap-1.5 font-medium whitespace-nowrap">
-        <Icon />
-        {t(`scenery.tools.${tool}`)}
-      </span>
+    <div className="h-12 shrink-0 border-b bg-muted/20 *:h-full">
+      <Scroller orientation="horizontal" hideScrollbar withNavigation scrollTriggerMode="click" scrollStep={160} className="flex h-full items-center gap-4 px-3">
+        <div className="flex shrink-0 items-center gap-4">
+        <span className="flex items-center gap-1.5 font-medium whitespace-nowrap">
+          <Icon />
+          {t(`scenery.tools.${tool}`)}
+        </span>
 
-      {(tool === 'floor' || tool === 'wall' || tool === 'door' || tool === 'prop' || tool === 'fill') &&
-        (info ? (
-          <span className="flex items-center gap-2">
-            <PieceThumb catalog={catalog} info={info} size="sm" />
-            <span className="flex max-w-48 flex-col leading-tight">
-              <span className="truncate">{info.label}</span>
-              <span className="truncate text-muted-foreground">{t(`scenery.groups.${info.group}`)}</span>
+        {(tool === 'floor' || tool === 'wall' || tool === 'door' || tool === 'prop' || tool === 'fill') &&
+          (info ? (
+            <span className="flex items-center gap-2">
+              <PieceThumb catalog={catalog} info={info} size="sm" />
+              <span className="flex max-w-48 flex-col leading-tight">
+                <span className="truncate">{info.label}</span>
+                <span className="truncate text-muted-foreground">{t(`scenery.groups.${info.group}`)}</span>
+              </span>
             </span>
-          </span>
-        ) : (
-          <span className="whitespace-nowrap text-muted-foreground">{t('scenery.choosePiece')}</span>
-        ))}
+          ) : (
+            <span className="whitespace-nowrap text-muted-foreground">{t('scenery.choosePiece')}</span>
+          ))}
 
-      {facings > 1 && <FacingControl count={facings} value={propDir} onTurn={(by) => onPropDir((((propDir + by) % facings) + facings) % facings)} />}
-      {tool === 'door' && info && canFlip(info) && <SideControl flipped={doorFlip} onFlip={() => onDoorFlip(!doorFlip)} />}
-      {states.length > 0 && <StateSelect states={states} value={placeState} onChange={onPlaceState} className="w-36" />}
-      {variants > 1 && info && <VariantSelect count={variants} labels={info.variantLabels} value={propVariant} onChange={onPropVariant} className="w-36" />}
+        {facings > 1 && <FacingControl count={facings} value={propDir} onTurn={(by) => onPropDir((((propDir + by) % facings) + facings) % facings)} />}
+        {tool === 'door' && info && canFlip(info) && <SideControl flipped={doorFlip} onFlip={() => onDoorFlip(!doorFlip)} />}
+        {states.length > 0 && <StateSelect states={states} value={placeState} onChange={onPlaceState} className="w-36" />}
+        {variants > 1 && info && <VariantSelect count={variants} labels={info.variantLabels} value={propVariant} onChange={onPropVariant} className="w-36" />}
 
-      {heights.length > 0 && info && <HeightSelect heights={heights} units={heightsOf(info, catalog)} value={wallHeight} onChange={onWallHeight} className="w-44" />}
+        {heights.length > 0 && info && <HeightSelect heights={heights} units={heightsOf(info, catalog)} value={wallHeight} onChange={onWallHeight} className="w-44" />}
 
-      {tool === 'erase' && (
-        <ToggleGroup type="single" variant="outline" size="sm" spacing={0} aria-label={t('scenery.eraserLayer')} value={eraseLayer} onValueChange={(value) => value && onEraseLayer(value as EraseLayer)}>
-          {ERASE_LAYERS.map((layer) => <ToggleGroupItem key={layer} value={layer}>{t(`scenery.eraseLayers.${layer}`)}</ToggleGroupItem>)}
-        </ToggleGroup>
-      )}
+        {tool === 'erase' && (
+          <ToggleGroup type="single" variant="outline" size="sm" spacing={0} aria-label={t('scenery.eraserLayer')} value={eraseLayer} onValueChange={(value) => value && onEraseLayer(value as EraseLayer)}>
+            {ERASE_LAYERS.map((layer) => <ToggleGroupItem key={layer} value={layer}>{t(`scenery.eraseLayers.${layer}`)}</ToggleGroupItem>)}
+          </ToggleGroup>
+        )}
 
-      </div>
+        </div>
 
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span className="min-w-8 flex-1 truncate text-right text-muted-foreground">{t(`scenery.hints.${tool}`)}</span>
-        </TooltipTrigger>
-        <TooltipContent className="max-w-sm">{t(`scenery.hints.${tool}`)}</TooltipContent>
-      </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="min-w-8 flex-1 truncate text-right text-muted-foreground">{t(`scenery.hints.${tool}`)}</span>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-sm">{t(`scenery.hints.${tool}`)}</TooltipContent>
+        </Tooltip>
+      </Scroller>
     </div>
   );
 });

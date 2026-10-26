@@ -91,7 +91,7 @@ const PieceCard = memo(function PieceCard({ catalog, info, current }: { catalog:
   );
 });
 
-/** The brushes and every piece of the kit by group, drawn by the engine. Choosing one arms it for its tool. */
+/** The brushes and every piece of the kit by group, drawn by the engine; a wider panel fits more pieces to a row. Choosing one arms it for its tool. */
 export const SceneryPalette = memo(function SceneryPalette({ catalog, brush, tool, onChoose, onTool }: Props) {
   const { t } = useT();
   const [query, setQuery] = useState('');
@@ -128,7 +128,7 @@ export const SceneryPalette = memo(function SceneryPalette({ catalog, brush, too
                 const info = pieces.find((p) => p.id === id);
                 if (info) onChoose(info);
               }}
-              className="grid w-full grid-cols-3 items-stretch"
+              className="grid w-full grid-cols-[repeat(auto-fill,minmax(5.5rem,1fr))] items-stretch"
             >
               {pieces.map((info) => <PieceCard key={info.id} catalog={catalog} info={info} current={toolNow === key} />)}
             </ToggleGroup>

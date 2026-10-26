@@ -66,8 +66,8 @@ function AssetCard({ asset, active, position, onOpen }: CardProps & { asset: Ass
         {(role === 'vfx' || role === 'ui') && detail && <Badge variant="secondary">{detail}</Badge>}
         {role === 'icon' && <ItemBadges asset={asset} />}
         {asset.engine && <EngineBadge engine={asset.engine} />}
-        {asset.width && <span>{asset.width}×{asset.height}</span>}
         <FrameSummary info={asset.atlasInfo} />
+        {asset.width && <span>{asset.width}×{asset.height}</span>}
         <span className="ml-auto">{bytes(asset.size)}</span>
       </EntryCard>
     </AssetContextMenu>
@@ -142,7 +142,14 @@ function EntryCard({ id, active, position, onOpen, onHover, thumb, flag, title, 
         <CardDescription className="truncate" title={description}>{description}</CardDescription>
         <CardAction>{menu}</CardAction>
       </CardHeader>
-      <CardFooter className="flex-wrap items-center gap-x-2 gap-y-1 py-2 text-muted-foreground tabular-nums">{children}</CardFooter>
+      {/*
+        One line at every card size: what does not fit wraps onto a second line that the fixed height hides, so the facts
+        go in order of weight (the type, the engine, the frames, the size in pixels, the file size, all of them in the
+        Details window too) and a narrow card drops the last ones whole, never half a badge.
+      */}
+      <CardFooter className="py-2">
+        <div className="flex h-5 min-w-0 flex-1 flex-wrap items-center gap-x-2 overflow-hidden whitespace-nowrap text-muted-foreground tabular-nums *:shrink-0">{children}</div>
+      </CardFooter>
     </Card>
   );
 }

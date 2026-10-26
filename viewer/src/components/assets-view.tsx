@@ -7,7 +7,7 @@ import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTi
 import { assetsQuery, projectsQuery } from '@/lib/queries';
 import { assetsRoute } from '@/lib/routes';
 import { useT } from '@/i18n';
-import { dirname } from '@/lib/format';
+import { folderTree } from '@/lib/folders';
 import { pendingExports } from '@/lib/export-state';
 import { entryCover, entryKey, entryOf, groupAnimations, type AssetEntry } from '@/lib/groups';
 import { usePref } from '@/lib/use-pref';
@@ -23,20 +23,6 @@ import { AssetToolbar, gridSizes, type GridSize } from './asset-toolbar';
 import { ExportBanner } from './export-banner';
 import { DetailsDialog } from './details/details-dialog';
 
-const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
-
-function folderCounts(assets: AssetFileMeta[]): Array<[string, number]> {
-  const counts = new Map<string, number>();
-  for (const asset of assets) {
-    const parts = dirname(asset.subpath).split('/').filter(Boolean);
-    parts.forEach((_, i) => {
-      const path = parts.slice(0, i + 1).join('/');
-      counts.set(path, (counts.get(path) ?? 0) + 1);
-    });
-  }
-  return [...counts.entries()].sort(([a], [b]) => collator.compare(a, b));
-}
-
 export function AssetsView() {
   const { project } = assetsRoute.useParams();
   const { t, plural } = useT();
@@ -49,7 +35,7 @@ export function AssetsView() {
   const { columns, cardWidth } = useGridColumns(scrollRef, gridSizes[gridSize]);
 
   const assets = useMemo(() => allAssets.filter((a) => a.project === project), [allAssets, project]);
-  const folders = useMemo(() => folderCounts(assets), [assets]);
+  const folders = useMemo(() => folderTree(assets.map((a) => a.subpath)), [assets]);
   const table = useAssetTable(assets);
   const rows = table.getRowModel().rows;
   const visible = useMemo(() => rows.map((row) => row.original), [rows]);

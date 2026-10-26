@@ -19,6 +19,7 @@ export const en = {
     none: 'None',
     yes: 'yes',
     no: 'no',
+    resizePanel: 'Resize the panel',
   },
   units: {
     byte: 'B',
@@ -148,6 +149,12 @@ export const en = {
     grouped: { one: '{count} item grouped', other: '{count} items grouped' },
     clearFiltersLink: 'clear filters',
     clearFilters: 'Clear filters',
+    filters: {
+      label: 'Filters',
+      labelActive: 'Filters, {count} in use',
+      searchFolders: 'Search folders',
+      noFolder: 'No folder matches.',
+    },
     empty: {
       title: 'No exported assets in this project',
       withSheets: {

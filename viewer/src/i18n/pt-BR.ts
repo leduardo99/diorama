@@ -17,6 +17,7 @@ export const ptBR: Shape<typeof en> = {
     none: 'Nenhum',
     yes: 'sim',
     no: 'não',
+    resizePanel: 'Redimensionar o painel',
   },
   units: {
     byte: 'B',
@@ -146,6 +147,12 @@ export const ptBR: Shape<typeof en> = {
     grouped: { one: '{count} item agrupado', other: '{count} itens agrupados' },
     clearFiltersLink: 'limpar filtros',
     clearFilters: 'Limpar filtros',
+    filters: {
+      label: 'Filtros',
+      labelActive: 'Filtros, {count} em uso',
+      searchFolders: 'Buscar pastas',
+      noFolder: 'Nenhuma pasta encontrada.',
+    },
     empty: {
       title: 'Nenhum asset exportado neste projeto',
       withSheets: {

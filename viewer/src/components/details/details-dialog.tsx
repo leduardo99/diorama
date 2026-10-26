@@ -12,7 +12,7 @@ import { digitRow, keyedAxis, stepRow } from '@/lib/rows';
 import type { AssetFileMeta } from '@/lib/types';
 import { IconDetails } from './icon-details';
 import { Inspector } from './inspector';
-import { DetailsHeader, DetailsShell, usePeers } from './details-shell';
+import { DetailsColumns, DetailsHeader, DetailsShell, usePeers } from './details-shell';
 import { Stage } from './stage';
 import { Transport } from './transport';
 import { UiDetails } from './ui-details';
@@ -156,20 +156,24 @@ function PlayerBody({ asset, clips, projectAssets, peers, directionIndex, onDire
         </div>
       )}
 
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_20rem]">
-        <section className="flex min-h-0 min-w-0 flex-col">
-          <Stage player={player} asset={asset} highlight={highlight} ring={vfx.ringRadius} flight={vfx.flight} />
-          <Transport player={player} />
-        </section>
-        <Inspector
-          player={player}
-          asset={asset}
-          directionIndex={directionIndex}
-          onDirection={onDirection}
-          onHighlight={setHighlight}
-          top={vfx.effect && <VfxSection vfx={vfx} projectAssets={projectAssets} onSelect={onSelect} />}
-        />
-      </div>
+      <DetailsColumns
+        stage={
+          <section className="flex min-h-0 min-w-0 flex-1 flex-col">
+            <Stage player={player} asset={asset} highlight={highlight} ring={vfx.ringRadius} flight={vfx.flight} />
+            <Transport player={player} />
+          </section>
+        }
+        inspector={
+          <Inspector
+            player={player}
+            asset={asset}
+            directionIndex={directionIndex}
+            onDirection={onDirection}
+            onHighlight={setHighlight}
+            top={vfx.effect && <VfxSection vfx={vfx} projectAssets={projectAssets} onSelect={onSelect} />}
+          />
+        }
+      />
 
       <footer className="flex items-center gap-4 border-t px-4 py-1.5 text-xs text-muted-foreground">
         {/* A still has no frames to play or step through, as the transport above says by hiding. */}

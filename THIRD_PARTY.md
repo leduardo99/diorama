@@ -27,6 +27,7 @@ Direct dependencies of the exporter, the CLI and the viewer (`dependencies` in `
 | radix-ui | 1.8.1 | MIT |
 | react | 19.3.1 | MIT |
 | react-dom | 19.3.1 | MIT |
+| react-resizable-panels | 4.14.5 | MIT |
 | simplex-noise | 4.0.3 | MIT |
 | sonner | 2.0.8 | MIT |
 | tailwindcss | 4.3.3 | MIT |
@@ -57,6 +58,7 @@ Third-party files kept in the source tree, each with a comment naming its origin
 | File | Source | License |
 | :--- | :--- | :--- |
 | `viewer/src/styles/shadcn-tailwind.css` | `shadcn` npm package 4.22.1, `dist/tailwind.css` (shadcn/ui, `shadcn-ui/ui` on GitHub), unmodified | MIT |
+| `viewer/src/components/ui/scroller.tsx` | Dice UI's `scroller` registry item for `radix-mira` (`sadmann7/diceui` on GitHub), added with `npx shadcn@4.22.1 add https://diceui.com/r/radix-mira/scroller.json`; the changes are marked `Diorama:` | MIT |
 
 The shadcn CLI that adds components to the viewer is not a dependency: it is run with `npx` when needed (see `viewer/AGENTS.md`).
 

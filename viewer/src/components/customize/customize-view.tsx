@@ -3,6 +3,7 @@ import NiceModal from '@ebay/nice-modal-react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import type { OutfitCharacterInfo } from '@core/rig';
 import { ChevronRightIcon, Redo2Icon, RefreshCwIcon, RotateCcwIcon, SaveIcon, ShirtIcon, Undo2Icon } from 'lucide-react';
+import { SidePanelLayout } from '@/components/side-panel-layout';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
@@ -90,100 +91,104 @@ function Customizer({ project, kit, character }: { project: string; kit: GearKit
     else undo();
   });
 
-  return (
-    <div className="flex min-h-0 flex-1">
-      <aside className="flex w-88 shrink-0 flex-col border-r" aria-label={t('customize.outfitLabel')}>
-        <div className="flex flex-col gap-3 border-b p-3">
-          <Field>
-            <FieldLabel htmlFor="customize-character">{t('customize.character')}</FieldLabel>
-            <Select value={character.id} onValueChange={(id) => void navigate({ search: (prev) => ({ ...prev, character: id }), replace: true })}>
-              <SelectTrigger id="customize-character" className="w-full"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {/* The kit's label with its id, in the list and in the trigger; typing picks by the label. */}
-                  {kit.characters.map((c) => (
-                    <SelectItem key={c.id} value={c.id} textValue={c.label}>
-                      {c.label}
-                      <span className="text-muted-foreground">{c.id}</span>
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </Field>
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-muted-foreground">
-              {plural('customize.clips', Object.keys(character.clips).length)} · {plural('customize.pieces', outfit.pieces.length)}
-            </p>
-            <div className="flex items-center gap-0.5">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon-xs" aria-label={t('customize.undo')} disabled={!canUndo} onClick={undo}><Undo2Icon /></Button>
-                </TooltipTrigger>
-                <TooltipContent>{t('customize.undo')} <Kbd>⌘Z</Kbd></TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon-xs" aria-label={t('customize.redo')} disabled={!canRedo} onClick={redo}><Redo2Icon /></Button>
-                </TooltipTrigger>
-                <TooltipContent>{t('customize.redo')} <Kbd>⇧⌘Z</Kbd></TooltipContent>
-              </Tooltip>
-            </div>
-          </div>
-          <div className="flex items-center justify-between gap-2">
-            <Tabs value={mode} onValueChange={setMode}>
-              <TabsList>
-                <TabsTrigger value="slots">{t('customize.modeSlots')}</TabsTrigger>
-                <TabsTrigger value="list">{t('customize.modeList')}</TabsTrigger>
-              </TabsList>
-            </Tabs>
+  // The outfit's column can be widened for long piece names and deep slot trees; the preview takes the rest.
+  const outfitPanel = (
+    <aside className="flex min-h-0 flex-1 flex-col" aria-label={t('customize.outfitLabel')}>
+      <div className="flex flex-col gap-3 border-b p-3">
+        <Field>
+          <FieldLabel htmlFor="customize-character">{t('customize.character')}</FieldLabel>
+          <Select value={character.id} onValueChange={(id) => void navigate({ search: (prev) => ({ ...prev, character: id }), replace: true })}>
+            <SelectTrigger id="customize-character" className="w-full"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {/* The kit's label with its id, in the list and in the trigger; typing picks by the label. */}
+                {kit.characters.map((c) => (
+                  <SelectItem key={c.id} value={c.id} textValue={c.label}>
+                    {c.label}
+                    <span className="text-muted-foreground">{c.id}</span>
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </Field>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-muted-foreground">
+            {plural('customize.clips', Object.keys(character.clips).length)} · {plural('customize.pieces', outfit.pieces.length)}
+          </p>
+          <div className="flex items-center gap-0.5">
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="xs" disabled={refreshGear.isPending} onClick={() => refreshGear.mutate({ project })}>
-                  {refreshGear.isPending ? <Spinner data-icon="inline-start" /> : <RefreshCwIcon data-icon="inline-start" />}
-                  {t('customize.updateGear')}
-                </Button>
+                <Button variant="ghost" size="icon-xs" aria-label={t('customize.undo')} disabled={!canUndo} onClick={undo}><Undo2Icon /></Button>
               </TooltipTrigger>
-              <TooltipContent>{t('customize.updateGearHint')}</TooltipContent>
+              <TooltipContent>{t('customize.undo')} <Kbd>⌘Z</Kbd></TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon-xs" aria-label={t('customize.redo')} disabled={!canRedo} onClick={redo}><Redo2Icon /></Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('customize.redo')} <Kbd>⇧⌘Z</Kbd></TooltipContent>
             </Tooltip>
           </div>
         </div>
-        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3">
-          <WieldNotes report={wield} />
-          {mode === 'list' ? (
-            <OutfitEditor project={project} catalog={kit.catalog} outfit={outfit} onEdit={edit} />
-          ) : (
-            <div className="flex flex-col gap-5">
-              <SlotBoard project={project} catalog={kit.catalog} outfit={outfit} skeleton={character.skeleton} onEdit={edit} onUndo={undo} />
-              <Collapsible open={basics} onOpenChange={setBasics} className="border-t pt-3">
-                <CollapsibleTrigger asChild>
-                  <Button variant="ghost" size="sm" className="w-full justify-start">
-                    <ChevronRightIcon data-icon="inline-start" className={cn('transition-transform', basics && 'rotate-90')} />
-                    {t('customize.bodyAndMaterials')}
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="pt-3">
-                  <OutfitBasics catalog={kit.catalog} outfit={outfit} onEdit={edit} />
-                </CollapsibleContent>
-              </Collapsible>
-            </div>
-          )}
+        <div className="flex items-center justify-between gap-2">
+          <Tabs value={mode} onValueChange={setMode}>
+            <TabsList>
+              <TabsTrigger value="slots">{t('customize.modeSlots')}</TabsTrigger>
+              <TabsTrigger value="list">{t('customize.modeList')}</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="xs" disabled={refreshGear.isPending} onClick={() => refreshGear.mutate({ project })}>
+                {refreshGear.isPending ? <Spinner data-icon="inline-start" /> : <RefreshCwIcon data-icon="inline-start" />}
+                {t('customize.updateGear')}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('customize.updateGearHint')}</TooltipContent>
+          </Tooltip>
         </div>
-        <div className="flex items-center gap-2 border-t p-3">
-          <Button variant="outline" size="sm" disabled={!changed} onClick={reset}>
-            <RotateCcwIcon data-icon="inline-start" />
-            {t('customize.restore')}
-          </Button>
-          <Button size="sm" className="ml-auto" onClick={() => void NiceModal.show(SaveOutfitModal, { project, characterId: character.id, outfit, skipped: [...wield.unusable] })}>
-            <SaveIcon data-icon="inline-start" />
-            {t('customize.saveAsCharacter')}
-          </Button>
-        </div>
-      </aside>
-      <section className="flex min-w-0 flex-1 flex-col" aria-label={t('customize.previewLabel')}>
+      </div>
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3">
+        <WieldNotes report={wield} />
+        {mode === 'list' ? (
+          <OutfitEditor project={project} catalog={kit.catalog} outfit={outfit} onEdit={edit} />
+        ) : (
+          <div className="flex flex-col gap-5">
+            <SlotBoard project={project} catalog={kit.catalog} outfit={outfit} skeleton={character.skeleton} onEdit={edit} onUndo={undo} />
+            <Collapsible open={basics} onOpenChange={setBasics} className="border-t pt-3">
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="w-full justify-start">
+                  <ChevronRightIcon data-icon="inline-start" className={cn('transition-transform', basics && 'rotate-90')} />
+                  {t('customize.bodyAndMaterials')}
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-3">
+                <OutfitBasics catalog={kit.catalog} outfit={outfit} onEdit={edit} />
+              </CollapsibleContent>
+            </Collapsible>
+          </div>
+        )}
+      </div>
+      <div className="flex items-center gap-2 border-t p-3">
+        <Button variant="outline" size="sm" disabled={!changed} onClick={reset}>
+          <RotateCcwIcon data-icon="inline-start" />
+          {t('customize.restore')}
+        </Button>
+        <Button size="sm" className="ml-auto" onClick={() => void NiceModal.show(SaveOutfitModal, { project, characterId: character.id, outfit, skipped: [...wield.unusable] })}>
+          <SaveIcon data-icon="inline-start" />
+          {t('customize.saveAsCharacter')}
+        </Button>
+      </div>
+    </aside>
+  );
+
+  return (
+    <SidePanelLayout id="customize" side="start" size={{ initial: '22rem', min: '18rem', max: '36rem' }} panel={outfitPanel}>
+      <section className="flex min-h-0 min-w-0 flex-1 flex-col" aria-label={t('customize.previewLabel')}>
         <PreviewPanel key={character.id} character={character} catalog={kit.catalog} outfit={outfit} unusable={wield.unusable} />
       </section>
-    </div>
+    </SidePanelLayout>
   );
 }
 

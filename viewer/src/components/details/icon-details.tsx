@@ -12,6 +12,7 @@ import { atlasQuery } from '@/lib/queries';
 import type { AssetFileMeta } from '@/lib/types';
 import { usePref } from '@/lib/use-pref';
 import { cn } from '@/lib/utils';
+import { DetailsColumns } from './details-shell';
 import { Section } from './inspector';
 import { useSheet } from './use-sheet';
 
@@ -145,80 +146,83 @@ export function IconDetails({ asset, projectAssets, onSelect }: { asset: AssetFi
   const box = frame && emptyRect ? { width: emptyRect.width * zoom, height: emptyRect.height * zoom } : { width: base * zoom, height: base * zoom };
 
   return (
-    <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_20rem]">
-      <section className="flex min-h-0 min-w-0 flex-col">
-        <div className="min-h-0 flex-1 overflow-auto bg-muted/30 p-6">
-          {(failed || atlasError) && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertDescription>{failed ? t('errors.loadFile', { url: asset.url }) : atlasError?.message}</AlertDescription>
-            </Alert>
-          )}
-          <div role="group" aria-label={t('details.icon.inventory')} className="mx-auto grid w-fit gap-1.5 rounded-md bg-card/60 p-3 ring-1 ring-foreground/10" style={{ gridTemplateColumns: `repeat(${COLUMNS}, ${box.width}px)` }}>
-            {slots.map((slot, i) => <Slot key={slot?.subpath ?? `empty-${i}`} asset={slot} selected={slot?.subpath === asset.subpath} box={box} zoom={zoom} frame={frame && emptyRect ? frame : null} onSelect={onSelect} />)}
+    <DetailsColumns
+      stage={
+        <section className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 overflow-auto bg-muted/30 p-6">
+            {(failed || atlasError) && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertDescription>{failed ? t('errors.loadFile', { url: asset.url }) : atlasError?.message}</AlertDescription>
+              </Alert>
+            )}
+            <div role="group" aria-label={t('details.icon.inventory')} className="mx-auto grid w-fit gap-1.5 rounded-md bg-card/60 p-3 ring-1 ring-foreground/10" style={{ gridTemplateColumns: `repeat(${COLUMNS}, ${box.width}px)` }}>
+              {slots.map((slot, i) => <Slot key={slot?.subpath ?? `empty-${i}`} asset={slot} selected={slot?.subpath === asset.subpath} box={box} zoom={zoom} frame={frame && emptyRect ? frame : null} onSelect={onSelect} />)}
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-3 border-t px-4 py-2.5">
-          <Field orientation="horizontal" className="w-auto">
-            <FieldTitle id="details-icon-zoom">{t('details.icon.zoom')}</FieldTitle>
-            <ToggleGroup type="single" variant="outline" size="sm" spacing={0} aria-labelledby="details-icon-zoom" value={String(zoom)} onValueChange={(value) => value && setZoom(Number(value))}>
-              {ZOOMS.map((z) => <ToggleGroupItem key={z} value={String(z)}>{t('units.times', { value: z })}</ToggleGroupItem>)}
-            </ToggleGroup>
-          </Field>
-          <span className="ml-auto text-muted-foreground tabular-nums">{frame && slotAsset ? `${t('details.icon.slotsOf', { name: slotAsset.atlasInfo?.label ?? slotAsset.subpath })} · ` : ''}{plural('details.icon.count', icons.length)}</span>
-        </div>
-      </section>
-
-      <div className="h-full min-h-0 overflow-y-auto border-l bg-card/40">
-        <Section title={t('details.icon.item')}>
-          {item ? (
-            <>
-              <div className="flex items-start gap-3">
-                <img src={sheetUrl(asset)} alt="" draggable={false} className="pixelated size-16 shrink-0 object-contain" />
-                <div className="flex min-w-0 flex-col gap-1">
-                  <span className="truncate font-medium">{item.label}</span>
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <Badge variant="outline" className="gap-1.5">
-                      <span aria-hidden className="size-2 rounded-full" style={{ backgroundColor: item.rarityColor }} />
-                      {item.rarityLabel ?? item.rarity}
-                    </Badge>
-                    <Badge variant="secondary">{item.kind}</Badge>
+          <div className="flex items-center gap-3 border-t px-4 py-2.5">
+            <Field orientation="horizontal" className="w-auto">
+              <FieldTitle id="details-icon-zoom">{t('details.icon.zoom')}</FieldTitle>
+              <ToggleGroup type="single" variant="outline" size="sm" spacing={0} aria-labelledby="details-icon-zoom" value={String(zoom)} onValueChange={(value) => value && setZoom(Number(value))}>
+                {ZOOMS.map((z) => <ToggleGroupItem key={z} value={String(z)}>{t('units.times', { value: z })}</ToggleGroupItem>)}
+              </ToggleGroup>
+            </Field>
+            <span className="ml-auto text-muted-foreground tabular-nums">{frame && slotAsset ? `${t('details.icon.slotsOf', { name: slotAsset.atlasInfo?.label ?? slotAsset.subpath })} · ` : ''}{plural('details.icon.count', icons.length)}</span>
+          </div>
+        </section>
+      }
+      inspector={
+        <div className="min-h-0 flex-1 overflow-y-auto bg-card/40">
+          <Section title={t('details.icon.item')}>
+            {item ? (
+              <>
+                <div className="flex items-start gap-3">
+                  <img src={sheetUrl(asset)} alt="" draggable={false} className="pixelated size-16 shrink-0 object-contain" />
+                  <div className="flex min-w-0 flex-col gap-1">
+                    <span className="truncate font-medium">{item.label}</span>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Badge variant="outline" className="gap-1.5">
+                        <span aria-hidden className="size-2 rounded-full" style={{ backgroundColor: item.rarityColor }} />
+                        {item.rarityLabel ?? item.rarity}
+                      </Badge>
+                      <Badge variant="secondary">{item.kind}</Badge>
+                    </div>
                   </div>
                 </div>
-              </div>
-              {item.description && <FieldDescription>{item.description}</FieldDescription>}
-              <dl className="flex flex-col gap-1.5">
-                {[
-                  [t('details.icon.id'), item.id],
-                  [t('details.icon.stack'), item.stack !== undefined ? t('details.icon.perSlot', { count: item.stack }) : undefined],
-                  [t('details.icon.rarityColor'), item.rarityColor],
-                  [t('details.icon.gearPart'), item.gear],
-                  [t('details.icon.icon'), atlas?.meta.frameWidth ? t('units.px', { value: `${atlas.meta.frameWidth}×${atlas.meta.frameHeight}` }) : undefined],
-                ].filter((row): row is [string, string] => row[1] !== undefined).map(([key, value]) => (
-                  <div key={key} className="flex justify-between gap-3">
-                    <dt className="text-muted-foreground">{key}</dt>
-                    <dd className="text-right font-mono">{value}</dd>
-                  </div>
-                ))}
-              </dl>
-            </>
-          ) : (
-            <FieldDescription>{t('details.icon.noDescription')}</FieldDescription>
-          )}
-        </Section>
-        {rarities.length > 0 && (
-          <Section title={t('details.icon.rarities')}>
-            <ul className="flex flex-col gap-1.5">
-              {rarities.map((rarity) => (
-                <li key={rarity.id} className="flex items-center gap-2">
-                  <span aria-hidden className="size-3 rounded-xs ring-1 ring-foreground/20" style={{ backgroundColor: rarity.color }} />
-                  <span>{rarity.label}</span>
-                  <span className="ml-auto font-mono text-muted-foreground">{rarity.color}</span>
-                </li>
-              ))}
-            </ul>
+                {item.description && <FieldDescription>{item.description}</FieldDescription>}
+                <dl className="flex flex-col gap-1.5">
+                  {[
+                    [t('details.icon.id'), item.id],
+                    [t('details.icon.stack'), item.stack !== undefined ? t('details.icon.perSlot', { count: item.stack }) : undefined],
+                    [t('details.icon.rarityColor'), item.rarityColor],
+                    [t('details.icon.gearPart'), item.gear],
+                    [t('details.icon.icon'), atlas?.meta.frameWidth ? t('units.px', { value: `${atlas.meta.frameWidth}×${atlas.meta.frameHeight}` }) : undefined],
+                  ].filter((row): row is [string, string] => row[1] !== undefined).map(([key, value]) => (
+                    <div key={key} className="flex justify-between gap-3">
+                      <dt className="text-muted-foreground">{key}</dt>
+                      <dd className="text-right font-mono">{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </>
+            ) : (
+              <FieldDescription>{t('details.icon.noDescription')}</FieldDescription>
+            )}
           </Section>
-        )}
-      </div>
-    </div>
+          {rarities.length > 0 && (
+            <Section title={t('details.icon.rarities')}>
+              <ul className="flex flex-col gap-1.5">
+                {rarities.map((rarity) => (
+                  <li key={rarity.id} className="flex items-center gap-2">
+                    <span aria-hidden className="size-3 rounded-xs ring-1 ring-foreground/20" style={{ backgroundColor: rarity.color }} />
+                    <span>{rarity.label}</span>
+                    <span className="ml-auto font-mono text-muted-foreground">{rarity.color}</span>
+                  </li>
+                ))}
+              </ul>
+            </Section>
+          )}
+        </div>
+      }
+    />
   );
 }

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon, RefreshCwIcon, XIcon } from 'lucide-react';
 import { AssetMenuButton } from '@/components/asset-menu';
+import { SidePanelLayout } from '@/components/side-panel-layout';
 import { EngineBadge } from '@/components/engine-badge';
 import { StaleBadge } from '@/components/stale-badge';
 import { Badge } from '@/components/ui/badge';
@@ -75,6 +76,15 @@ export function DetailsHeader({ asset, peers }: { asset: AssetFileMeta; peers: P
         </DialogClose>
       </div>
     </header>
+  );
+}
+
+/** The stage of a Details window beside its inspector, which can be widened (one width remembered for every kind of asset). */
+export function DetailsColumns({ stage, inspector }: { stage: ReactNode; inspector: ReactNode }) {
+  return (
+    <SidePanelLayout id="details" side="end" size={{ initial: '20rem', min: '16rem', max: '40rem' }} panel={inspector}>
+      {stage}
+    </SidePanelLayout>
   );
 }
 

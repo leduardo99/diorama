@@ -15,6 +15,7 @@ import { isTyping, useWindowKeydown } from '@/lib/hotkeys';
 import type { AssetFileMeta } from '@/lib/types';
 import { usePref } from '@/lib/use-pref';
 import { cn } from '@/lib/utils';
+import { DetailsColumns } from './details-shell';
 import { Section } from './inspector';
 import { useSheet } from './use-sheet';
 import type { Backdrop } from './use-player';
@@ -65,14 +66,16 @@ function ViewControls({ zoom, onZoom, backdrop, onBackdrop }: ControlsProps) {
 /** The stage on the left and the controls on the right, as in the other Details windows. */
 function Layout({ stage, controls, backdrop }: { stage: ReactNode; controls: ReactNode; backdrop: Backdrop }) {
   return (
-    <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_20rem]">
-      <section className="relative min-h-0 min-w-0">
-        <div className={cn('absolute inset-0 flex overflow-auto p-6', backdrops[backdrop])}>
-          <div className="m-auto flex flex-col items-center gap-6">{stage}</div>
-        </div>
-      </section>
-      <div className="h-full min-h-0 overflow-y-auto border-l bg-card/40">{controls}</div>
-    </div>
+    <DetailsColumns
+      stage={
+        <section className="relative min-h-0 min-w-0 flex-1">
+          <div className={cn('absolute inset-0 flex overflow-auto p-6', backdrops[backdrop])}>
+            <div className="m-auto flex flex-col items-center gap-6">{stage}</div>
+          </div>
+        </section>
+      }
+      inspector={<div className="min-h-0 flex-1 overflow-y-auto bg-card/40">{controls}</div>}
+    />
   );
 }
 

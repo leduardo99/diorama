@@ -58,7 +58,7 @@ export function Inspector({ player, asset, directionIndex, onDirection, onHighli
   const sheetFrames = kind === 'sheet' && atlas ? Object.entries(atlas.frames) : [];
 
   return (
-    <div className="h-full min-h-0 overflow-y-auto border-l bg-card/40">
+    <div className="min-h-0 flex-1 overflow-y-auto bg-card/40">
       {top}
       {kind === 'animated' && frames.length > 1 && (
         <Section title={t('details.inspector.playback')}>

@@ -25,7 +25,7 @@ export function Palette({ library, entries, recent, player, onPlayer, armed, onA
   const { t } = useT();
   const directions = armed?.type === 'sprite' ? (armed.clip.atlas.meta.directions ?? []) : [];
   return (
-    <aside className="flex min-h-0 w-80 shrink-0 flex-col gap-5 border-r p-4">
+    <aside className="flex min-h-0 flex-1 flex-col gap-5 p-4">
       {library.characters.length > 0 && (
         <FieldSet>
           <FieldLegend variant="label" className="mb-0 text-muted-foreground uppercase">{t('playground.palette.character')}</FieldLegend>

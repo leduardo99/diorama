@@ -8,6 +8,7 @@ import { assetsQuery, projectsQuery } from '@/lib/queries';
 import { APP_KEYS, isModalOpen, isTyping, useWindowKeydown } from '@/lib/hotkeys';
 import { Rich, useT } from '@/i18n';
 import { AppHeader } from '@/components/app-header';
+import { AppPending } from '@/components/app-pending';
 import { NewModal } from '@/modals/new-modal';
 import { ShortcutsModal } from '@/modals/shortcuts-modal';
 
@@ -15,6 +16,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   loader: ({ context: { queryClient } }) =>
     Promise.all([queryClient.ensureQueryData(projectsQuery), queryClient.ensureQueryData(assetsQuery)]),
   component: Shell,
+  // A slow first load (a large catalog, a dev server just started) shows the header and a spinner rather than a blank
+  // page; only after a moment, so a fast load never flashes it, and then for long enough to be read.
+  pendingComponent: AppPending,
+  pendingMs: 300,
+  pendingMinMs: 400,
   errorComponent: LoadError,
   notFoundComponent: NotFound,
 });

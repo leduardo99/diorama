@@ -8,21 +8,17 @@ import { Toggle } from '@/components/ui/toggle';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useT } from '@/i18n';
-import { isRoleId, roleIds } from '@/lib/asset-role';
 import { assetsRoute } from '@/lib/routes';
 import { isSortId, sortIds } from '@/lib/search';
-import { basename } from '@/lib/format';
-import type { Engine } from '@/lib/types';
+import type { FolderRow } from '@/lib/folders';
+import { AssetFilters } from './asset-filters';
 
 export const gridSizes = { s: 132, m: 176, l: 240 } as const;
 export type GridSize = keyof typeof gridSizes;
 
-/** Radix Select cannot hold an empty value, so "no filter" is this sentinel. */
-const ALL = 'all';
-
 interface Props {
-  /** Every folder prefix in the project with the number of assets below it. */
-  folders: Array<[path: string, count: number]>;
+  /** The project's folders in tree order, with the number of assets below each (`lib/folders.ts`). */
+  folders: FolderRow[];
   gridSize: GridSize;
   onGridSize: (size: GridSize) => void;
 }
@@ -64,47 +60,7 @@ export function AssetToolbar({ folders, gridSize, onGridSize }: Props) {
         </InputGroupAddon>
       </InputGroup>
 
-      <Select value={search.engine ?? ALL} onValueChange={(value) => setSearch({ engine: value === ALL ? undefined : (value as Engine | 'none') })}>
-        <SelectTrigger aria-label={t('assets.toolbar.engine')} className="w-40">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            <SelectItem value={ALL}>{t('assets.toolbar.allEngines')}</SelectItem>
-            <SelectItem value="volume">volume</SelectItem>
-            <SelectItem value="rig">rig</SelectItem>
-            <SelectItem value="none">{t('assets.toolbar.noEngine')}</SelectItem>
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-
-      <Select value={search.role ?? ALL} onValueChange={(value) => setSearch({ role: isRoleId(value) ? value : undefined })}>
-        <SelectTrigger aria-label={t('assets.toolbar.type')} className="w-36">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            <SelectItem value={ALL}>{t('assets.toolbar.allTypes')}</SelectItem>
-            {roleIds.map((id) => <SelectItem key={id} value={id}>{t(`roles.filter.${id}`)}</SelectItem>)}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-
-      <Select value={search.folder ?? ALL} onValueChange={(value) => setSearch({ folder: value === ALL ? undefined : value })} disabled={folders.length === 0}>
-        <SelectTrigger aria-label={t('assets.toolbar.folder')} className="w-44">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            <SelectItem value={ALL}>{t('assets.toolbar.allFolders')}</SelectItem>
-            {folders.map(([path, count]) => (
-              <SelectItem key={path} value={path}>
-                {`${' '.repeat(path.split('/').length - 1)}${basename(path)} (${count})`}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
+      <AssetFilters folders={folders} />
 
       <div className="ml-auto flex flex-wrap items-center gap-2">
         <ButtonGroup>

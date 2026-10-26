@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 import { keepPreviousData, useQueries, useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import { Gamepad2Icon, GamepadIcon } from 'lucide-react';
+import { SidePanelLayout } from '@/components/side-panel-layout';
 import { Button } from '@/components/ui/button';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
 import { assetsQuery, atlasQuery, projectsQuery } from '@/lib/queries';
@@ -152,9 +153,13 @@ export function PlaygroundView() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1">
-      <Palette library={library} entries={entries} recent={recent} player={player} onPlayer={setPlayerId} armed={armed} onArm={setArmed} />
-      <div className="flex min-w-0 flex-1 flex-col">
+    <SidePanelLayout
+      id="playground"
+      side="start"
+      size={{ initial: '20rem', min: '16rem', max: '32rem' }}
+      panel={<Palette library={library} entries={entries} recent={recent} player={player} onPlayer={setPlayerId} armed={armed} onArm={setArmed} />}
+    >
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <SceneToolbar
           options={options}
           zoom={zoomChoice}
@@ -208,6 +213,6 @@ export function PlaygroundView() {
           <SelectionPopover selection={selection} handle={sceneRef} anchorRef={anchorRef} boundaryRef={sceneBoxRef} />
         </div>
       </div>
-    </div>
+    </SidePanelLayout>
   );
 }
