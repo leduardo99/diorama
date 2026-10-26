@@ -279,9 +279,9 @@ export function held(pose: Pose, skeleton: SkeletonSpec, hand: string, o: HeldOp
     dir = norm3(lerp3(dir, beside, k));
   }
   const floor = o.floor ?? 1;
-  const liftOffFloor = (from: Vec3) => {
-    if (from.z + dir.z * o.length >= floor) return false;
-    const z = Math.max(-1, Math.min(1, (floor - from.z) / o.length));
+  const liftOffFloor = (from: Vec3, lowest = floor) => {
+    if (from.z + dir.z * o.length >= lowest) return false;
+    const z = Math.max(-1, Math.min(1, (lowest - from.z) / o.length));
     const h = Math.hypot(dir.x, dir.y) || 1;
     const s = Math.sqrt(1 - z * z) / h;
     dir = vec3(dir.x * s, dir.y * s, z);
@@ -305,6 +305,8 @@ export function held(pose: Pose, skeleton: SkeletonSpec, hand: string, o: HeldOp
     if (released > 0) {
       dir = norm3(lerp3(dir, vec3(beside.x, beside.y, 0), released));
       grip = lerp3(grip, vec3(grip.x, grip.y, hold.handle.radius), released);
+      // On the way down the tip stays above the floor; once let go the item lies on it, its handle its radius above.
+      liftOffFloor(grip, floor + (Math.min(floor, hold.handle.radius) - floor) * released);
     }
   }
   const buttLength = o.butt ? (dir.z > 0.02 ? Math.min(o.butt, Math.max(0, (grip.z - floor) / dir.z)) : o.butt) : 0;

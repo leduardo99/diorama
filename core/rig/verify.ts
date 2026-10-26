@@ -314,7 +314,7 @@ export function checkGrips(skeleton: SkeletonSpec, clip: Clip, subject: GripSubj
         const hand = handSize(skeleton, arm);
         const item = h.held?.(pose, skeleton);
         if (item?.released) {
-          // Letting go as the body lies down (`Held.released`): neither this hand nor the other hand of a two-handed item holds it.
+          // Letting go, as the clip says (`Held.released`): neither this hand nor the other hand of a two-handed item holds it.
           letGo.add(side);
           if ((h.hands ?? 1) === 2) letGo.add(otherSide(side));
           return;
@@ -425,7 +425,7 @@ export function checkGrips(skeleton: SkeletonSpec, clip: Clip, subject: GripSubj
   }
   if (wl?.failing) {
     const words = wristWords.get(`${wl.hand === 'left' ? -1 : 1}:${wl.frame}`);
-    errors.push(`wristLimit: the ${wl.hand} wrist needs ${words} to hold its item (${wl.worst} of its limit; ${where(wl)}): the hand stops at its limit and the handle leaves the fist; turn the item less against the forearm (the clip's \`weaponYaw\` / \`weaponPitch\`, or the part's \`rest\` where the clip sets none), or turn the forearm with it`);
+    errors.push(`wristLimit: the ${wl.hand} wrist needs ${words} to hold its item (${wl.worst} of its limit; ${where(wl)}): the hand stops at its limit and the handle leaves the fist; turn the item less against the forearm (the clip's \`weaponYaw\` / \`weaponPitch\`: a rest the engine chose is already turned to where the wrist holds it), or turn the forearm with it`);
   }
   const cm = comfort.result();
   if (cm?.failing) warnings.push(`wristLimit: at rest the ${cm.hand} wrist is bent past its comfortable range (${cm.worst} of it; ${where(cm)}): a resting hand sits near neutral (extended 15 to 30°, up to 15° towards the little finger); carry the item, or pose the forearm, so the hand holds it with the wrist nearly straight`);

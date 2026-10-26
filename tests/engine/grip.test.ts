@@ -235,6 +235,13 @@ function armAlong(fore: Vec3, arm: 'armR' | 'armL' = 'armR'): Pose {
   }
   assert.ok(midway, 'part way through the fall the hand is letting go');
   near(heldGrip(midway!)!.curl, curlFor(1.5, HAND.length * h.height) * (1 - midway!.released!), 1e-12, 'its fingers half open');
+  // Through the whole fall the fist stays in the palm while the item leaves it, and the item never goes under the floor.
+  for (let t = 0; t <= 1; t += 0.02) {
+    const item = held(solvePose(h, frame, death(h).drive(t)), h, 'armR', { length: 26, hold: SWORD, floor: 1 });
+    const fist = heldGrip(item);
+    if (fist) assert.deepEqual(fist.at, item.palm!.at, `t ${t.toFixed(2)}: the fist is in the palm`);
+    assert.ok(Math.min(item.tip.z, item.butt.z) >= 1 - 1e-9, `t ${t.toFixed(2)}: the blade stays above the floor (tip ${item.tip.z.toFixed(2)})`);
+  }
   assert.equal(held(standing, h, 'armR', { length: 26, hold: SWORD }).released, undefined, 'standing, nothing is let go');
   console.log('✔ Rest and release: the engine turns an item to a comfortable wrist, and the clip lets go, not lying down.');
 }

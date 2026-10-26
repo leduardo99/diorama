@@ -1040,7 +1040,8 @@ function palmGrip(pose: Pose, skeleton: SkeletonSpec, arm: string, o: { axis: Ve
 ### `heldGrip`
 
 The holding hand's grip on an item `held` placed with a `hold`; undefined for one placed without (at
-the wrist, the old way) and once the hand has let go of it (`Held.released`), its fingers opening on the way.
+the wrist, the old way) and once the hand has let go of it (`Held.released`). While it lets go the
+fingers open, and the fist stays in the palm, round the finger tube, as the item leaves it.
 
 ```ts
 function heldGrip(item: Held): Grip | undefined

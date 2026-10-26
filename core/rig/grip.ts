@@ -574,14 +574,17 @@ export function palmGrip(pose: Pose, skeleton: SkeletonSpec, arm: string, o: { a
 
 /**
  * The holding hand's grip on an item `held` placed with a `hold`; undefined for one placed without (at
- * the wrist, the old way) and once the hand has let go of it (`Held.released`), its fingers opening on the way.
+ * the wrist, the old way) and once the hand has let go of it (`Held.released`). While it lets go the
+ * fingers open, and the fist stays in the palm, round the finger tube, as the item leaves it.
  */
 export function heldGrip(item: Held): Grip | undefined {
   if (!item.hold || !item.palm) return undefined;
   const loose = 1 - (item.released ?? 0);
   if (loose <= 0) return undefined;
   const radius = item.hold.handle.radius;
-  return { at: item.grip, axis: item.hold.reverse ? scale3(item.dir, -1) : item.dir, radius, curl: curlFor(radius, item.palm.length) * loose, palm: item.palm };
+  const curl = curlFor(radius, item.palm.length) * loose;
+  if (item.released) return { at: item.palm.at, axis: item.palm.tube, radius, curl, palm: item.palm };
+  return { at: item.grip, axis: item.hold.reverse ? scale3(item.dir, -1) : item.dir, radius, curl, palm: item.palm };
 }
 
 /** Wrist angles within the comfortable range for a held still pose (`WRIST.comfort`; deviation has half of it), the measure the grip checks use at rest. */
@@ -729,7 +732,7 @@ export function secondHand(pose: Pose, skeleton: SkeletonSpec, item: Held, side:
   const gap = len3(sub3(target, palm.at));
   const tolerance = 0.05 * hand;
   const reached = gap <= tolerance ? 1 : clamp01(1 - (gap - tolerance) / Math.max(1e-9, palmWidth - tolerance));
-  // The other hand lets go with the holding one as the body lies down (`Held.released`).
+  // The other hand lets go with the holding one when the clip lets go (`Held.released`).
   const weight = clamp01(pose.extra.secondGrip ?? 1) * reached * (1 - (item.released ?? 0));
   const report = { arm: arm.name, fraction, target, gap, slid, released: reached < 1 };
   if (weight <= 0) return { pose, ...report, weight: 0 };
