@@ -125,6 +125,7 @@ function EntryCard({ id, active, position, onOpen, onHover, thumb, flag, title, 
       id={id}
       size="sm"
       role="option"
+      tabIndex={-1}
       aria-selected={active}
       aria-posinset={position.index + 1}
       aria-setsize={position.total}
@@ -133,7 +134,7 @@ function EntryCard({ id, active, position, onOpen, onHover, thumb, flag, title, 
       onClick={onOpen}
       onMouseEnter={() => onHover(true)}
       onMouseLeave={() => onHover(false)}
-      className={cn('cursor-pointer gap-0 pt-0 pb-0 transition-colors hover:bg-accent/40', active && 'ring-2 ring-primary')}
+      className={cn('cursor-pointer gap-0 pt-0 pb-0 outline-none transition-colors hover:bg-accent/40', active && 'ring-2 ring-primary')}
     >
       <div className="relative">
         {thumb}

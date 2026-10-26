@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import NiceModal from '@ebay/nice-modal-react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { PackageOpenIcon, PlusIcon, SearchXIcon } from 'lucide-react';
@@ -12,7 +12,7 @@ import { pendingExports } from '@/lib/export-state';
 import { entryCover, entryKey, entryOf, groupAnimations, type AssetEntry } from '@/lib/groups';
 import { usePref } from '@/lib/use-pref';
 import { useAssetTable } from '@/lib/use-asset-table';
-import { useEntrySelection } from '@/lib/use-asset-selection';
+import { assetDomId, useEntrySelection } from '@/lib/use-asset-selection';
 import { useGridColumns } from '@/lib/use-grid-columns';
 import type { AssetFileMeta } from '@/lib/types';
 import { DeleteAssetsModal } from '@/modals/delete-assets-modal';
@@ -70,13 +70,19 @@ export function AssetsView() {
       if (targets.length) void NiceModal.show(DeleteAssetsModal, { assets: targets });
     },
   });
-  const open = (asset: AssetFileMeta) => {
+  const keyOf = (asset: AssetFileMeta) => {
     const entry = asGrid ? entryOf(entries, asset) : undefined;
-    setActiveKey(entry ? entryKey(entry) : asset.subpath);
+    return entry ? entryKey(entry) : asset.subpath;
+  };
+  const open = (asset: AssetFileMeta) => {
+    setActiveKey(keyOf(asset));
     openDetails(asset);
   };
 
   const detailsAsset = search.asset ? assets.find((a) => a.subpath === search.asset) : undefined;
+  useEffect(() => {
+    if (detailsAsset && activeKey === null) setActiveKey(keyOf(detailsAsset));
+  }, [detailsAsset, activeKey]);
   const filtered = search.q.trim() !== '' || search.engine !== undefined || search.folder !== undefined || search.role !== undefined;
   const projectMeta = projects.find((p) => p.name === project);
   const sheetCount = projectMeta?.sheetCount ?? 0;
@@ -149,6 +155,7 @@ export function AssetsView() {
       {detailsAsset && (
         <DetailsDialog
           asset={detailsAsset}
+          openerId={assetDomId(activeKey ?? keyOf(detailsAsset))}
           projectAssets={assets}
           visibleAssets={visible}
           onClose={() => setSearch({ asset: undefined }, false)}

@@ -21,6 +21,8 @@ import { VfxSection, useVfx } from './vfx-section';
 
 interface Props {
   asset: AssetFileMeta;
+  /** DOM id of the card or row the window was opened from, so closing returns focus to it. */
+  openerId?: string;
   /** Every asset of the project: the other animations of a character are found here. */
   projectAssets: AssetFileMeta[];
   /** The assets in the order the list shows them, for stepping through the list. */
@@ -29,8 +31,9 @@ interface Props {
   onSelect: (asset: AssetFileMeta) => void;
 }
 
-export function DetailsDialog({ asset, projectAssets, visibleAssets, onClose, onSelect }: Props) {
+export function DetailsDialog({ asset, openerId, projectAssets, visibleAssets, onClose, onSelect }: Props) {
   const contentRef = useRef<HTMLDivElement>(null);
+  const [returnId] = useState(openerId);
   // The facing direction survives switching between the animations of one character.
   const [directionIndex, setDirectionIndex] = useState(0);
   const clips = useMemo(() => clipsOf(projectAssets, asset), [projectAssets, asset]);
@@ -47,6 +50,10 @@ export function DetailsDialog({ asset, projectAssets, visibleAssets, onClose, on
         onOpenAutoFocus={(e) => {
           e.preventDefault();
           contentRef.current?.focus();
+        }}
+        onCloseAutoFocus={(e) => {
+          e.preventDefault();
+          if (returnId) document.getElementById(returnId)?.focus();
         }}
       >
         <DetailsBody

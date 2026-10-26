@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import { DIRECTION_NAMES } from '@core/volume';
 import { facingsOf } from '../../viewer/server/catalog';
 import { createTranslator } from '../../viewer/src/i18n/core';
-import { peersOf } from '../../viewer/src/lib/groups';
+import { entryKey, entryOf, groupAnimations, peersOf } from '../../viewer/src/lib/groups';
 import type { AssetFileMeta } from '../../viewer/src/lib/types';
+import { assetDomId, isMenuTriggerKey, stopMenuTriggerKey } from '../../viewer/src/lib/use-asset-selection';
 import { digitRow, FACING_NAMES, framesLabel, keyedAxis, rowWith, sheetRows, stepLabel, stepRow, type RowsMeta } from '../../viewer/src/lib/rows';
 
 console.log('🧪 Checking the Details window (a sheet\'s rows by what they are: facings, variants, states, heights; what [ and ] step through)...\n');
@@ -84,5 +85,39 @@ assert.deepEqual([lone.stepsClips, lone.position, lone.at(-1)?.subpath, lone.at(
 assert.equal(peersOf(idle, [idle], list).at(-1), undefined, 'and at its start');
 assert.equal(peersOf(idle, [idle], list).stepsClips, false, 'a character with a single clip steps through the list');
 assert.deepEqual([en('details.footer.animation'), en('details.footer.asset'), pt('details.shell.previousAnimation'), pt('details.shell.nextAsset')], ['animation', 'asset', 'Animação anterior ([)', 'Próximo asset (])']);
+
+// 5. A card's ⋯ trigger stops only the keys it uses (Enter and Space, plus the arrows while its menu is open), so the
+//    grid's keys reach the window listener while the trigger has focus; ArrowDown while closed prevents the trigger from
+//    opening its menu instead of moving down the grid.
+const triggerKey = (key: string, expanded: boolean | null) => {
+  let stopped = false;
+  let prevented = false;
+  stopMenuTriggerKey({
+    key,
+    currentTarget: { getAttribute: (name) => (name === 'aria-expanded' && expanded !== null ? String(expanded) : null) },
+    stopPropagation: () => { stopped = true; },
+    preventDefault: () => { prevented = true; },
+  });
+  return { stopped, prevented };
+};
+for (const key of ['Enter', ' ']) {
+  assert.equal(isMenuTriggerKey(key, false), true, `${JSON.stringify(key)} opens the ⋯ menu when closed`);
+  assert.deepEqual(triggerKey(key, false), { stopped: true, prevented: false });
+}
+for (const key of ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'Backspace', 'Delete', 'Escape', '/']) {
+  assert.equal(isMenuTriggerKey(key, false), false, `closed ⋯ trigger lets ${key} reach the grid`);
+  assert.deepEqual(triggerKey(key, false), { stopped: false, prevented: key === 'ArrowDown' });
+  assert.deepEqual(triggerKey(key, null), { stopped: false, prevented: key === 'ArrowDown' });
+}
+for (const key of ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', ' ']) {
+  assert.equal(isMenuTriggerKey(key, true), true, `open ⋯ trigger keeps ${key} for the menu`);
+  assert.deepEqual(triggerKey(key, true), { stopped: true, prevented: false });
+}
+
+// 6. The DOM id of the card or row the Details window returns focus to on close, whether the list is flat or grouped.
+const charAsset = (subpath: string) => ({ subpath, atlasInfo: { mode: 'directions', role: 'character', character: { name: 'guard', label: 'Guard' } } }) as unknown as AssetFileMeta;
+const grouped = groupAnimations([charAsset('characters/guard/idle.png'), charAsset('characters/guard/walk.png'), crate], [charAsset('characters/guard/idle.png'), charAsset('characters/guard/walk.png'), crate]);
+assert.equal(assetDomId(entryKey(entryOf(grouped, charAsset('characters/guard/walk.png'))!)), 'entry-group_characters_guard_guard');
+assert.equal(assetDomId(entryKey(entryOf(grouped, crate)!)), 'entry-props_crate_png');
 
 console.log('✅ Details window rows and peers passed');

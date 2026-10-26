@@ -13,6 +13,7 @@ import { copyText } from '@/lib/clipboard';
 import { useReexport } from '@/lib/mutations';
 import { stripExtension } from '@/lib/format';
 import { projectFile, projectUrl } from '@/lib/project-paths';
+import { stopMenuTriggerKey } from '@/lib/use-asset-selection';
 import type { AssetGroup } from '@/lib/groups';
 import type { AssetFileMeta } from '@/lib/types';
 import { DeleteAssetsModal } from '@/modals/delete-assets-modal';
@@ -106,7 +107,7 @@ export function AssetMenuButton({ asset, onDetails }: AssetProps) {
           size="icon-sm"
           aria-label={t('assets.menu.actionsFor', { name: stripExtension(asset.subpath) })}
           onClick={(e) => e.stopPropagation()}
-          onKeyDown={(e) => e.stopPropagation()}
+          onKeyDown={stopMenuTriggerKey}
         >
           <MoreHorizontalIcon />
         </Button>
@@ -176,7 +177,7 @@ export function GroupMenuButton({ group, onOpen }: GroupProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon-sm" aria-label={t('assets.menu.actionsFor', { name: group.name })} onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+        <Button variant="ghost" size="icon-sm" aria-label={t('assets.menu.actionsFor', { name: group.name })} onClick={(e) => e.stopPropagation()} onKeyDown={stopMenuTriggerKey}>
           <MoreHorizontalIcon />
         </Button>
       </DropdownMenuTrigger>

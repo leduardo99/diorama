@@ -3,6 +3,22 @@ import { isTyping, useWindowKeydown } from './hotkeys';
 
 export const assetDomId = (key: string) => `entry-${key.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
 
+/** Keys the ⋯ trigger uses itself: Enter and Space to open, and the arrows while its menu is open. */
+export const isMenuTriggerKey = (key: string, open: boolean): boolean =>
+  key === 'Enter' || key === ' ' || (open && key.startsWith('Arrow'));
+
+/** Stops only the keys the ⋯ trigger uses, and keeps ArrowDown while closed from opening the menu instead of moving down the list. */
+export function stopMenuTriggerKey(e: {
+  key: string;
+  currentTarget: { getAttribute(name: string): string | null };
+  stopPropagation(): void;
+  preventDefault(): void;
+}) {
+  const open = e.currentTarget.getAttribute('aria-expanded') === 'true';
+  if (isMenuTriggerKey(e.key, open)) e.stopPropagation();
+  else if (e.key === 'ArrowDown') e.preventDefault();
+}
+
 interface Options {
   /** Keys of the visible entries, in display order. */
   keys: string[];
@@ -29,9 +45,20 @@ export function useEntrySelection({ keys, view, columns, paused, onOpen, onDelet
     }
     if (keys.length === 0) return;
 
+    const focusedKey =
+      e.target instanceof Element
+        ? (keys.find((key) => document.getElementById(assetDomId(key))?.contains(e.target as Node)) ?? null)
+        : null;
+    const current = focusedKey ?? activeKey;
     const perRow = view === 'grid' ? columns : 1;
-    const at = activeKey ? keys.indexOf(activeKey) : -1;
-    const move = (to: number) => setActiveKey(keys[Math.max(0, Math.min(keys.length - 1, to))]);
+    const at = current ? keys.indexOf(current) : -1;
+    const move = (to: number) => {
+      const next = keys[Math.max(0, Math.min(keys.length - 1, to))];
+      setActiveKey(next);
+      const el = document.getElementById(assetDomId(next));
+      if (el) el.focus({ preventScroll: true });
+      else if (e.target instanceof HTMLElement) e.target.blur();
+    };
 
     switch (e.key) {
       case 'ArrowDown': move(at < 0 ? 0 : at + perRow); break;
@@ -40,9 +67,13 @@ export function useEntrySelection({ keys, view, columns, paused, onOpen, onDelet
       case 'ArrowLeft': if (view !== 'grid') return; move(at < 0 ? 0 : at - 1); break;
       case 'Home': move(0); break;
       case 'End': move(keys.length - 1); break;
-      case 'Enter': if (!activeKey) return; onOpen(activeKey); break;
-      case 'Delete': case 'Backspace': if (!activeKey) return; onDelete(activeKey); break;
-      case 'Escape': if (!activeKey) return; setActiveKey(null); break;
+      case 'Enter': if (!current) return; onOpen(current); break;
+      case 'Delete': case 'Backspace': if (!current) return; onDelete(current); break;
+      case 'Escape':
+        if (!current) return;
+        setActiveKey(null);
+        if (e.target instanceof HTMLElement) e.target.blur();
+        break;
       default: return;
     }
     e.preventDefault();
