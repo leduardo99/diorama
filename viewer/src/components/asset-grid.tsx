@@ -137,8 +137,9 @@ function EntryCard({ id, active, position, onOpen, onHover, thumb, flag, title, 
         {flag && <div className="absolute top-1.5 left-1.5">{flag}</div>}
       </div>
       <CardHeader className="pt-2">
-        <CardTitle className="truncate">{title}</CardTitle>
-        <CardDescription className="truncate">{description}</CardDescription>
+        {/* Long names and paths are cut to the card: the browser's own tooltip gives them whole (a Radix one per card would weigh on the grid). */}
+        <CardTitle className="truncate" title={title}>{title}</CardTitle>
+        <CardDescription className="truncate" title={description}>{description}</CardDescription>
         <CardAction>{menu}</CardAction>
       </CardHeader>
       <CardFooter className="flex-wrap items-center gap-x-2 gap-y-1 py-2 text-muted-foreground tabular-nums">{children}</CardFooter>

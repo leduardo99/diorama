@@ -29,6 +29,7 @@ import type { UseBrush } from './selection-popover';
 import { SceneryPalette } from './scenery-palette';
 import { ToolOptions } from './tool-options';
 import { ToolRail } from './tool-rail';
+import { useWarnOnUnload } from '@/lib/unsaved';
 
 const DEFAULT_SIZE = { cols: 16, rows: 12 };
 
@@ -51,7 +52,7 @@ export function SceneryView() {
           <EmptyMedia variant="icon"><MapIcon /></EmptyMedia>
           <EmptyTitle>{t('scenery.noKit.title')}</EmptyTitle>
           <EmptyDescription>
-            <Rich id="scenery.noKit.description" />
+            <Rich id="scenery.noKit.description" vars={{ project }} />
           </EmptyDescription>
         </EmptyHeader>
       </Empty>
@@ -106,6 +107,7 @@ function Painter({ project, catalog, fixture, sceneNames }: { project: string; c
   const problems = useMemo(() => validateScene(scene, catalog), [scene, catalog]);
   const empty = useMemo(() => scene.props.length === 0 && countCells(scene.floor) === 0 && countCells(scene.walls) === 0, [scene]);
   const unsaved = loaded === null ? !empty : scene !== baseline;
+  useWarnOnUnload(unsaved);
   // Undo, an erase or a resize can leave the selection pointing at nothing.
   const selected = useMemo(() => validSelection(scene, selection), [scene, selection]);
   const selectedProp = selected?.kind === 'prop' ? selected.index : null;

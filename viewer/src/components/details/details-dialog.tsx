@@ -172,8 +172,13 @@ function PlayerBody({ asset, clips, projectAssets, peers, directionIndex, onDire
       </div>
 
       <footer className="flex items-center gap-4 border-t px-4 py-1.5 text-xs text-muted-foreground">
-        <span><Kbd>{t('keys.space')}</Kbd> {t('details.footer.play')}</span>
-        <span><Kbd>←</Kbd> <Kbd>→</Kbd> {t('details.footer.frame')}</span>
+        {/* A still has no frames to play or step through, as the transport above says by hiding. */}
+        {frames.length > 1 && (
+          <>
+            <span><Kbd>{t('keys.space')}</Kbd> {t('details.footer.play')}</span>
+            <span><Kbd>←</Kbd> <Kbd>→</Kbd> {t('details.footer.frame')}</span>
+          </>
+        )}
         {keyed && <span><Kbd>↑</Kbd> <Kbd>↓</Kbd> {keyed === 'step' && rows.axis ? t(`details.footer.${rows.axis}`) : t('details.footer.direction')}</span>}
         <span><Kbd>[</Kbd> <Kbd>]</Kbd> {peers.stepsClips ? t('details.footer.animation') : t('details.footer.asset')}</span>
         <span><Kbd>B</Kbd> {t('details.footer.background')}</span>

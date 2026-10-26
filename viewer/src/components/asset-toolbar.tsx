@@ -1,10 +1,12 @@
 import { ArrowDownIcon, ArrowUpIcon, LayersIcon, LayoutGridIcon, Rows3Icon, SearchIcon, XIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ButtonGroup } from '@/components/ui/button-group';
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group';
 import { Kbd } from '@/components/ui/kbd';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Toggle } from '@/components/ui/toggle';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useT } from '@/i18n';
 import { isRoleId, roleIds } from '@/lib/asset-role';
 import { assetsRoute } from '@/lib/routes';
@@ -63,7 +65,7 @@ export function AssetToolbar({ folders, gridSize, onGridSize }: Props) {
       </InputGroup>
 
       <Select value={search.engine ?? ALL} onValueChange={(value) => setSearch({ engine: value === ALL ? undefined : (value as Engine | 'none') })}>
-        <SelectTrigger size="sm" aria-label={t('assets.toolbar.engine')} className="w-40">
+        <SelectTrigger aria-label={t('assets.toolbar.engine')} className="w-40">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -77,7 +79,7 @@ export function AssetToolbar({ folders, gridSize, onGridSize }: Props) {
       </Select>
 
       <Select value={search.role ?? ALL} onValueChange={(value) => setSearch({ role: isRoleId(value) ? value : undefined })}>
-        <SelectTrigger size="sm" aria-label={t('assets.toolbar.type')} className="w-36">
+        <SelectTrigger aria-label={t('assets.toolbar.type')} className="w-36">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -89,7 +91,7 @@ export function AssetToolbar({ folders, gridSize, onGridSize }: Props) {
       </Select>
 
       <Select value={search.folder ?? ALL} onValueChange={(value) => setSearch({ folder: value === ALL ? undefined : value })} disabled={folders.length === 0}>
-        <SelectTrigger size="sm" aria-label={t('assets.toolbar.folder')} className="w-44">
+        <SelectTrigger aria-label={t('assets.toolbar.folder')} className="w-44">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -105,46 +107,51 @@ export function AssetToolbar({ folders, gridSize, onGridSize }: Props) {
       </Select>
 
       <div className="ml-auto flex flex-wrap items-center gap-2">
-        <Select value={search.sort} onValueChange={(value) => isSortId(value) && setSearch({ sort: value })}>
-          <SelectTrigger size="sm" aria-label={t('assets.toolbar.sortBy')} className="w-32">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              {sortIds.map((id) => <SelectItem key={id} value={id}>{t(`assets.sort.${id}`)}</SelectItem>)}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-        <Button
-          variant="outline"
-          size="icon"
-          aria-label={search.dir === 'asc' ? t('assets.toolbar.ascending') : t('assets.toolbar.descending')}
-          onClick={() => setSearch({ dir: search.dir === 'asc' ? 'desc' : 'asc' })}
-        >
-          {search.dir === 'asc' ? <ArrowUpIcon /> : <ArrowDownIcon />}
-        </Button>
+        <ButtonGroup>
+          <Select value={search.sort} onValueChange={(value) => isSortId(value) && setSearch({ sort: value })}>
+            <SelectTrigger aria-label={t('assets.toolbar.sortBy')} className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {sortIds.map((id) => <SelectItem key={id} value={id}>{t(`assets.sort.${id}`)}</SelectItem>)}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                aria-label={search.dir === 'asc' ? t('assets.toolbar.ascending') : t('assets.toolbar.descending')}
+                onClick={() => setSearch({ dir: search.dir === 'asc' ? 'desc' : 'asc' })}
+              >
+                {search.dir === 'asc' ? <ArrowUpIcon /> : <ArrowDownIcon />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{search.dir === 'asc' ? t('assets.toolbar.ascending') : t('assets.toolbar.descending')}</TooltipContent>
+          </Tooltip>
+        </ButtonGroup>
 
         {search.view === 'grid' && (
           <>
-            <Toggle
-              variant="outline"
-              size="sm"
-              pressed={search.group}
-              onPressedChange={(group) => setSearch({ group })}
-              aria-label={t('assets.toolbar.groupHint')}
-              title={t('assets.toolbar.groupHint')}
-            >
-              <LayersIcon />
-              {t('assets.toolbar.group')}
-            </Toggle>
-            <ToggleGroup type="single" variant="outline" size="sm" spacing={0} value={gridSize} onValueChange={(size) => size && onGridSize(size as GridSize)} aria-label={t('assets.toolbar.cardSize')}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Toggle variant="outline" pressed={search.group} onPressedChange={(group) => setSearch({ group })}>
+                  <LayersIcon data-icon="inline-start" />
+                  {t('assets.toolbar.group')}
+                </Toggle>
+              </TooltipTrigger>
+              <TooltipContent>{t('assets.toolbar.groupHint')}</TooltipContent>
+            </Tooltip>
+            <ToggleGroup type="single" variant="outline" spacing={0} value={gridSize} onValueChange={(size) => size && onGridSize(size as GridSize)} aria-label={t('assets.toolbar.cardSize')}>
               {(Object.keys(gridSizes) as GridSize[]).map((size) => (
                 <ToggleGroupItem key={size} value={size}>{size.toUpperCase()}</ToggleGroupItem>
               ))}
             </ToggleGroup>
           </>
         )}
-        <ToggleGroup type="single" variant="outline" size="sm" spacing={0} value={search.view} onValueChange={(view) => (view === 'grid' || view === 'table') && setSearch({ view })} aria-label={t('assets.toolbar.view')}>
+        <ToggleGroup type="single" variant="outline" spacing={0} value={search.view} onValueChange={(view) => (view === 'grid' || view === 'table') && setSearch({ view })} aria-label={t('assets.toolbar.view')}>
           <ToggleGroupItem value="grid" aria-label={t('assets.toolbar.grid')}><LayoutGridIcon /></ToggleGroupItem>
           <ToggleGroupItem value="table" aria-label={t('assets.toolbar.table')}><Rows3Icon /></ToggleGroupItem>
         </ToggleGroup>

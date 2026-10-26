@@ -3,19 +3,22 @@ import NiceModal from '@ebay/nice-modal-react';
 import { useNavigate } from '@tanstack/react-router';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { CopyIcon } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Kbd } from '@/components/ui/kbd';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Rich, useT } from '@/i18n';
 import type { TFn } from '@/i18n';
-import { exportFailureText, exportTypeErrors } from '@/lib/export-errors';
+import { copyText } from '@/lib/clipboard';
+import { clipToAdd, exportFailureText, exportTypeErrors } from '@/lib/export-errors';
 import { projectsQuery } from '@/lib/queries';
 import { useCli } from '@/lib/mutations';
 import { useModalDialog } from '@/lib/use-modal-dialog';
@@ -136,14 +139,16 @@ export const NewModal = NiceModal.create(({ tab: initialTab = 'new-asset', proje
       void navigate({ to: '/p/$project', params: { project: values.name } });
       modal.hide();
     } else if (tab === 'new-asset') {
+      // A clip of a character that exists needs a line in the character's clips first (the alert below shows it), and an
+      // export would only fail on it: the dialog stays open on that step.
+      if (clipToAdd(created.output)) return;
       // The asset lands in its project right away; exporting makes it show up in the list.
-      if (values.exportNow) {
-        const exported = await cli.mutateAsync({ command: 'export', project: values.project, subpath: values.subpath });
-        if (!exported.ok) {
-          toast.error(t('modals.new.assetExportFailed'), { description: exportFailureText(exported.output, t('toasts.fixTypeErrors')) });
-        }
+      const exported = values.exportNow ? await cli.mutateAsync({ command: 'export', project: values.project, subpath: values.subpath }) : undefined;
+      if (exported && !exported.ok) {
+        toast.error(t('modals.new.assetExportFailed'), { description: exportFailureText(exported.output, t('toasts.fixTypeErrors')) });
+      } else {
+        toast.success(t('modals.new.assetCreated'), { description: `${values.project}/${values.subpath}` });
       }
-      toast.success(t('modals.new.assetCreated'), { description: `${values.project}/${values.subpath}` });
       void navigate({ to: '/p/$project', params: { project: values.project } });
       modal.hide();
     }
@@ -165,16 +170,18 @@ export const NewModal = NiceModal.create(({ tab: initialTab = 'new-asset', proje
     </Field>
   );
 
+  const command = cliLine(tab, values, t);
   const pending = cli.isPending;
   const verb = tab === 'export' ? t('common.export') : t('common.create');
   // The viewer cannot pass --force: on a type refusal, its own hint in the output is misleading.
   const typeErrors = cli.data && !cli.data.ok && tab === 'export' ? exportTypeErrors(cli.data.output) : null;
+  const nextStep = cli.data?.ok && tab === 'new-asset' ? clipToAdd(cli.data.output) : undefined;
 
   return (
     <Dialog {...rootProps}>
       <DialogContent {...contentProps} className="sm:max-w-lg" aria-describedby={undefined}>
         <DialogHeader>
-          <DialogTitle>{t('modals.new.title')}</DialogTitle>
+          <DialogTitle>{tab === 'export' ? t('common.export') : t('modals.new.title')}</DialogTitle>
           {/* Only the Export tab says what it does (the project bar's Export says the same). Radix links a description
               while one is mounted, so the other tabs stay without one. */}
           {tab === 'export' && (
@@ -307,7 +314,7 @@ export const NewModal = NiceModal.create(({ tab: initialTab = 'new-asset', proje
                 {projectField}
                 <Field>
                   <FieldLabel htmlFor="new-export-path">{t('modals.new.path')}</FieldLabel>
-                  <Input id="new-export-path" placeholder="characters/wolf/" {...text('subpath')} />
+                  <Input id="new-export-path" placeholder={t('modals.new.exportPathPlaceholder')} {...text('subpath')} />
                   <FieldDescription>
                     <Rich id="modals.new.exportPathHint" />
                   </FieldDescription>
@@ -349,15 +356,24 @@ export const NewModal = NiceModal.create(({ tab: initialTab = 'new-asset', proje
             )}
           </FieldGroup>
 
-          <div className="flex items-baseline gap-2 rounded-md bg-muted/50 p-2">
-            <Kbd>CLI</Kbd>
-            <code className="font-mono text-xs break-all">{cliLine(tab, values, t)}</code>
+          <div className="flex items-start gap-2 rounded-md bg-muted/50 p-2">
+            <Badge variant="outline">CLI</Badge>
+            <code className="min-w-0 flex-1 font-mono text-xs break-words">{command}</code>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button type="button" variant="ghost" size="icon-xs" aria-label={t('modals.new.copyCommand')} onClick={() => void copyText(command, t('modals.new.commandLabel'))}>
+                  <CopyIcon />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('modals.new.copyCommand')}</TooltipContent>
+            </Tooltip>
           </div>
 
           {(cli.data || cli.isError) && (
             <Alert variant={cli.data?.ok ? 'default' : 'destructive'}>
+              {nextStep && <AlertTitle>{t('modals.new.clipToAdd')}</AlertTitle>}
               <AlertDescription>
-                <pre className="max-h-48 overflow-auto font-mono text-xs whitespace-pre-wrap">
+                <pre className="max-h-48 overflow-auto font-mono text-xs whitespace-pre-wrap [overflow-wrap:anywhere]">
                   {cli.data
                     ? typeErrors
                       ? `${t('toasts.fixTypeErrors')}\n${typeErrors.join('\n')}`

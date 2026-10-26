@@ -19,7 +19,14 @@ export function roleOf(asset: AssetFileMeta): RoleId {
 export const isRoleId = (value: string): value is RoleId => (roleIds as readonly string[]).includes(value);
 
 /** The name shown for an asset: a gear item's own label ("Elmo"), otherwise its file name. */
-export const assetTitle = (asset: AssetFileMeta) => asset.atlasInfo?.label ?? basename(stripExtension(asset.subpath));
+/** A file or folder name as people read it, the way labels are written: "stone-crate" is "Stone crate". */
+export const readableName = (name: string) => {
+  const words = name.replace(/-+/g, ' ').trim();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+};
+
+/** An asset's name: its label, or else its file name made readable (`readableName`), so an unlabelled sheet reads like the labelled ones beside it. */
+export const assetTitle = (asset: AssetFileMeta) => asset.atlasInfo?.label ?? readableName(basename(stripExtension(asset.subpath)));
 
 /**
  * The name people read for a character's sheet, the one every surface shows ("Ossuary Guard"): its manifest's label, or its
@@ -30,12 +37,12 @@ export const characterLabel = (asset: AssetFileMeta): string | null => asset.atl
 /**
  * The name the Details window carries. A character's clip is titled by its character, not by the clip: its label
  * (`characterLabel`), as its group card is, or for an older sheet without a manifest the folder its clips live in
- * ("captain" for characters/captain/idle.png). Anything else carries its own title, its label or else its file name, even a
+ * ("Captain" for characters/captain/idle.png). Anything else carries its own title, its label or else its file name, even a
  * scenery piece whose folder holds other animated sheets.
  */
 export function detailsTitle(asset: AssetFileMeta): string {
   const folder = dirname(asset.subpath);
-  return characterLabel(asset) ?? (roleOf(asset) === 'character' && folder ? basename(folder) : assetTitle(asset));
+  return characterLabel(asset) ?? (roleOf(asset) === 'character' && folder ? readableName(basename(folder)) : assetTitle(asset));
 }
 
 /** The group of a gear item ("Head"), or null for anything else. */

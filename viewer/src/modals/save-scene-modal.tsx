@@ -76,39 +76,48 @@ export const SaveSceneModal = NiceModal.create(({ project, scene, defaultName, o
           </DialogDescription>
         </DialogHeader>
 
-        <FieldGroup className="gap-3">
-          <Field data-invalid={(name !== '' && !valid) || undefined}>
-            <FieldLabel htmlFor="scene-name">{t('modals.save.name')}</FieldLabel>
-            <Input
-              id="scene-name"
-              className="font-mono"
-              autoComplete="off"
-              placeholder={t('modals.saveScene.example')}
-              aria-invalid={name !== '' && !valid}
-              value={name}
-              disabled={save.isPending}
-              onChange={(e) => { setName(e.target.value); save.reset(); }}
-            />
-            {name !== '' && !valid ? <FieldError>{t('modals.saveScene.invalid', { example: t('modals.saveScene.example') })}</FieldError> : <FieldDescription>{t('modals.save.hint')}</FieldDescription>}
-          </Field>
-          <Field orientation="horizontal">
-            <Checkbox id="scene-force" checked={force} disabled={save.isPending} onCheckedChange={(checked) => setForce(checked === true)} />
-            <FieldLabel htmlFor="scene-force" className="font-normal">{t('modals.save.replace')}</FieldLabel>
-          </Field>
-        </FieldGroup>
+        {/* A form, so Enter in the name saves. */}
+        <form
+          id="save-scene-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (valid && !save.isPending && !saved) save.mutate();
+          }}
+        >
+          <FieldGroup className="gap-3">
+            <Field data-invalid={(name !== '' && !valid) || undefined}>
+              <FieldLabel htmlFor="scene-name">{t('modals.save.name')}</FieldLabel>
+              <Input
+                id="scene-name"
+                className="font-mono"
+                autoComplete="off"
+                placeholder={t('modals.saveScene.example')}
+                aria-invalid={name !== '' && !valid}
+                value={name}
+                disabled={save.isPending}
+                onChange={(e) => { setName(e.target.value); save.reset(); }}
+              />
+              {name !== '' && !valid ? <FieldError>{t('modals.saveScene.invalid', { example: t('modals.saveScene.example') })}</FieldError> : <FieldDescription>{t('modals.save.hint')}</FieldDescription>}
+            </Field>
+            <Field orientation="horizontal">
+              <Checkbox id="scene-force" checked={force} disabled={save.isPending} onCheckedChange={(checked) => setForce(checked === true)} />
+              <FieldLabel htmlFor="scene-force" className="font-normal">{t('modals.save.replace')}</FieldLabel>
+            </Field>
+          </FieldGroup>
+        </form>
 
         {save.isError && (
-          <Alert variant="destructive">
+          <Alert className="min-w-0" variant="destructive">
             <AlertTitle>{t('modals.save.failed')}</AlertTitle>
-            <AlertDescription><pre className="max-h-40 overflow-auto font-mono whitespace-pre-wrap">{save.error.message}</pre></AlertDescription>
+            <AlertDescription><pre className="max-h-40 overflow-auto font-mono whitespace-pre-wrap [overflow-wrap:anywhere]">{save.error.message}</pre></AlertDescription>
           </Alert>
         )}
         {saved && (
-          <Alert variant={saved.exported ? 'default' : 'destructive'}>
+          <Alert className="min-w-0" variant={saved.exported ? 'default' : 'destructive'}>
             <CheckIcon />
             <AlertTitle>{t(saved.exported ? 'modals.saveScene.saved' : 'modals.saveScene.savedExportFailed', { name: saved.name })}</AlertTitle>
             <AlertDescription>
-              <pre className="max-h-40 overflow-auto font-mono whitespace-pre-wrap">{saved.output}</pre>
+              <pre className="max-h-40 overflow-auto font-mono whitespace-pre-wrap [overflow-wrap:anywhere]">{saved.output}</pre>
             </AlertDescription>
           </Alert>
         )}
@@ -133,7 +142,7 @@ export const SaveSceneModal = NiceModal.create(({ project, scene, defaultName, o
           ) : (
             <>
               <Button variant="outline" onClick={() => modal.hide()}>{t('common.cancel')}</Button>
-              <Button disabled={!valid || save.isPending} onClick={() => save.mutate()}>
+              <Button type="submit" form="save-scene-form" disabled={!valid || save.isPending}>
                 {save.isPending ? <Spinner data-icon="inline-start" /> : <SaveIcon data-icon="inline-start" />}
                 {save.isPending ? t('modals.save.saving') : t('modals.save.saveAndExport')}
               </Button>

@@ -35,10 +35,12 @@ export const scenerySearchSchema = z.object({
 
 /**
  * URL state of the playground. `scene` opens it on a saved scene of the project (Save scene's "Play it in the
- * Playground"), which then becomes the chosen one and leaves the address; `fixture` stands the built-in kit's scene
- * behind the actors (development).
+ * Playground"), which then becomes the chosen one and leaves the address; `character` (a character's folder,
+ * `characters/<name>`) makes that character the one played, as Save as character's "Open in the Playground" does, and
+ * leaves the address once the character is there; `fixture` stands the built-in kit's scene behind the actors (development).
  */
 export const playgroundSearchSchema = z.object({
   fixture: z.boolean().optional().catch(undefined),
   scene: z.string().optional().catch(undefined),
+  character: z.string().optional().catch(undefined),
 });

@@ -304,6 +304,7 @@ export const en = {
       details: ' — {assets}, {sheets} in sheets/ ({size} exported)',
       detailsAssets: { one: '{count} exported asset', other: '{count} exported assets' },
       warning: 'Includes src/, sheets/, the exports and STYLE.md.',
+      warningNoStyle: 'Includes src/, sheets/ and the exports.',
       confirmLabel: 'Type the project name to confirm',
       confirmHint: 'Confirm with <code>{project}</code>.',
       confirm: 'Delete project',
@@ -419,6 +420,8 @@ export const en = {
       },
       cliProject: '<project>',
       cliPath: '<path>',
+      copyCommand: 'Copy the command',
+      commandLabel: 'Command',
       projectName: 'Project name',
       projectNamePlaceholder: 'my-game',
       projectNameHint: 'Lowercase letters, numbers, - and _.',
@@ -457,6 +460,8 @@ export const en = {
       projectCreated: 'Project created',
       assetCreated: 'Asset created',
       assetExportFailed: 'Asset created, but the export failed',
+      clipToAdd: 'The clip is created. Add it to the character\'s clips (below), then export it.',
+      exportPathPlaceholder: 'e.g. characters/',
     },
   },
   details: {
@@ -700,7 +705,7 @@ export const en = {
   customize: {
     noKit: {
       title: 'This project has no gear kit',
-      description: 'To customize characters, the project needs <code>src/gear/catalog.ts</code> exporting <code>CATALOG</code> (gear, bodies and materials) and <code>CHARACTERS</code> (the characters that can be dressed).',
+      description: 'To customize characters, the project needs <code>src/gear/catalog.ts</code> exporting <code>CATALOG</code> (gear, bodies and materials) and <code>CHARACTERS</code> (the characters that can be dressed). Start one with <code>npm run new-kit -- {project} gear</code>.',
     },
     noCharacters: {
       title: 'No character to dress',
@@ -801,7 +806,7 @@ export const en = {
   scenery: {
     noKit: {
       title: 'This project has no scenery kit',
-      description: 'To paint scenes, the project needs <code>src/scenery/catalog.ts</code> exporting <code>SCENERY</code> (pieces, materials, grid and camera).',
+      description: 'To paint scenes, the project needs <code>src/scenery/catalog.ts</code> exporting <code>SCENERY</code> (pieces, materials, grid and camera). Start one with <code>npm run new-kit -- {project} scenery</code>.',
     },
     sceneLabel: 'Scene',
     piecesLabel: 'Pieces',

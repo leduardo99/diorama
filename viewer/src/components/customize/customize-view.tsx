@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
 import { Field, FieldLabel } from '@/components/ui/field';
+import { Kbd } from '@/components/ui/kbd';
 import { Spinner } from '@/components/ui/spinner';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -27,6 +28,7 @@ import { OutfitEditor } from './outfit-editor';
 import { PreviewPanel } from './preview-panel';
 import { SlotBoard } from './slot-board';
 import { WieldNotes } from './wield-notes';
+import { useWarnOnUnload } from '@/lib/unsaved';
 
 /** Dress a character of the project's gear kit and watch the result live; save it as a new character. */
 export function CustomizeView() {
@@ -44,7 +46,7 @@ export function CustomizeView() {
           <EmptyMedia variant="icon"><ShirtIcon /></EmptyMedia>
           <EmptyTitle>{t('customize.noKit.title')}</EmptyTitle>
           <EmptyDescription>
-            <Rich id="customize.noKit.description" />
+            <Rich id="customize.noKit.description" vars={{ project }} />
           </EmptyDescription>
         </EmptyHeader>
       </Empty>
@@ -71,6 +73,7 @@ function Customizer({ project, kit, character }: { project: string; kit: GearKit
   const i18n = useT();
   const { t, plural } = i18n;
   const { outfit, edit, reset, changed, undo, redo, canUndo, canRedo } = useDraft(`${project}:${character.id}`, character.outfit);
+  useWarnOnUnload(changed);
   const refreshGear = useRefreshGearItems();
   // The outfit by place on the body (swap a piece in one click), or the flat list of pieces in drawing order.
   const [mode, setMode] = usePref<string>('customize.mode', 'slots');
@@ -117,13 +120,13 @@ function Customizer({ project, kit, character }: { project: string; kit: GearKit
                 <TooltipTrigger asChild>
                   <Button variant="ghost" size="icon-xs" aria-label={t('customize.undo')} disabled={!canUndo} onClick={undo}><Undo2Icon /></Button>
                 </TooltipTrigger>
-                <TooltipContent>{t('customize.undo')} <kbd className="font-mono">⌘Z</kbd></TooltipContent>
+                <TooltipContent>{t('customize.undo')} <Kbd>⌘Z</Kbd></TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button variant="ghost" size="icon-xs" aria-label={t('customize.redo')} disabled={!canRedo} onClick={redo}><Redo2Icon /></Button>
                 </TooltipTrigger>
-                <TooltipContent>{t('customize.redo')} <kbd className="font-mono">⇧⌘Z</kbd></TooltipContent>
+                <TooltipContent>{t('customize.redo')} <Kbd>⇧⌘Z</Kbd></TooltipContent>
               </Tooltip>
             </div>
           </div>
@@ -134,10 +137,15 @@ function Customizer({ project, kit, character }: { project: string; kit: GearKit
                 <TabsTrigger value="list">{t('customize.modeList')}</TabsTrigger>
               </TabsList>
             </Tabs>
-            <Button variant="ghost" size="xs" disabled={refreshGear.isPending} onClick={() => refreshGear.mutate({ project })} title={t('customize.updateGearHint')}>
-              {refreshGear.isPending ? <Spinner data-icon="inline-start" /> : <RefreshCwIcon data-icon="inline-start" />}
-              {t('customize.updateGear')}
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="xs" disabled={refreshGear.isPending} onClick={() => refreshGear.mutate({ project })}>
+                  {refreshGear.isPending ? <Spinner data-icon="inline-start" /> : <RefreshCwIcon data-icon="inline-start" />}
+                  {t('customize.updateGear')}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('customize.updateGearHint')}</TooltipContent>
+            </Tooltip>
           </div>
         </div>
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3">

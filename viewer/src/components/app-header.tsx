@@ -33,7 +33,7 @@ export function AppHeader() {
       {project && <ProjectMenu project={project} />}
 
       <div className="ml-auto flex items-center gap-1">
-        <Button variant="outline" size="sm" onClick={() => void NiceModal.show(NewModal, {})}>
+        <Button variant="outline" size="sm" onClick={() => void NiceModal.show(NewModal, { project })}>
           <PlusIcon data-icon="inline-start" />
           {t('header.new')}
           <Kbd>N</Kbd>

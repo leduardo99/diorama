@@ -302,6 +302,7 @@ export const ptBR: Shape<typeof en> = {
       details: ' — {assets}, {sheets} em sheets/ ({size} exportados)',
       detailsAssets: { one: '{count} asset exportado', other: '{count} assets exportados' },
       warning: 'Inclui src/, sheets/, exports e STYLE.md.',
+      warningNoStyle: 'Inclui src/, sheets/ e exports.',
       confirmLabel: 'Digite o nome do projeto para confirmar',
       confirmHint: 'Confirme com <code>{project}</code>.',
       confirm: 'Apagar projeto',
@@ -417,6 +418,8 @@ export const ptBR: Shape<typeof en> = {
       },
       cliProject: '<projeto>',
       cliPath: '<caminho>',
+      copyCommand: 'Copiar o comando',
+      commandLabel: 'Comando',
       projectName: 'Nome do projeto',
       projectNamePlaceholder: 'meu-jogo',
       projectNameHint: 'Letras minúsculas, números, - e _.',
@@ -455,6 +458,8 @@ export const ptBR: Shape<typeof en> = {
       projectCreated: 'Projeto criado',
       assetCreated: 'Asset criado',
       assetExportFailed: 'Asset criado, mas o export falhou',
+      clipToAdd: 'O clipe foi criado. Adicione-o aos clipes do personagem (abaixo) e depois exporte.',
+      exportPathPlaceholder: 'ex.: characters/',
     },
   },
   details: {
@@ -698,7 +703,7 @@ export const ptBR: Shape<typeof en> = {
   customize: {
     noKit: {
       title: 'Este projeto não tem um kit de gear',
-      description: 'Para customizar personagens, o projeto precisa de <code>src/gear/catalog.ts</code> exportando <code>CATALOG</code> (gear, corpos e materiais) e <code>CHARACTERS</code> (os personagens que podem ser vestidos).',
+      description: 'Para customizar personagens, o projeto precisa de <code>src/gear/catalog.ts</code> exportando <code>CATALOG</code> (gear, corpos e materiais) e <code>CHARACTERS</code> (os personagens que podem ser vestidos). Comece um com <code>npm run new-kit -- {project} gear</code>.',
     },
     noCharacters: {
       title: 'Nenhum personagem para vestir',
@@ -799,7 +804,7 @@ export const ptBR: Shape<typeof en> = {
   scenery: {
     noKit: {
       title: 'Este projeto não tem um kit de cenário',
-      description: 'Para pintar cenas, o projeto precisa de <code>src/scenery/catalog.ts</code> exportando <code>SCENERY</code> (peças, materiais, grade e câmera).',
+      description: 'Para pintar cenas, o projeto precisa de <code>src/scenery/catalog.ts</code> exportando <code>SCENERY</code> (peças, materiais, grade e câmera). Comece um com <code>npm run new-kit -- {project} scenery</code>.',
     },
     sceneLabel: 'Cena',
     piecesLabel: 'Peças',
