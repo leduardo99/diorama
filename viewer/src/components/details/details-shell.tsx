@@ -56,11 +56,11 @@ export function DetailsHeader({ asset, peers }: { asset: AssetFileMeta; peers: P
         {isStale(asset) && <StaleBadge />}
       </div>
       <div className="flex shrink-0 items-center gap-1">
-        <Button variant="ghost" size="icon" aria-label={stepsClips ? t('details.shell.previousAnimation') : t('details.shell.previousAsset')} disabled={stepsClips && peers.peers.length === 1 ? true : !stepsClips && position <= 0} onClick={() => go(-1)}>
+        <Button variant="ghost" size="icon-sm" aria-label={stepsClips ? t('details.shell.previousAnimation') : t('details.shell.previousAsset')} disabled={stepsClips && peers.peers.length === 1 ? true : !stepsClips && position <= 0} onClick={() => go(-1)}>
           <ChevronLeftIcon />
         </Button>
         <span className="text-muted-foreground tabular-nums">{position + 1}/{peers.peers.length}</span>
-        <Button variant="ghost" size="icon" aria-label={stepsClips ? t('details.shell.nextAnimation') : t('details.shell.nextAsset')} disabled={!stepsClips && (position < 0 || position >= peers.peers.length - 1)} onClick={() => go(1)}>
+        <Button variant="ghost" size="icon-sm" aria-label={stepsClips ? t('details.shell.nextAnimation') : t('details.shell.nextAsset')} disabled={!stepsClips && (position < 0 || position >= peers.peers.length - 1)} onClick={() => go(1)}>
           <ChevronRightIcon />
         </Button>
         <Button variant="outline" size="sm" className="ml-2" disabled={!asset.sheet || reexport.isPending} onClick={() => reexport.mutate(asset)}>
@@ -69,7 +69,7 @@ export function DetailsHeader({ asset, peers }: { asset: AssetFileMeta; peers: P
         </Button>
         <AssetMenuButton asset={asset} />
         <DialogClose asChild>
-          <Button variant="ghost" size="icon" aria-label={t('details.shell.close')}>
+          <Button variant="ghost" size="icon-sm" aria-label={t('details.shell.close')}>
             <XIcon />
           </Button>
         </DialogClose>

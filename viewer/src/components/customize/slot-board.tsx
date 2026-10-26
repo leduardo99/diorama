@@ -3,6 +3,7 @@ import type { GearCatalog, OutfitData, PartInfo, SkeletonSpec } from '@core/rig'
 import { ArrowLeftRightIcon, PlusIcon, Settings2Icon, XIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useT } from '@/i18n';
 import { groupLabel, sideLabel, slotLabel } from '@/lib/outfit/labels';
 import { isPaired, partOf, removePiece } from '@/lib/outfit/edit';
@@ -101,12 +102,22 @@ export function SlotBoard({ project, catalog, outfit, skeleton, onEdit, onUndo }
               <ArrowLeftRightIcon data-icon="inline-end" className="ml-auto text-muted-foreground" />
             </Button>
           </PartPicker>
-          <Button variant={open ? 'secondary' : 'ghost'} size="icon-xs" aria-label={t(open ? 'customize.board.settingsClose' : 'customize.board.settingsOpen', { name: info?.label ?? piece.part })} aria-pressed={open} title={t('customize.board.settingsHint')} onClick={() => toggle(index)}>
-            <Settings2Icon />
-          </Button>
-          <Button variant="ghost" size="icon-xs" aria-label={t('customize.board.takeOff', { name: info?.label ?? piece.part })} title={t('customize.board.takeOffHint')} onClick={() => remove(index)}>
-            <XIcon />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant={open ? 'secondary' : 'ghost'} size="icon-xs" aria-label={t(open ? 'customize.board.settingsClose' : 'customize.board.settingsOpen', { name: info?.label ?? piece.part })} aria-pressed={open} onClick={() => toggle(index)}>
+                <Settings2Icon />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('customize.board.settingsHint')}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon-xs" aria-label={t('customize.board.takeOff', { name: info?.label ?? piece.part })} onClick={() => remove(index)}>
+                <XIcon />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('customize.board.takeOffHint')}</TooltipContent>
+          </Tooltip>
         </div>
         {open && info && (
           <div className="rounded-md border bg-card/40">

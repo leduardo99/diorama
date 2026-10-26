@@ -6,7 +6,7 @@ import { BoxesIcon, CopyIcon, FolderOpenIcon, FolderPlusIcon, SparklesIcon } fro
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
-import { Kbd } from '@/components/ui/kbd';
+import { Badge } from '@/components/ui/badge';
 import { Spinner } from '@/components/ui/spinner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Rich, useT } from '@/i18n';
@@ -95,7 +95,7 @@ function NoProjects() {
             : <Rich id={there ? 'projects.none.sampleThereHint' : 'projects.none.sampleHint'} />}
         </p>
         <div className="flex w-full items-center gap-2 rounded-md bg-muted/50 p-2 text-left">
-          <Kbd>CLI</Kbd>
+          <Badge variant="outline">CLI</Badge>
           <span className="sr-only">{t('projects.none.terminal')}</span>
           <code className="min-w-0 flex-1 truncate font-mono text-xs">{SAMPLE_COMMAND}</code>
           <Tooltip>

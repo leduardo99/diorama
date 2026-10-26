@@ -3,18 +3,21 @@ import NiceModal from '@ebay/nice-modal-react';
 import { useNavigate } from '@tanstack/react-router';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { CopyIcon } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Kbd } from '@/components/ui/kbd';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Rich, useT } from '@/i18n';
 import type { TFn } from '@/i18n';
+import { copyText } from '@/lib/clipboard';
 import { clipToAdd, exportFailureText, exportTypeErrors } from '@/lib/export-errors';
 import { projectsQuery } from '@/lib/queries';
 import { useCli } from '@/lib/mutations';
@@ -167,6 +170,7 @@ export const NewModal = NiceModal.create(({ tab: initialTab = 'new-asset', proje
     </Field>
   );
 
+  const command = cliLine(tab, values, t);
   const pending = cli.isPending;
   const verb = tab === 'export' ? t('common.export') : t('common.create');
   // The viewer cannot pass --force: on a type refusal, its own hint in the output is misleading.
@@ -352,9 +356,17 @@ export const NewModal = NiceModal.create(({ tab: initialTab = 'new-asset', proje
             )}
           </FieldGroup>
 
-          <div className="flex items-baseline gap-2 rounded-md bg-muted/50 p-2">
-            <Kbd>CLI</Kbd>
-            <code className="min-w-0 font-mono text-xs break-words">{cliLine(tab, values, t)}</code>
+          <div className="flex items-start gap-2 rounded-md bg-muted/50 p-2">
+            <Badge variant="outline">CLI</Badge>
+            <code className="min-w-0 flex-1 font-mono text-xs break-words">{command}</code>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button type="button" variant="ghost" size="icon-xs" aria-label={t('modals.new.copyCommand')} onClick={() => void copyText(command, t('modals.new.commandLabel'))}>
+                  <CopyIcon />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('modals.new.copyCommand')}</TooltipContent>
+            </Tooltip>
           </div>
 
           {(cli.data || cli.isError) && (

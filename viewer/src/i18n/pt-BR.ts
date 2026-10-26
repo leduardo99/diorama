@@ -418,6 +418,8 @@ export const ptBR: Shape<typeof en> = {
       },
       cliProject: '<projeto>',
       cliPath: '<caminho>',
+      copyCommand: 'Copiar o comando',
+      commandLabel: 'Comando',
       projectName: 'Nome do projeto',
       projectNamePlaceholder: 'meu-jogo',
       projectNameHint: 'Letras minúsculas, números, - e _.',

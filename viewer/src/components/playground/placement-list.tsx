@@ -4,6 +4,7 @@ import { ChevronDownIcon, ChevronRightIcon, GamepadIcon, SearchIcon, SearchXIcon
 import { AssetThumb } from '@/components/asset-thumb';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group';
 import { Item, ItemActions, ItemContent, ItemDescription, ItemMedia, ItemTitle } from '@/components/ui/item';
@@ -175,18 +176,22 @@ export function PlacementList({ entries, recent, armedKey, playerId, onArm, onCo
                       {isPlayer ? (
                         <Badge variant="secondary">{t('playground.list.controlling')}</Badge>
                       ) : (
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label={t('playground.list.controlLabel', { name: entry.name })}
-                          title={t('playground.list.controlHint')}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (entry.armed.type === 'character') onControl(entry.armed.character.id);
-                          }}
-                        >
-                          <GamepadIcon />
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              aria-label={t('playground.list.controlLabel', { name: entry.name })}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (entry.armed.type === 'character') onControl(entry.armed.character.id);
+                              }}
+                            >
+                              <GamepadIcon />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>{t('playground.list.controlHint')}</TooltipContent>
+                        </Tooltip>
                       )}
                     </ItemActions>
                   )}

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { TrimmedImage } from '@/components/trimmed-image';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty';
-import { Field, FieldDescription, FieldGroup, FieldLabel, FieldTitle } from '@/components/ui/field';
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldTitle } from '@/components/ui/field';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -146,7 +146,7 @@ export const AddPieceModal = NiceModal.create(({ project, catalog, outfit, onAdd
                       </SelectGroup>
                     </SelectContent>
                   </Select>
-                  {missingHost && <FieldDescription>{t('modals.addPiece.missingHost', { needs: list(partRequires(info), 'or') })}</FieldDescription>}
+                  {missingHost && <FieldError>{t('modals.addPiece.missingHost', { needs: list(partRequires(info), 'or') })}</FieldError>}
                 </Field>
               )}
             </FieldGroup>

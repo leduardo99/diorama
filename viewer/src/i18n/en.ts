@@ -420,6 +420,8 @@ export const en = {
       },
       cliProject: '<project>',
       cliPath: '<path>',
+      copyCommand: 'Copy the command',
+      commandLabel: 'Command',
       projectName: 'Project name',
       projectNamePlaceholder: 'my-game',
       projectNameHint: 'Lowercase letters, numbers, - and _.',

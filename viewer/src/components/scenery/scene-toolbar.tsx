@@ -102,21 +102,21 @@ export function SceneToolbar(p: Props) {
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Toggle variant="outline" pressed={p.grid} onPressedChange={p.onGrid} aria-label={t('scenery.toolbar.grid')}><GridIcon /></Toggle>
+            <Toggle variant="outline" size="sm" pressed={p.grid} onPressedChange={p.onGrid} aria-label={t('scenery.toolbar.grid')}><GridIcon /></Toggle>
           </TooltipTrigger>
           <TooltipContent>{t('scenery.toolbar.grid')} <Kbd>G</Kbd></TooltipContent>
         </Tooltip>
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Toggle variant="outline" pressed={p.navigation} onPressedChange={p.onNavigation} aria-label={t('scenery.toolbar.navigation')}><RouteIcon /></Toggle>
+            <Toggle variant="outline" size="sm" pressed={p.navigation} onPressedChange={p.onNavigation} aria-label={t('scenery.toolbar.navigation')}><RouteIcon /></Toggle>
           </TooltipTrigger>
           <TooltipContent>{t('scenery.toolbar.navigationHint')}</TooltipContent>
         </Tooltip>
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Toggle variant="outline" pressed={p.panelOpen} onPressedChange={p.onPanel} aria-label={t('scenery.toolbar.piecePanel')}>
+            <Toggle variant="outline" size="sm" pressed={p.panelOpen} onPressedChange={p.onPanel} aria-label={t('scenery.toolbar.piecePanel')}>
               {p.panelOpen ? <PanelRightCloseIcon /> : <PanelRightOpenIcon />}
             </Toggle>
           </TooltipTrigger>

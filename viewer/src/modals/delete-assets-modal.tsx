@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Field, FieldDescription, FieldLabel } from '@/components/ui/field';
+import { Field, FieldContent, FieldDescription, FieldLabel } from '@/components/ui/field';
 import { Item, ItemActions, ItemContent, ItemGroup, ItemMedia, ItemTitle } from '@/components/ui/item';
 import { Spinner } from '@/components/ui/spinner';
 import { Rich, useT } from '@/i18n';
@@ -77,10 +77,10 @@ export const DeleteAssetsModal = NiceModal.create(({ assets }: Props) => {
 
         <Field orientation="horizontal" data-disabled={!hasSheet || undefined}>
           <Checkbox id="delete-sheet" checked={deleteSheet} disabled={!hasSheet} onCheckedChange={(checked) => setDeleteSheet(checked === true)} />
-          <div className="flex flex-col gap-0.5">
+          <FieldContent>
             <FieldLabel htmlFor="delete-sheet">{t('modals.deleteAssets.alsoSheet')}</FieldLabel>
             {!hasSheet && !loading && <FieldDescription>{assets.length === 1 ? t('modals.deleteAssets.noSheetOne') : t('modals.deleteAssets.noSheetMany')}</FieldDescription>}
-          </div>
+          </FieldContent>
         </Field>
         {deleteSheet && hasSheet && (
           <Alert>
