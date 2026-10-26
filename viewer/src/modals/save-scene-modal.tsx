@@ -98,17 +98,17 @@ export const SaveSceneModal = NiceModal.create(({ project, scene, defaultName, o
         </FieldGroup>
 
         {save.isError && (
-          <Alert variant="destructive">
+          <Alert className="min-w-0" variant="destructive">
             <AlertTitle>{t('modals.save.failed')}</AlertTitle>
-            <AlertDescription><pre className="max-h-40 overflow-auto font-mono whitespace-pre-wrap">{save.error.message}</pre></AlertDescription>
+            <AlertDescription><pre className="max-h-40 overflow-auto font-mono whitespace-pre-wrap [overflow-wrap:anywhere]">{save.error.message}</pre></AlertDescription>
           </Alert>
         )}
         {saved && (
-          <Alert variant={saved.exported ? 'default' : 'destructive'}>
+          <Alert className="min-w-0" variant={saved.exported ? 'default' : 'destructive'}>
             <CheckIcon />
             <AlertTitle>{t(saved.exported ? 'modals.saveScene.saved' : 'modals.saveScene.savedExportFailed', { name: saved.name })}</AlertTitle>
             <AlertDescription>
-              <pre className="max-h-40 overflow-auto font-mono whitespace-pre-wrap">{saved.output}</pre>
+              <pre className="max-h-40 overflow-auto font-mono whitespace-pre-wrap [overflow-wrap:anywhere]">{saved.output}</pre>
             </AlertDescription>
           </Alert>
         )}

@@ -45,7 +45,7 @@ export const DeleteProjectModal = NiceModal.create(({ project }: { project: stri
           </AlertDialogDescription>
         </AlertDialogHeader>
         <Alert variant="destructive">
-          <AlertDescription>{t('modals.deleteProject.warning')}</AlertDescription>
+          <AlertDescription>{t(meta?.hasStyle ? 'modals.deleteProject.warning' : 'modals.deleteProject.warningNoStyle')}</AlertDescription>
         </Alert>
         <Field>
           <FieldLabel htmlFor="confirm-project">{t('modals.deleteProject.confirmLabel')}</FieldLabel>

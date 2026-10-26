@@ -1,5 +1,5 @@
 import NiceModal from '@ebay/nice-modal-react';
-import { createRootRouteWithContext, ErrorComponent, Link, Outlet, useRouter, type ErrorComponentProps } from '@tanstack/react-router';
+import { createRootRouteWithContext, ErrorComponent, Link, Outlet, useParams, useRouter, type ErrorComponentProps } from '@tanstack/react-router';
 import type { QueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Toaster } from '@/components/ui/sonner';
@@ -45,6 +45,8 @@ function NotFound() {
 }
 
 function Shell() {
+  // N opens the New dialog on the project in use, as the header's New does.
+  const { project } = useParams({ strict: false });
   useWindowKeydown((e) => {
     // A modal dialog or an open menu keeps the keys; a popover does not (the Playground's and the painter's selection
     // popovers stay open while the page is used), so N and ? still work over one.
@@ -52,7 +54,7 @@ function Shell() {
     const key = e.key.toLowerCase();
     if (key === APP_KEYS.newThing) {
       e.preventDefault();
-      void NiceModal.show(NewModal, {});
+      void NiceModal.show(NewModal, { project });
     } else if (key === APP_KEYS.help) {
       e.preventDefault();
       void NiceModal.show(ShortcutsModal);

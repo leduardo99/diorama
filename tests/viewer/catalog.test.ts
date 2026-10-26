@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { buildAssetCatalog, buildProjectCatalog } from '../../viewer/server/catalog';
 import { createTranslator } from '../../viewer/src/i18n/core';
-import { characterLabel, detailsTitle, roleDetail, roleOf } from '../../viewer/src/lib/asset-role';
+import { characterLabel, detailsTitle, readableName, roleDetail, roleOf } from '../../viewer/src/lib/asset-role';
 import { exportTarget, isStale, pendingExports, projectTotals } from '../../viewer/src/lib/export-state';
 import { clipsOf, groupAnimations } from '../../viewer/src/lib/groups';
 import type { AssetFileMeta, AtlasInfo } from '../../viewer/src/lib/types';
@@ -137,10 +137,11 @@ try {
   const titleOf = (subpath: string) => detailsTitle(find(subpath));
   assert.deepEqual(['characters/captain/idle.png', 'characters/captain/walk.png'].map(titleOf), ['Ossuary Captain', 'Ossuary Captain'], 'a clip is titled by its character');
   assert.equal(titleOf('characters/bat/idle.png'), 'Bat', 'even a character with a single clip');
-  assert.equal(titleOf('characters/old/walk.png'), 'old', 'an older sheet without a manifest: its folder');
-  assert.equal(titleOf('hero.png'), 'hero', 'a character with no folder: its file name');
+  assert.equal(titleOf('characters/old/walk.png'), 'Old', 'an older sheet without a manifest: its folder, as a name reads');
+  assert.equal(titleOf('hero.png'), 'Hero', 'a character with no folder: its file name, as a name reads');
   assert.equal(titleOf('gear/horned-helm.png'), 'Horned helm', 'a gear sheet by its label, as its card');
-  assert.equal(titleOf('ui/button.png'), 'button', 'an interface piece with no label: its file name');
+  assert.equal(titleOf('ui/button.png'), 'Button', 'an interface piece with no label: its file name, as a name reads');
+  assert.equal(readableName('stone-crate'), 'Stone crate', 'a kebab-case name reads as a label is written');
   assert.deepEqual(['scenery/coffin.png', 'scenery/crypt-door--closing.png', 'scenery/crypt-archway.png'].map(titleOf), ['Coffin', 'Crypt door', 'Crypt archway']);
   assert.deepEqual(sample.map(characterLabel).filter(Boolean), ['Ossuary Captain', 'Ossuary Captain', 'Bat'], 'only a clip of a character with a manifest has a label');
 

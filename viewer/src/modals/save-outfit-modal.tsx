@@ -96,17 +96,17 @@ export const SaveOutfitModal = NiceModal.create(({ project, characterId, outfit,
           </Alert>
         )}
         {save.isError && (
-          <Alert variant="destructive">
+          <Alert className="min-w-0" variant="destructive">
             <AlertTitle>{t('modals.save.failed')}</AlertTitle>
-            <AlertDescription><pre className="max-h-40 overflow-auto font-mono whitespace-pre-wrap">{save.error.message}</pre></AlertDescription>
+            <AlertDescription><pre className="max-h-40 overflow-auto font-mono whitespace-pre-wrap [overflow-wrap:anywhere]">{save.error.message}</pre></AlertDescription>
           </Alert>
         )}
         {saved && (
-          <Alert variant={saved.exported ? 'default' : 'destructive'}>
+          <Alert className="min-w-0" variant={saved.exported ? 'default' : 'destructive'}>
             <CheckIcon />
             <AlertTitle>{t(saved.exported ? 'modals.saveOutfit.saved' : 'modals.saveOutfit.savedExportFailed', { name: saved.name })}</AlertTitle>
             <AlertDescription>
-              <pre className="max-h-40 overflow-auto font-mono whitespace-pre-wrap">{saved.output}</pre>
+              <pre className="max-h-40 overflow-auto font-mono whitespace-pre-wrap [overflow-wrap:anywhere]">{saved.output}</pre>
             </AlertDescription>
           </Alert>
         )}
@@ -116,7 +116,7 @@ export const SaveOutfitModal = NiceModal.create(({ project, characterId, outfit,
             <>
               <Button variant="outline" onClick={() => modal.hide()}>{t('common.close')}</Button>
               <Button asChild onClick={() => modal.hide()}>
-                <Link to="/p/$project/playground" params={{ project }}>{t('modals.saveOutfit.openPlayground')}</Link>
+                <Link to="/p/$project/playground" params={{ project }} search={{ character: `characters/${saved.name}` }}>{t('modals.saveOutfit.openPlayground')}</Link>
               </Button>
             </>
           ) : (

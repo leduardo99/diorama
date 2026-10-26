@@ -59,7 +59,7 @@ function BrushStrip({ catalog, brush, tool, onTool }: Pick<Props, 'catalog' | 'b
           <ToggleGroupItem key={slot.tool} value={slot.tool} aria-label={t(`scenery.brushAria.${slot.brush}`)} className="h-auto min-w-0 flex-col items-stretch gap-1 p-1.5 aria-checked:border-primary aria-checked:bg-primary/10">
             <span className="text-left text-[0.625rem] text-muted-foreground uppercase">{t(`scenery.brushes.${slot.brush}`)}</span>
             {info ? <PieceThumb catalog={catalog} info={info} size="slot" /> : <span className="h-10 rounded-sm bg-muted" />}
-            <span className="truncate text-left font-normal">{info?.label ?? t('scenery.noBrush')}</span>
+            <span className="truncate text-left font-normal" title={info?.label}>{info?.label ?? t('scenery.noBrush')}</span>
           </ToggleGroupItem>
         );
       })}

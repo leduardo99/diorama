@@ -28,7 +28,7 @@ import { Scene, type SceneHandle, type SceneOptions, type Selection } from './sc
 export function PlaygroundView() {
   const { project } = playgroundRoute.useParams();
   const { t } = useT();
-  const { fixture = false, scene: linked } = playgroundRoute.useSearch();
+  const { fixture = false, scene: linked, character: linkedCharacter } = playgroundRoute.useSearch();
   const navigate = playgroundRoute.useNavigate();
   const { data: allAssets } = useSuspenseQuery(assetsQuery);
   const assets = useMemo(() => allAssets.filter((a) => a.project === project), [allAssets, project]);
@@ -45,6 +45,16 @@ export function PlaygroundView() {
 
   const [playerId, setPlayerId] = useState<string | null>(null);
   const player = library.characters.find((c) => c.id === playerId) ?? library.characters[0] ?? null;
+  // A link that names a character (Save as character's "Open in the Playground") plays it once its sheets are in the
+  // library (they arrive as its export ends), then leaves the address.
+  const linkedPlayer = linkedCharacter === undefined ? undefined : library.characters.find((c) => c.folder === linkedCharacter);
+  const takeCharacter = useEffectEvent((id: string) => {
+    setPlayerId(id);
+    void navigate({ search: (prev) => ({ ...prev, character: undefined }), replace: true });
+  });
+  useEffect(() => {
+    if (linkedPlayer) takeCharacter(linkedPlayer.id);
+  }, [linkedPlayer?.id]);
   // The zoom chosen: a number, or "fit" (the whole scene in view), which is worked out below from the scene and the box it is drawn in.
   const [zoomChoice, setZoom] = usePref<Zoom>('playground.zoom', DEFAULT_ZOOM);
   const [shadow, setShadow] = usePref<boolean>('playground.shadow', true);

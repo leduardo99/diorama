@@ -27,6 +27,7 @@ import { OutfitEditor } from './outfit-editor';
 import { PreviewPanel } from './preview-panel';
 import { SlotBoard } from './slot-board';
 import { WieldNotes } from './wield-notes';
+import { useWarnOnUnload } from '@/lib/unsaved';
 
 /** Dress a character of the project's gear kit and watch the result live; save it as a new character. */
 export function CustomizeView() {
@@ -44,7 +45,7 @@ export function CustomizeView() {
           <EmptyMedia variant="icon"><ShirtIcon /></EmptyMedia>
           <EmptyTitle>{t('customize.noKit.title')}</EmptyTitle>
           <EmptyDescription>
-            <Rich id="customize.noKit.description" />
+            <Rich id="customize.noKit.description" vars={{ project }} />
           </EmptyDescription>
         </EmptyHeader>
       </Empty>
@@ -71,6 +72,7 @@ function Customizer({ project, kit, character }: { project: string; kit: GearKit
   const i18n = useT();
   const { t, plural } = i18n;
   const { outfit, edit, reset, changed, undo, redo, canUndo, canRedo } = useDraft(`${project}:${character.id}`, character.outfit);
+  useWarnOnUnload(changed);
   const refreshGear = useRefreshGearItems();
   // The outfit by place on the body (swap a piece in one click), or the flat list of pieces in drawing order.
   const [mode, setMode] = usePref<string>('customize.mode', 'slots');

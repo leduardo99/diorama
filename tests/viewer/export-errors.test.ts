@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { exportFailureText, exportTypeErrors } from '../../viewer/src/lib/export-errors';
+import { clipToAdd, exportFailureText, exportTypeErrors } from '../../viewer/src/lib/export-errors';
 
 console.log('🧪 Checking how the viewer reads a failed export (type errors it cannot --force, other tails)...\n');
 
@@ -40,5 +40,11 @@ const other = 'line one\nline two\nline three\nline four\nline five\nError: shee
 assert.equal(exportTypeErrors(other), null, 'a render failure is not a type refusal');
 assert.equal(exportFailureText(other, 'Fix these type errors to export'), 'line three\nline four\nline five\nError: sheet props/nope.ts has no default export.', 'other failures show the output tail');
 assert.equal(exportTypeErrors(''), null, 'empty output parses to nothing');
+
+// 6. A clip added to a character that exists: new-asset says what to add to its clips (as it prints it, in colour), and a first clip asks for nothing.
+const step = "Add the clip to `clips` in projects/zz/src/characters/hero/character.ts: 'hit': hit(skeleton) (import hit from '@core/rig'). Until it is there, the sheet's character.sheet('hit') is a type error.";
+const added = `\x1b[32mCreated projects/zz/sheets/characters/hero/hit.ts\x1b[39m\r\n\x1b[33m${step}\x1b[39m\r\nExport it with: npm run export -- zz characters/hero/hit`;
+assert.equal(clipToAdd(added), step, 'the step, without colours');
+assert.equal(clipToAdd('Created projects/zz/src/characters/hero/character.ts\nCreated projects/zz/sheets/characters/hero/idle.ts\nExport it with: npm run export -- zz characters/hero/idle'), undefined, 'a first clip needs nothing more');
 
 console.log('\n✅ export failure text checks passed');
