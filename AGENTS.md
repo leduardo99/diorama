@@ -4,7 +4,7 @@ Diorama makes 2.5D game assets as code: AI coding agents write TypeScript, and t
 
 ## Two kinds of work
 
-- **Making assets in a project** (`projects/<name>/`, yours, not versioned). Follow the skills in [.agents/skills/](.agents/skills/). Start with `diorama-setup` and `diorama`, then `diorama-volume` or `diorama-rig` for the asset at hand. Check your work with `npm run check -- <project>`, `npm run inspect` and contact sheets. Nothing here goes through a pull request.
+- **Making assets in a project** (`projects/<name>/`, yours, not versioned). Follow the skills in [.agents/skills/](.agents/skills/): plain Markdown that you read by path, because no agent loads them by itself. Start with `diorama-setup` (the environment) and `diorama` (the workflow), then `diorama-style` for a new project's look, `diorama-volume`, `diorama-rig` or `diorama-kits` for the asset at hand, `diorama-review` to check it and `diorama-game` to play it. Check your work with `npm run check -- <project>`, `npm run inspect` and contact sheets. Never create assets in `examples/`. Nothing here goes through a pull request.
 - **Changing Diorama itself**: the engine (`core/`), the packages (`packages/`), the commands (`tools/`), the viewer (`viewer/`), the sample project (`examples/`), the docs. Use the workflow below.
 
 ## Read before you write
@@ -62,7 +62,7 @@ Diorama makes 2.5D game assets as code: AI coding agents write TypeScript, and t
   - `docs/api/` comes from `npm run docs:api`;
   - generated sheets come from `gear-items`, `scenery-items`, `vfx-items` and `item-icons`;
   - `assets/` comes from the export.
-- Diorama is for any kind of 2.5D game. Name engine features as generic capabilities, never as one genre's feature. Soulkeeper is a sample that proves the tool works, not the limit of what it makes.
+- Diorama is for any kind of 2.5D game. Name engine features as generic capabilities, never as one genre's feature. The sample is one example of what Diorama makes, not the limit of it and not teaching material: skills and guides state rules and show short neutral snippets, and never point an agent at the sample (`tests/docs` fails when they name it).
 - No secrets, tokens or personal data in code, tests, commits or issues.
 
 ## For the agent

@@ -63,7 +63,7 @@ Read the guide for a module before using it (the [guides index](../../../docs/gu
 | :--- | :--- | :--- |
 | World axes, the camera, light, facings, pivot, the sheet layout (`@core/volume`) | [volume 01](../../../docs/guides/volume/01-space-camera-and-facings.md) and the `diorama-volume` skill | [volume](../../../docs/api/volume.md) |
 | Choosing solids, round volumes, tubes and decals; how the stage sorts | [volume 02](../../../docs/guides/volume/02-volumes-and-stage.md) | [volume](../../../docs/api/volume.md) |
-| Props, scenery pieces, armor and equipment | [volume 03](../../../docs/guides/volume/03-props-scenery-and-armor.md) | [volume](../../../docs/api/volume.md) |
+| Props, scenery pieces, armor and equipment | [volume 03](../../../docs/guides/volume/03-props-scenery-and-equipment.md) | [volume](../../../docs/api/volume.md) |
 | The game's space profile, scenery kits, floors, walls and fences that connect, scenes as data, tile sets | [volume 04](../../../docs/guides/volume/04-scenery-kits.md) | [volume](../../../docs/api/volume.md) |
 | Living scenery: states and clips, doors on cell edges, navigation | [volume 05](../../../docs/guides/volume/05-living-scenery.md) | [volume](../../../docs/api/volume.md) |
 | Effects cued on character events, items and inventory icons, the HUD | [volume 06](../../../docs/guides/volume/06-effects-items-and-hud.md) | [volume](../../../docs/api/volume.md), [rig](../../../docs/api/rig.md), [core](../../../docs/api/core.md) |

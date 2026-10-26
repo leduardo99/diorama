@@ -36,11 +36,11 @@ A project keeps its effects in `src/vfx/` and exports `VFX: EffectCatalog` from 
 - `ctx.frame` faces the heading: build a projectile along `forward`.
 - The floor is `ctx.height` below the origin. Draw a projectile's glow pool or shadow there, so it reads as flying.
 - `ctx.seed` is the same in every frame and facing, so random details hold still while the effect plays; animate them with `t`.
-- Use `@core/volume` parts for anything solid (a bone shard) and `object.custom` drawings for light, smoke and sparks.
+- Use `@core/volume` parts for anything solid (a metal shard) and `object.custom` drawings for light, smoke and sparks.
 
 **What makes an effect read:**
 - a clear silhouette in the first frames (anticipation), the peak early, then a fall-off;
-- the project's saturated accent (soul green in Soulkeeper) as the core, darker tones at the rim, and a pale hot centre;
+- the project's saturated accent as the core, darker tones at the rim, and a pale hot centre;
 - a size that matches the character (`SPACE.scale.character`): a hand projectile about a hand's size, an area blast a few cells;
 - loops that close, and one-shots that end empty (the last frame fades to nothing) unless they leave a mark (a scorch on the ground layer).
 
@@ -53,7 +53,7 @@ A character cues effects on its clip events in `defineCharacter`:
 ```ts
 import type { EffectCue } from '@core/rig';
 
-const effects: Record<string, EffectCue[]> = { cast: [{ on: 'release', effect: 'soul-bolt', motion: 'fly' }, { on: 'start', effect: 'cast-circle', at: 'feet' }] };
+const effects: Record<string, EffectCue[]> = { cast: [{ on: 'release', effect: 'bolt', motion: 'fly' }, { on: 'start', effect: 'cast-circle', at: 'feet' }] };
 ```
 
 (passed as `defineCharacter({ ..., effects })`)
@@ -70,18 +70,18 @@ The cues go into the manifest of every sheet (`meta.data.character.effects`). Th
 ## 2. Items and icons
 
 A project keeps its items in `src/items/` and exports `ITEMS: ItemCatalog` from `src/items/catalog.ts`:
-- `items`: one `ItemInfo` each: id, label, kind (`weapon`, `armor`, `consumable`, `key`, `material`, `currency`, `quest`, or the project's own), `rarity`, `stack`, `description`;
+- `items`: one `ItemInfo` each: id, label, kind (free text: `tool`, `consumable`, `key`, `material`, `currency`, and for a loot-driven game `weapon`, `armor` or `quest`; the project names its own), `rarity`, `stack`, `description`;
 - each item is a gear part (`gear: { part, character?, materials?, options?, hosts? }`), drawn as worn with the body hidden, a piece of its own (`piece`: a potion, a key, a coin), or both: a piece drawn for the icon of a gear part the item equips (loot art that differs from the worn part, which still says what it equips);
-- `rarities`: tiers with a label and a color (common, rare, epic, legendary);
+- `rarities`: tiers with a label and a color (the project's own ladder: common, rare, epic and legendary for loot; plain, fine and prized for crops; or one tier when rarity means nothing);
 - `icon: { size, padding }`: the icon square in logical pixels, and the room kept round the item;
 - `background` and `frame`: the project's drawing under and over the item for its rarity (a slot's ground, a border, a corner gem);
 - `camera`, `materials`, `defaultMaterials`, and `gear: { catalog, characters }` for gear items.
 
 `npm run item-icons -- <project>` writes the generated sheet `sheets/icons/<id>.ts` (`defineItemIcon`). Export `icons/`. A project without the kit starts it with `npm run new-kit -- <project> items`: a gem in `src/items/gems.ts` with two rarity tiers, `catalog.ts` and `index.ts`.
 
-**How an icon is made:** the item is drawn once to measure its pixels, then drawn again at the scale that fits the padded square, centred, so every icon fills its slot the same way and lines stay crisp. A soft halo (a crown of fire) counts in the measure and makes the item smaller.
+**How an icon is made:** the item is drawn once to measure its pixels, then drawn again at the scale that fits the padded square, centred, so every icon fills its slot the same way and lines stay crisp. A soft halo (a glowing aura) counts in the measure and makes the item smaller.
 - **The view:** three-quarters from the front left (`facing`, default 3π/4). `pose: { turn, tip }` turns a piece of its own before the view (a shield tipped towards the viewer); `spin` turns the drawn item in the icon's plane (a sword or a key on the diagonal).
-- **Gear items:** drawn on the character, so they take `facing`, `pose.turn` and `spin`, never `pose.tip`. The character is `gear.character`, else the first whose outfit has the part; an add-on (a part with `requires`) must be in that outfit, on its host. The pieces the part rests on in that outfit (a helm's skull, a shield's arm) are drawn with it; `gear.hosts: 'hide'` places them without drawing them.
+- **Gear items:** drawn on the character, so they take `facing`, `pose.turn` and `spin`, never `pose.tip`. The character is `gear.character`, else the first whose outfit has the part; an add-on (a part with `requires`) must be in that outfit, on its host. The pieces the part rests on in that outfit (a helm's head, a shield's arm) are drawn with it; `gear.hosts: 'hide'` places them without drawing them.
 
 **A piece of its own** (`ItemPiece`) builds the item into `ctx.object` around `ctx.frame`, like a prop, at any world size: the icon is scaled to fit. Keep the project's materials and line weights, so the potion belongs with the helm.
 
@@ -98,15 +98,15 @@ Interface pieces are drawn with `@core/draw` (no camera, no volumes) in `src/ui/
 | Piece | Function | What the atlas carries |
 | :--- | :--- | :--- |
 | Panel, dialog box, tooltip, button, slot | `defineNineSlice({ kind, width, height, insets, states, draw })` | `nineSlice` insets, one row per state (normal, hover, pressed, disabled, selected) |
-| Health, mana, soul bar | `defineBar({ measure, width, height, insets, fillBox, grows, draw })` | three frames: back, fill, frame; the fill box and its direction |
+| Health, energy, progress bar | `defineBar({ measure, width, height, insets, fillBox, grows, draw })` | three frames: back, fill, frame; the fill box and its direction |
 | Damage numbers, short labels | `defineBitmapFont({ chars, cell, baseline, draw })` | one glyph per frame; `font`: advances, baseline, line height |
 | Cursor, portrait frame, ornament | `defineUiImage({ kind, width, height, states, pivot, draw })` | states; the pivot is a cursor's hotspot |
 
 - **States:** one row each, in the order of `meta.data.states` (the frames keep the sheet's row names, so read the states from there). `contact --rows hover` finds a row by its state.
 - **Nine-slice:** a game stretches the edges and the middle to any size larger than the insets. Draw corners and edges so they can repeat or stretch; nothing may cross an inset line except along its edge.
 - **Bars:** a game draws the back, the fill clipped to the value inside `fillBox` along `grows`, the cap, then the frame. The fill clipped by the game has a plain cut: give the bar a `cap` (`cap: { width }`, a fourth frame drawn at the full end of `fillBox`), the bright edge a game moves to where the fill ends and clips to `fillBox`, so a sliver still reads.
-- **Bitmap font:** draw each glyph with `@core/draw` paths in the project's style and return its advance; a narrow `1` takes less room. A game draws each glyph's cell at the pen and moves the pen by the advance plus `spacing`; an outline that runs past the advance needs the spacing to keep neighbours apart. Damage numbers need `0123456789` and a few signs (`+-%`); dialog text is the game engine's own font.
-- **Style:** the same palette, line hierarchy and light as the art (light from the upper left on bevels); flat by design, so `inspect` judges interface sheets only on line weight. The accent marks what is active or important (a selected slot, the soul bar).
+- **Bitmap font:** draw each glyph with `@core/draw` paths in the project's style and return its advance; a narrow `1` takes less room. A game draws each glyph's cell at the pen and moves the pen by the advance plus `spacing`; an outline that runs past the advance needs the spacing to keep neighbours apart. Numbers (scores, prices, damage) need `0123456789` and a few signs (`+-%`); dialog text is the game engine's own font.
+- **Style:** the same palette, line hierarchy and light as the art (light from the upper left on bevels); flat by design, so `inspect` judges interface sheets only on line weight. The accent marks what is active or important (a selected slot, a full bar).
 
 ## 4. Checklist
 

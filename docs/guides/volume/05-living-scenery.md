@@ -27,7 +27,7 @@ nav: { passableIn: ['broken'], interact: 'break', interactIn: ['whole'] },
 - **`states`:** resting looks, the default first. A scene picks one per placement (`{ piece, col, row, state }`); the piece reads `ctx.state`.
 - **`clips`:** each has `frames`, `fps` (default 10), `events`, and either:
   - **a transition**, `from` → `to` (a door opening, an urn breaking). `ctx.clip.t` runs from 0 on its first frame to 1 on its last; the last frame should match the `to` state's still frame, and the first the `from` state's;
-  - **a loop**, `loop: true`, optionally `from` (a brazier's flame, a lantern's flicker). `ctx.clip.t` is frame ÷ frames, so frame `frames` would equal frame 0: close the loop.
+  - **a loop**, `loop: true`, optionally `from` (a lamp's flame, a lantern's flicker). `ctx.clip.t` is frame ÷ frames, so frame `frames` would equal frame 0: close the loop.
 - **Events** mark the moment a game reacts: `open` (the door lets characters through from here), `break`, `spark`, `release`.
 - **Names:** name a transition by its action ('opening', 'closing', 'breaking', 'pulling') and never like a state: a state and a clip of one name would both export as `<id>--<name>`, and `validateCatalog` refuses it.
 - **The piece** draws `ctx.state` when still, and the clip's frame when `ctx.clip` is set (its state is then the clip's `from`). Animate with `t` and the frame's seed; keep the silhouette's pivot fixed so a game can swap sheets in place.
@@ -43,10 +43,10 @@ A **door** (`group: 'door'`) stands on a cell edge between two wall vertices (wa
 - **Size:** the door piece is one cell wide; the opening's height is `SPACE.scale.door`, and the lintel reaches the wall's height. Give the catalog entry a `cell` wide enough for the jambs and an open leaf.
 - **States and clips:** `states: ['closed', 'open']`, a clip `opening` (closed → open, with an `open` event when the leaf clears the way) and `closing` (with `shut`); `nav: { passableIn: ['open'], interact: 'door' }`.
 - **Draw order:** a door is drawn after the wall vertex on its north or west end and, on a west edge, before the one on its south end: keep the door's parts between the piers' shafts, plinths and caps, never over them.
-- **Edge-on doors:** under the tilted camera a door on a west or east edge shows mostly its edge when shut. Give it a mark that reads from the front (the kit lights a ward on the lintel's top).
+- **Edge-on doors:** under the tilted camera a door on a west or east edge shows mostly its edge when shut. Give it a mark that reads from the front (a lit symbol on the lintel's top, say).
 - **Width:** a door is one cell wide. A path two cells wide needs two doors side by side (or a wider door piece the project builds), or it narrows at the door.
 - **A gate** in a fence is a door too, between fence posts.
-- With walls at cell centres (tactics, dungeon crawler), a door is a wall piece in the wall run (it connects like a wall); edge doors need walls on borders.
+- With walls at cell centres (the `tactics` and `dungeon-crawler` presets), a door is a wall piece in the wall run (it connects like a wall); edge doors need walls on borders.
 
 ## 3. Navigation
 
@@ -62,7 +62,7 @@ A **door** (`group: 'door'`) stands on a cell edge between two wall vertices (wa
 
 How pieces count (`nav`, else the group's default):
 - **Floors** cost `nav.cost` (default 1); a floor with `nav.blocks` (deep water) cannot be entered; a cell without floor neither.
-- **Props** block the cells of their turned footprint, unless `nav.blocks: false` (a low bone pile a character walks over) or their state is in `nav.passableIn` (a broken urn). **Decals** never block.
+- **Props** block the cells of their turned footprint, unless `nav.blocks: false` (a low stack of planks a character walks over) or their state is in `nav.passableIn` (a broken urn). **Decals** never block.
 - **Walls and fences on borders** block the cell edges they run along; at cell centres they block their cells. Low walls block too.
 - **Doors** block their edge until their state is passable.
 - **`nav.interact`** lists a piece in `interactables`: 'door', 'chest', 'lever', 'break', or the project's own kinds; **`nav.interactIn`** limits it to some states, so a chest once opened or an urn once broken drops out.

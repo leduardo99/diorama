@@ -1,6 +1,6 @@
 # Gaits and clips (`@core/rig`)
 
-**Purpose.** Make a skeleton move: locomotion from gait numbers, idles, and actions such as attacks, hits and emotes built from a drive function. The judgment behind timing lives in the diorama-volume [motion reference](../../../.agents/skills/diorama-volume/references/motion.md); this guide maps those rules to the API.
+**Purpose.** Make a skeleton move: locomotion from gait numbers, idles, and actions such as attacks, hits and emotes built from a drive function. The judgment behind timing lives in the diorama-review [motion reference](../../../.agents/skills/diorama-review/references/motion.md); this guide maps those rules to the API.
 
 **API reference:** [`docs/api/rig.md`](../../api/rig.md).
 
@@ -47,7 +47,7 @@ One gait has one `stride`, `duty` and `cadence` for every leg, because planted f
   - `death`: held, with a `land` event and `extra.dead` (0 alive → 1 dead) for dimming eyes and glows.
     - Bipeds topple face down, the legs fold under the hips and the arms settle along the trunk.
     - Bodies with more legs collapse onto the belly: the head slumps to one side, the front legs splay and tails go limp.
-  - Wrap a preset to add a character's own channels (a weapon falling, ears folding): `defineClip({ ...base, drive: t => ({ ...base.drive(t), extra: { ...} }) })`. The worked guard and wolf deaths do this.
+  - Wrap a preset to add a character's own channels (a weapon falling, ears folding): `defineClip({ ...base, drive: t => ({ ...base.drive(t), extra: { ...} }) })`.
 - `jump(skeleton, { height, distance })`: crouch, `takeoff`, an arc with the legs tucked, `land` with a crouch that absorbs it. With a `distance` the body travels by root motion and the feet land on their new spot.
 - `dodge(skeleton, { style: 'dash' | 'backstep', distance })`: a quick low dash forward or a hop back, covered by root motion. The feet stay planted in the world and step one after the other, so nothing slides; a `cancel` event marks the recovery.
 - `defineClip({ name, kind, tags, seconds, events, drive })` makes anything else. Attacks need a `hit` event, skills `cast` and/or `release`, a death `hold: true`; `checkClip` reports a missing one.
@@ -56,7 +56,7 @@ One gait has one `stride`, `duty` and `cadence` for every leg, because planted f
   - the default `BEAT` = { apex 0.17, strike 0.24, extreme 0.37, hold 0.49, settle 0.64 };
   - `creep` (default 0) is the drift during the holds that keeps them alive.
   Frames sample t = k ÷ frames, so at 10–12 frames the default strike gets only 1–2 frames. For a 3-frame strike, pass a `Beat` with `extreme − strike = 3 ÷ frames`, and put the hit on a frame boundary so the hit frame shows the extreme pose.
-- **Worked actions:** `slash` (humanoid weapon swing) and `bite` (quadruped lunge with `extra.jaw`) are in `@core/rig`. Soulkeeper's characters add a skill each in their `character.ts`: the wolf's howl (`spawn:mouth` at release) and the spider's spit.
+- **Presets for actions:** `slash` (humanoid weapon swing) and `bite` (quadruped lunge with `extra.jaw`) are in `@core/rig`. Any other action is a `defineClip` of its own: a skill (a spell, a howl, a spit) with `cast` and `release` events and a `spawn:<socket>` where the effect appears, and the non-combat kinds (`interact`, `emote`, and the like) built the same way with their own event names, which games and the playground accept (custom names are allowed).
 - Drive offsets are per joint: a `trunk` offset on the neck does not move the head. Move both, or use `root`, `pitch` and `twist` for whole-body motion.
 - Put the hit event at the end of the strike (`BEAT.extreme`). The skin uses it for the smear and the game for damage.
 - **Windows:** `bell(u)` is only a bump for u in 0..1 (outside it grows again). Use `bump(t, t0, t1)` for a windowed motion such as a tap, a claw flick or a jump arc, and keep t1 below 1 in loops.

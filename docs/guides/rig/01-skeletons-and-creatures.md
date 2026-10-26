@@ -1,6 +1,6 @@
 # Skeletons and creatures (`@core/rig`)
 
-**Purpose.** Describe any body as data so one engine walks a knight, a wolf, a spider or a bird. This guide covers choosing and writing a `SkeletonSpec`. Gaits and clips are in [guide 02](02-gaits-and-clips.md), drawing a body in [guide 03](03-skins-and-character-assets.md).
+**Purpose.** Describe any body as data so one engine walks a person, a dog, a crab or a bird. This guide covers choosing and writing a `SkeletonSpec`. Gaits and clips are in [guide 02](02-gaits-and-clips.md), drawing a body in [guide 03](03-skins-and-character-assets.md).
 
 **API reference:** [`docs/api/rig.md`](../../api/rig.md). Signatures are not repeated here.
 
@@ -10,9 +10,9 @@
 
 | Body | Start from | Change |
 | :--- | :--- | :--- |
-| Humans, elves, undead, goblins (scale it) | `humanoid(scale)` | `scale` for size; bone lengths for proportions (long arms for a ghoul) |
+| People, elves, robots, goblins (scale it) | `humanoid(scale)` | `scale` for size; bone lengths for proportions (long arms for a gorilla-like creature) |
 | Wolves, dogs, big cats, horses (longer legs) | `quadruped(scale)` | trunk joint positions for body length; leg lengths; the tail |
-| Spiders, insects, crabs | a new spec | 6–8 legs on one trunk joint, sideways offsets, **vector knees** that arch up and out (`[fan, ±1, 1.2]`), a `foot` segment for the tarsus, a tetrapod or wave gait. Worked example: `examples/soulkeeper/src/characters/shared/bone-spider.ts` |
+| Spiders, insects, crabs | a new spec | 6–8 legs on one trunk joint, sideways offsets, **vector knees** that arch up and out (`[fan, ±1, 1.2]`), a `foot` segment for the tarsus, a tetrapod or wave gait |
 | Birds, raptors, kangaroo-like bodies | a new spec | 2 legs on the quadruped hind-leg pattern: `knee: 'forward'`, `lengths` = [thigh, shin], `foot` = the metatarsus tilted 20–25° so the ankle sits behind the toes; narrow stance; small arms held bent (guide 02); a long tail for balance. The skin draws the thigh mass on the first bone |
 | Serpents, worms, floating ghosts | a new spec with no legs | a long trunk; motion comes from `trunk` offsets in a custom clip |
 
@@ -39,7 +39,7 @@ Presets are only data plus clips. Copy one into the project and change its numbe
 - With a `foot` segment: the ankle sits at foot.length × cos(tilt) above the floor. Put the hip at that height plus about 0.97 × (l1 + l2) for a straight leg, or 0.8–0.9 × (l1 + l2) for a visibly bent digitigrade leg.
 - Trunk heights are targets: when a foot is out of reach the solver lowers the trunk. Print the solved rest pose to check: `solvePose(skeleton, Frame3.facing(vec3(0, 0, 0), 0), {})`.
 - **Stance:** the rest foot is the hip joint's ground point plus `offset` (x, y) plus `stance`. A `stance` y of 0 puts the foot right under the hip socket; the humanoid uses 0.6 outward. Theropods and birds walk on a narrow line: use a negative (inward) stance y. Quadruped hind feet sit slightly behind the hip (`stance` x about −1).
-- Exaggerate for the camera: heads, hands, paws and weapons 15–30% larger than life at 100–160 px (see the diorama-volume readability reference).
+- Exaggerate for the camera: heads, hands, paws and weapons 15–30% larger than life at 100–160 px (see the diorama-review [readability reference](../../../.agents/skills/diorama-review/references/readability.md)).
 
 ## 4. The solved pose
 

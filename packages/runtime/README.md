@@ -11,8 +11,8 @@ The atlas contract in pure TypeScript: it reads Diorama's exported sheets and pl
 <!-- docs:allow-long -->
 ```ts
 import { buildLibrary, createActor, cues, play, projectionOf, readSheet, shownFrame, steer, stepFx, toScreen, type Fx } from '@diorama/runtime';
-const json: unknown = { meta: {}, frames: {} }; // what the host fetched: characters/guard/idle.json, and the sheets it depends on
-const library = buildLibrary([readSheet('characters/guard/idle', json)]);
+const json: unknown = { meta: {}, frames: {} }; // what the host fetched: characters/hero/idle.json, and the sheets it depends on
+const library = buildLibrary([readSheet('characters/hero/idle', json)]);
 const actor = createActor(library.characters[0], { x: 0, y: 0 }, { id: 1 });
 let effects: Fx[] = [];
 play(actor, 'slash');
@@ -64,8 +64,8 @@ The full reference is [docs/api/runtime.md](../../docs/api/runtime.md).
 ## How it is checked
 
 - `tests/runtime/` (`npm run test:runtime`) holds the rules, the contract type test and the conformance traces.
-  - The rules run on synthetic atlases and on small JSON fixtures cut from the sample's export (`tests/runtime/fixtures/`).
+  - The rules run on synthetic atlases and on small JSON fixtures of exported sheets (`tests/runtime/fixtures/`).
   - `contract.test.ts` checks that the engine's producer types can be assigned to these and, for the types it lists, that every field these name is one the engine still writes. It compiles itself, so `npm test` runs the type checks too.
-  - The conformance traces in `tests/runtime/conformance/` record what the runtime plays, frame by frame, for the guard, Malvek and the wolf. Another implementation replays them.
+  - The conformance traces in `tests/runtime/conformance/` record what the runtime plays, frame by frame, for three exported characters. Another implementation replays them.
 - `tests/runtime/standalone.test.ts` compiles the package alone with its own `tsconfig.json`: lib ES2022, no DOM, no paths.
 - `tests/engine/boundary.test.ts` checks that the runtime imports nothing outside `packages/runtime`, that core never imports it, and that everything else reaches it through `@diorama/runtime`, never by a path into `packages/`.

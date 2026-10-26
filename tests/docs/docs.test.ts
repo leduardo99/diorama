@@ -31,7 +31,7 @@ const docFiles = [
   resolve('.agents/skills/diorama-setup/SKILL.md'),
   resolve('.agents/skills/diorama-review/SKILL.md'),
   resolve('.agents/skills/diorama-volume/SKILL.md'),
-  ...guideDir('.agents/skills/diorama-volume/references'),
+  ...guideDir('.agents/skills/diorama-review/references'),
   resolve('.agents/skills/diorama-rig/SKILL.md'),
 ];
 

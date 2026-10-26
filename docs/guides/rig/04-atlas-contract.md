@@ -37,7 +37,7 @@ Every sheet's JSON repeats the whole character manifest, so reading any one shee
 | `tags` | Free qualifiers such as `melee`, `ranged`, `aoe`, `heavy`. |
 | `loop`, `hold` | Loops forever, or plays once. `hold` means the clip stays on its last frame (death). |
 | `seconds`, `groundSpeed` | Clip length, and the world units per second the sprite moves while locomotion plays. Multiply by `meta.scale` for exported px. |
-| `events` | `[{ frame, name }]`. Standard names: `hit` (deal damage), `cast` (a skill commits), `release` (its effect leaves), `cancel` (the action may be interrupted from here), `land`, `step:<leg>`, `spawn:<socket>` (something appears at that socket). |
+| `events` | `[{ frame, name }]`. The names below are conventions that games and the playground understand; a clip may carry events with any other name (a non-combat clip such as `interact` or `emote` has its own). Standard names: `hit` (deal damage), `cast` (a skill commits), `release` (its effect leaves), `cancel` (the action may be interrupted from here), `land`, `step:<leg>`, `spawn:<socket>` (something appears at that socket). |
 | `travel` | Root motion of an action that covers ground: world units along the facing from the start at each frame, then at the end (frames + 1 values). It is negative for movement backwards (a backstep, a knock-back). Move the sprite along the facing by the difference between frames. Absent for clips in place. |
 | `sockets` | `{ names, frames }`. `frames["<DIR>_<n>"]` holds one `[x, y, d]` per name: x, y in logical px from the cell's top-left corner; d is depth relative to the body's center (positive = in front of the body: draw the effect over the sprite). `head` and `center` are always present. |
 | `motion` | The export's own check: bone drift, foot slide, loop gap and warnings. Not needed to play the clip. |
@@ -51,7 +51,7 @@ Every sheet's JSON repeats the whole character manifest, so reading any one shee
 - `controls`: default bindings.
   - `idle`: the idle key.
   - `move`: locomotion keys from slowest to fastest; the first is the walk, the last the run.
-  - `actions`: action keys grouped by kind, e.g. `{ attack: ['slash'], skill: ['howl'], hit: ['hit'], death: ['death'] }`.
+  - `actions`: action keys grouped by kind, e.g. `{ attack: ['slash'], skill: ['spell'], hit: ['hit'], death: ['death'] }`.
 - `wield`: what the character holds when it was defined with an outfit, `main` (right hand) and `off` (left), each with `part`, `class` and `hands`. Clips list what they are made to hold in `wields` (`main` / `off` classes, `unarmed` for an empty hand); a clip marked `usable: false` is made for something else and is not in `controls`: players leave it out.
 - `effects`: effects to play on clip events, by clip key. Each cue has `on` (the event, or `start` / `end` of the clip), `effect` (an effect id: its sheet is `sheets/vfx/<id>.ts`, exported to `assets/vfx/<id>`), `at` (the socket it starts at; default the socket of a `spawn:<socket>` event on the same frame, else `center`; `feet` is the pivot on the floor) and `motion` (`fly`, `follow` or `stay`).
 - `warnings`: problems found when the character was defined. Show them, don't block on them.

@@ -13,14 +13,14 @@ This skill covers how to plan, build and check volume assets. It does not repeat
 | :--- | :--- |
 | Camera, light, facings, pivot, export layout | [guide 01](../../../docs/guides/volume/01-space-camera-and-facings.md) |
 | Choosing solids, round volumes, tubes, decals; how the stage sorts | [guide 02](../../../docs/guides/volume/02-volumes-and-stage.md) |
-| Props, scenery kits, armor and equipment | [guide 03](../../../docs/guides/volume/03-props-scenery-and-armor.md) |
+| Props, scenery kits, armor and equipment | [guide 03](../../../docs/guides/volume/03-props-scenery-and-equipment.md) |
 | The game's space (grid, scale against the characters, wall placement, genre presets) and scenery kits on it: floors with transitions, walls and fences that connect, props, scenes as data, tile sets | [guide 04](../../../docs/guides/volume/04-scenery-kits.md) |
 | Living scenery: pieces with states and animations (doors, chests, levers, breakables, flames), doors on cell edges, navigation exported with scenes, characters sorted against walls and props | [guide 05](../../../docs/guides/volume/05-living-scenery.md) |
 | Visual effects (projectiles, impacts, casts, auras) cued on character events, items and their inventory icons, the HUD (nine-slice panels and buttons, bars, bitmap fonts, cursors) | [guide 06](../../../docs/guides/volume/06-effects-items-and-hud.md) |
 | Exact signatures | [volume API](../../../docs/api/volume.md) |
-| The quality floor every style must clear (tones, line hierarchy, focal accent, detail tiers, sorting, cost) | [references/quality-bar.md](references/quality-bar.md) |
-| Silhouette, value contrast, proportions, readability per facing | [references/readability.md](references/readability.md) |
-| Anything with `frames > 1` (opening chests, flames, banners; characters also follow diorama-rig) | [references/motion.md](references/motion.md) |
+| The quality floor every style must clear (tones, line hierarchy, focal accent, detail tiers, sorting, cost) | [references/quality-bar.md](../diorama-review/references/quality-bar.md) |
+| Silhouette, value contrast, proportions, readability per facing | [references/readability.md](../diorama-review/references/readability.md) |
+| Anything with `frames > 1` (opening chests, flames, banners; characters also follow diorama-rig) | [references/motion.md](../diorama-review/references/motion.md) |
 
 ## When to use volume
 
@@ -36,7 +36,7 @@ Worked examples (read-only, for technique: an exception to project isolation, li
 
 ## Before the first volume asset of a project
 
-1. The theme must declare `CAMERA` (one `Camera` for the whole project, with its `contour`) and the `VOLUMES` material tokens (ramp, inner line, crease edge, optional `form`). New projects get both from the template; add them to older themes. The style is the owner's choice; the [quality bar](references/quality-bar.md) is not.
+1. The theme must declare `CAMERA` (one `Camera` for the whole project, with its `contour`) and the `VOLUMES` material tokens (ramp, inner line, crease edge, optional `form`). New projects get both from the template; add them to older themes. The style is the owner's choice; the [quality bar](../diorama-review/references/quality-bar.md) is not.
 2. `STYLE.md` must hold the reference sizes (character height, door height, grid size) under a "Reference sizes" heading, so every asset uses the same world scale. If it has none yet, measure the existing volume assets (their sheets, not their code) and write the sizes down before building. For the first asset of a project there is nothing to measure: choose them (the example of guide 03 §1 is a start: a character 80 units tall, a door 92, a floor cell 48 × 36 on screen, the `jrpg` profile; `new-project --genre <preset> --character <height>` writes them as a space profile in `src/space.ts`) and write them in the table before building. If `projects/<project>/STYLE.md` does not exist, create it by copying `templates/optional/STYLE.md` (replace `[Project Name]`; it already holds the starting sizes of the `jrpg` preset at a character height of 80, to replace with your own); `new-project --style` cannot be run on an existing project.
 
 ## Workflow per asset

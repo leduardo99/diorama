@@ -1,6 +1,6 @@
 # Motion principles for animated assets
 
-Applies to any asset with `frames > 1`: props (chests, doors, levers, flames, banners) and characters and creatures (`@core/rig`, see the diorama-rig skill). These rules were verified with per-frame measurements on the sample project; numbers are at 60 Hz unless noted.
+Applies to any asset with `frames > 1`: props (chests, doors, levers, flames, banners) and characters and creatures (`@core/rig`, see the diorama-rig skill). These rules were checked with per-frame measurements; numbers are at 60 Hz unless noted. They fit any action: a swing, a wave, a pick-up, a lid opening.
 
 ## Loops and timing
 

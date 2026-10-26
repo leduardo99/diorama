@@ -1,6 +1,6 @@
 # Space, Camera and Facings (`@core/volume`)
 
-**Purpose.** Place 3D volumes in one shared 2.5D space and render them from several facings. Props, scenery, armor pieces and characters of a project all go through the same camera, so they match in angle, light and scale.
+**Purpose.** Place 3D volumes in one shared 2.5D space and render them from several facings. Props, scenery, equipment pieces and characters of a project all go through the same camera, so they match in angle, light and scale.
 
 **API reference:** [`docs/api/volume.md`](../../api/volume.md). Signatures are not repeated here.
 
@@ -45,7 +45,7 @@ Decide in this order; the first row that matches wins:
 | :--- | :--- | :--- |
 | Moves or turns in the game (character, creature, vehicle, a turret) | 8 | Turns and diagonal movement need the diagonals. A character that only moves along the grid axes may use 4 (see rig guide 03). |
 | Same from every side (barrel, column, pot, rock) | 1 | Every facing looks the same. |
-| Static, placed by level design on the grid axes only (wall, door, fence, tombstone, statue) | 4 | The game only places it in four orientations. |
+| Static, placed by level design on the grid axes only (wall, door, fence, signpost, statue) | 4 | The game only places it in four orientations. |
 | Static, but may be placed at diagonals or scattered freely (chest, crate, furniture, rubble) | 8 | Diagonal placements need their own rows. |
 
 Whatever the count, an asymmetric object (a lock on one side, a weapon in one hand) gets every row rendered; never mirror one direction into another.

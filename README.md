@@ -1,19 +1,19 @@
 <p align="center">
-  <img src="docs/media/banner.webp" alt="DIORAMA in amber block letters standing in a lit crypt, while a skeleton guard and a wolf fight and a necromancer casts a soul bolt" width="100%">
+  <img src="docs/media/banner.webp" alt="DIORAMA in amber block letters over a 2.5D scene of scenery, characters and effects exported with Diorama" width="100%">
 </p>
 
 # Diorama
 
 2.5D game assets as code. You write props, scenery, effects, rigged characters with their gear, item icons and HUD pieces in TypeScript, and Diorama draws them in one shared camera and light and exports them as sprite sheets with an atlas JSON that a game can play. It is built to be driven by coding agents, with skills and guides that tell them how, and a viewer that lets a person look at the result.
 
-Diorama is for any kind of 2.5D game. Pick the kind of game when a project starts (`npm run new-project -- <name> --genre <preset>`: JRPG, action RPG, tactics, farm / life sim or dungeon crawler), and the grid, the characters' scale and the height of walls and doors follow it. More genres, side view and isometric among them, are on the [roadmap](https://github.com/users/leduardo99/projects/1). Soulkeeper, the sample game, is one example that proves the pipeline works in a real game, not the limit of what Diorama makes.
+Diorama is for any kind of 2.5D game, in any look the theme can express: cute or realistic, flat or shaded, pixel art. The look is the project's own (its `src/theme.ts`), and the engine only keeps a quality floor. When a project has a grid, give it a space profile (`npm run new-project -- <name> --genre <preset>`): a preset sets how big a cell is against a character, how tall walls and doors are and whether walls stand on cell borders or through cell centres (`jrpg`, `action-rpg`, `tactics`, `farm-sim` and `dungeon-crawler` are five such sets, and any number in them can be overridden). A game that fits none of them overrides what differs. The engine draws a tilted top-down 3/4 view on a rectangular grid today; side view, isometric and hex grids are on the [roadmap](https://github.com/users/leduardo99/projects/1).
 
 Everything is deterministic: the same source exports the same pixels. Sheets are rasterized to PNG (or JPEG) through headless Chromium.
 
 ## What is in it
 
 - **Props and scenery** (`@core/volume`). Objects built from solids, round volumes, tubes and decals, projected through one 3/4 camera and rendered in 1, 4 or 8 facings. Scenery kits on the game's own grid: floors with transitions, walls and fences that connect, props, decals, and scenes saved as data. Scenery is alive: pieces rest in states and play clips between them (doors, chests, levers, breakables, flames), and the sheets carry the navigation a game needs.
-- **Characters and gear** (`@core/rig`). Skeletons written as data (humanoid, quadruped, spider, bird, serpent, or your own), gaits with planted feet and an exported ground speed, clips with events, sockets and root motion, exported in 8 facings with a manifest. Armor, weapons and garments are reusable parts that dress characters as outfits.
+- **Characters and gear** (`@core/rig`). Skeletons written as data (humanoid, quadruped, spider, bird, serpent, or your own), gaits with planted feet and an exported ground speed, clips with events, sockets and root motion, exported in 8 facings with a manifest. Equipment (wearables, carried and held items) is made of reusable parts that dress characters as outfits.
 - **Effects, item icons and the HUD.** Visual effects cued on character events, items and inventory icons with rarity tiers, and interface pieces: nine-slice panels and buttons, bars, bitmap fonts and cursors.
 - **A drawing layer** (`@core/draw`). Geometry, paths, styles and procedural textures: what volumes, effects and the HUD are drawn with.
 - **A viewer.** A local web app to browse every export, play characters and scenes, dress characters and paint scenes.
@@ -28,13 +28,13 @@ npm install
 npx playwright install chromium
 npm run doctor
 npm test
-npm run check -- examples/soulkeeper
-npm run example
 ```
 
-`npm run check -- examples/soulkeeper` type checks the sample, checks its layout and that it is deterministic. `npm run example` brings Soulkeeper, the sample game, in as a project of yours: it copies `examples/soulkeeper` to `projects/soulkeeper` and exports it there (163 sheets, about 45 seconds on four performance cores). The viewer shows only your projects, those of `projects/`, so the copy is what it opens and what its editors save into, and the sample in `examples/` stays as it ships. Run it again and it keeps your copy, exporting only the sheets whose code changed (`--changed`); `npm run example -- --force` replaces the copy with a fresh one, after moving yours to the viewer's trash (`.diorama-trash/`), and prints how to get yours back.
+To open the viewer: on Windows, run `dev.bat`; on macOS and Linux, run `sh dev.sh`. Any system can run `npm run view` and then open `http://localhost:5173`. With no project yet, it says what Diorama is and offers "New project" and "Try the sample".
 
-To open the viewer: on Windows, run `dev.bat`; on macOS and Linux, run `sh dev.sh`. Any system can run `npm run view` and then open `http://localhost:5173`. With no project yet, it says what Diorama is and offers "New project" and "Try the sample", which runs `npm run example` for you and opens Soulkeeper. Its characters also play in Phaser on the test bench of `@diorama/phaser`, `http://localhost:5173/packages/phaser/demo/?project=soulkeeper`; Soulkeeper has no game of its own yet (when it has one, "Play game" opens it at `/projects/soulkeeper/game/`).
+**The sample.** Diorama ships a sample project in `examples/`, to have something to open. `npm run example` brings it in as a project of yours: it copies it to `projects/` and exports it there. The viewer shows only your projects, those of `projects/`, so the copy is what it opens and what its editors save into, and the sample in `examples/` stays as it ships. Run `npm run example` again and it keeps your copy, exporting only the sheets whose code changed (`--changed`); `npm run example -- --force` replaces the copy with a fresh one, after moving yours to the viewer's trash (`.diorama-trash/`), and prints how to get yours back. "Try the sample" on the viewer's start page runs the same command. The sample is where Diorama's own changes are proved (`npm run export:sample`, `npm run compare-exports`, `npm run check:sample`, see [AGENTS.md](AGENTS.md)); it is not material to learn from: the skills and guides are.
+
+The characters of any project also play in Phaser on the test bench of `@diorama/phaser`, `http://localhost:5173/packages/phaser/demo/?project=<name>`. A project with a game of its own gets "Play game" in the viewer ([packages/phaser/README.md](packages/phaser/README.md)).
 
 ## How a repository and a project are laid out
 
@@ -50,7 +50,7 @@ scripts/     the doctor and the API reference generator
 templates/   what new-project copies (theme.ts, STYLE.md)
 viewer/      the web app
 tests/       engine, docs, runtime, viewer, phaser and cli suites
-examples/    Soulkeeper, the sample game (examples/soulkeeper)
+examples/    the sample project (versioned; npm run example copies it into projects/)
 projects/    your projects, one folder each; not versioned by Diorama
 .agents/     skills for coding agents
 ```
@@ -68,7 +68,7 @@ A project, in `projects/<project>/` or `examples/<project>/`, has four places:
 
 `src/` is code and nothing there is exported by itself; `sheets/` lists what is exported, each sheet a one-line re-export of an asset in `src/`; `assets/` is the output and `review/` is scratch, and neither is versioned. No file or folder starts with an underscore, names are kebab-case, and a kit folder (`gear/`, `scenery/`, `vfx/`, `items/`) has a `catalog.ts` for editors and an `index.ts` for code. `npm run check -- <project>` runs the type check, then these rules, then the determinism lint (no `Math.random`, no clock, no raw colors outside `src/theme.ts`), and says what to move or use instead when one is broken; `npm run layout -- <project> --strict` (or `npm run check -- <project> --strict`) also fails on sheets without an export, which is the gate after an export.
 
-**`examples/` and `projects/`.** `examples/` holds the samples Diorama ships, versioned with it; `projects/` holds your own, one folder each, and Diorama does not version them (only [`projects/README.md`](projects/README.md) is in the repository), so each can be a git repository of its own. The viewer shows `projects/` only: a sample becomes one of your projects when `npm run example` copies it there. Commands find a project by name, in `projects/` first, then in `examples/`; `projects/<name>` or `examples/<name>` picks one exactly, so `examples/soulkeeper` always names the sample itself.
+**`examples/` and `projects/`.** `examples/` holds the samples Diorama ships, versioned with it; `projects/` holds your own, one folder each, and Diorama does not version them (only [`projects/README.md`](projects/README.md) is in the repository), so each can be a git repository of its own. The viewer shows `projects/` only: a sample becomes one of your projects when `npm run example` copies it there. Commands find a project by name, in `projects/` first, then in `examples/`; `projects/<name>` or `examples/<name>` picks one exactly, so `examples/<name>` always names the sample itself. Never create assets in `examples/`.
 
 ## Start with a coding agent
 
@@ -76,7 +76,12 @@ Open this folder in a coding agent and ask:
 
 > Read `.agents/skills/diorama-setup/SKILL.md` and prepare this environment.
 
-When the setup passes, ask for the asset you want. Before writing asset code, the agent reads `.agents/skills/diorama/SKILL.md`, which holds the production rules and routes to the skill for the kind of asset, and `.agents/skills/diorama-review/SKILL.md`, which covers checking the output.
+The skills are plain Markdown in `.agents/skills/`, read by path (most agents do not load them by themselves), so [AGENTS.md](AGENTS.md) and this README point to them. When the setup passes, ask for what you want to make, and the agent follows this order:
+
+1. `diorama` for the rules and the workflow, which routes to the skill for the job;
+2. `diorama-style` when a project starts or its look changes: the theme, the palette, the light, `STYLE.md`, and a first prop and character to prove the look;
+3. `diorama-volume` (props, scenery pieces, equipment, effects, icons, HUD), `diorama-rig` (characters and creatures) and `diorama-kits` (scenery, gear, effects and items as catalog-driven sets) to make the assets;
+4. `diorama-review` to check them, and `diorama-game` to play them in a game.
 
 ## Start by hand
 
@@ -89,7 +94,7 @@ npm run export -- my-game
 npm run view
 ```
 
-`new-asset` writes the drawing in `src/` and its sheet in `sheets/`. The `diorama-setup` skill walks through the first prop and the first character in full.
+`new-asset` writes the drawing in `src/` and its sheet in `sheets/`. The `diorama-style` skill walks through the first prop and the first character in full.
 
 ## Commands
 
@@ -103,7 +108,7 @@ npm run view
 | Check the layout alone | `npm run layout -- <project> [--strict] [--json]` |
 | Export (type checks first; `--force` exports anyway) | `npm run export -- <project> [subpath] [options] [--force]` |
 | Export only what changed since the last export | `npm run export -- <project> --changed` |
-| Bring Soulkeeper, the sample game, in as a project and export it | `npm run example [-- --force]` |
+| Bring the sample in as a project and export it | `npm run example [-- --force]` |
 | List your projects and the samples | `npm run list -- [project] [--json]` |
 | Measure a PNG | `npm run inspect -- <file.png> [--json]` |
 | Review sheet of a strip or direction sheet | `npm run contact -- <file.png> [--rows W,SW] [--frames 0-3] [--with <b.png>] [--gray] [--bg <hex>] [--zoom N]` |
@@ -115,28 +120,29 @@ npm run view
 | Write one sheet per effect | `npm run vfx-items -- <project> [--force]` |
 | Write one sheet per item icon | `npm run item-icons -- <project> [--force]` |
 | Open the viewer | `npm run view` |
+| Serve a project's own game (`game/index.html`) | `npm run game -- <project> [--port N]` |
 | Regenerate the API reference (`docs/api/`) | `npm run docs:api` |
 | Check the environment | `npm run doctor` |
 | Run the tests | `npm test` |
 
-`--genre` adds `src/space.ts`, the game's space profile (grid, scale against the characters, wall placement) from a preset: `jrpg`, `action-rpg`, `tactics`, `farm-sim` or `dungeon-crawler`. `--directions` is the number of facings, 1, 4 or 8; the default is 8. A volume asset is two files, the drawing in `src/<subpath>.ts` and the sheet `sheets/<subpath>.ts`. A rig clip belongs to a character: `<character-folder>/<clip>` names the folder (the character) and the clip, the first clip creates `src/<character-folder>/character.ts` (`defineCharacter`), every clip gets its sheet in `sheets/<character-folder>/<clip>.ts`, and later clips print the line to add to the character's `clips`. `new-kit` starts a kit in `src/<kit>/` (its `catalog.ts`, its `index.ts` and a first piece drawn with the theme's materials: a crate prop, a helm with a mannequin that wears it, a spark burst or a gem) and refuses to overwrite one unless `--force`. The four generated commands (`gear-items`, `scenery-items`, `vfx-items`, `item-icons`) write `sheets/gear/`, `sheets/scenery/`, `sheets/vfx/` and `sheets/icons/` from the catalogs in `src/`; export those folders afterwards. `export` type checks the project first and exports nothing while it has a type error; `--force` skips the check for experiments. It renders several sheets at once (`--jobs <n>`; by default one per performance core, less one), and the files are the same with any number. `--changed` exports only the sheets whose image is missing or older than the sheet or a local file it imports, however deep: the ones the viewer marks as stale. `--skeleton`, `--size`, `--frames` and `--directions` apply to the first clip only. `--with <b.png>` stacks the same rows and frames of a second sheet under the first, to compare before and after or one character with another. `--bg` takes six hex digits: write `--bg 6e6a64` or quote it (`--bg "#6e6a64"`), because an unquoted `#` starts a shell comment. `npm run <command> -- --help` lists the options of a command, and `npm run export -- --help` those of the exporter.
+`--genre` adds `src/space.ts`, the game's space profile (grid, scale against the characters, wall placement) from a preset of proportions: `jrpg`, `action-rpg`, `tactics`, `farm-sim` or `dungeon-crawler` (the table of [volume guide 04](docs/guides/volume/04-scenery-kits.md#1-the-space-profile) says what each sets). `--directions` is the number of facings, 1, 4 or 8; the default is 8. A volume asset is two files, the drawing in `src/<subpath>.ts` and the sheet `sheets/<subpath>.ts`. A rig clip belongs to a character: `<character-folder>/<clip>` names the folder (the character) and the clip, the first clip creates `src/<character-folder>/character.ts` (`defineCharacter`), every clip gets its sheet in `sheets/<character-folder>/<clip>.ts`, and later clips print the line to add to the character's `clips`. `new-kit` starts a kit in `src/<kit>/` (its `catalog.ts`, its `index.ts` and a first piece drawn with the theme's materials: a crate prop, a helm with a mannequin that wears it, a spark burst or a gem) and refuses to overwrite one unless `--force`. The four generated commands (`gear-items`, `scenery-items`, `vfx-items`, `item-icons`) write `sheets/gear/`, `sheets/scenery/`, `sheets/vfx/` and `sheets/icons/` from the catalogs in `src/`; export those folders afterwards. `export` type checks the project first and exports nothing while it has a type error; `--force` skips the check for experiments. It renders several sheets at once (`--jobs <n>`; by default one per performance core, less one), and the files are the same with any number. `--changed` exports only the sheets whose image is missing or older than the sheet or a local file it imports, however deep: the ones the viewer marks as stale. `--skeleton`, `--size`, `--frames` and `--directions` apply to the first clip only. `--with <b.png>` stacks the same rows and frames of a second sheet under the first, to compare before and after or one character with another. `--bg` takes six hex digits: write `--bg 6e6a64` or quote it (`--bg "#6e6a64"`), because an unquoted `#` starts a shell comment. `npm run <command> -- --help` lists the options of a command, and `npm run export -- --help` those of the exporter.
 
 ## The viewer
 
-`npm run view` serves the viewer at `http://localhost:5173`. It lists your projects, the folders of `projects/`, with their sources and their exported assets; the samples in `examples/` are not listed until `npm run example` (or "Try the sample", when there is no project yet) copies one in. Each project has four tabs (the interface is in English or Brazilian Portuguese, from the language switch in the header):
+`npm run view` serves the viewer at `http://localhost:5173`. It lists your projects, the folders of `projects/`, with their sources and their exported assets; the samples in `examples/` are not listed until `npm run example` (or "Try the sample", when there is no project yet) copies one in. The interface is in English or Brazilian Portuguese, from the language switch in the header, and `?` opens the shortcuts window with the keys of every page. A character has one name everywhere: the `label` it declares, with its folder as secondary text. Each project has four tabs:
 
-- **Assets.** Every exported sheet, filterable by kind (characters, gear, scenery, props, effects, icons, interface), with a Details window that plays animations. A banner says when a source is newer than its export, and exports it.
-- **Playground.** Characters and props play from their exported atlases: WASD moves, Shift runs, 1 to 9 trigger actions, H is a hit and K a death. Effects start at their sockets, and a chosen scene becomes the world, with walls, doors and props that react and sort against the characters.
-- **Customize.** Dress a character with the project's gear kit by slot, swap and take off gear, and save the outfit as a new character.
+- **Assets.** Every exported sheet, filterable by kind (characters, gear, scenery, props, effects, icons, interface). Its Details window plays an animation (playback speed, facing, zoom, light, dark or checker background, the pivot and frame-edge guides, the events and frames, the data of the atlas) and has a body of its own for an effect, an item icon or an interface piece. The project bar counts the sheets not exported yet, and a banner says when a source is newer than its export.
+- **Playground.** Characters and props play from their exported atlases: WASD or the arrows move, Shift runs, Space and 1 to 9 trigger actions, H is a hit, K a death, R resets, E uses what is next to the character, `[` and `]` switch character and `/` searches. A toolbar shows the shadow, anchor, bounds, sockets, step events and navigation, sets the speed (down to a pause) and fits the view. Effects start at their sockets, and a chosen scene becomes the world, with walls, doors and props that react and sort against the characters.
+- **Customize.** Dress a character with the project's gear kit by slot, swap and take off gear, undo, and save the outfit as a new character.
 - **Scenery.** Paint scenes with the project's scenery kit: floors, walls, fences, doors, props and scale figures, with the navigation overlay, saved as scenes.
 
-A project with a game of its own (`game/index.html`, which plays the exports in Phaser through `@diorama/phaser`) has **Play game** in its bar and "Open game" in its ⋯ menu, which open the game in a new tab at `/projects/<project>/game/`; the Playground plays the same exports with debug tools, and says so. Soulkeeper has no game yet. To see a project's characters in Phaser without one, the package's test bench is at `http://localhost:5173/packages/phaser/demo/?project=<name>` ([packages/phaser/README.md](packages/phaser/README.md#the-test-bench)).
+**Export** is in the project bar and in the New dialog (its Export tab): it exports the whole project or a folder of sheets, the same export as `npm run export`, and shows the type errors that stop it. The banner exports what is stale or missing, as `--changed` does.
+
+A project with a game of its own (`game/index.html`, which plays the exports in Phaser through `@diorama/phaser`) has **Play game** in its bar and "Open game" in its ⋯ menu, which open the game in a new tab at `/projects/<project>/game/`; the Playground plays the same exports with debug tools, and says so. To see a project's characters in Phaser without a game, the package's test bench is at `http://localhost:5173/packages/phaser/demo/?project=<name>` ([packages/phaser/README.md](packages/phaser/README.md#the-test-bench)).
 
 ## Projects
 
-Your projects live in `projects/<project>/`, laid out as above. Create one with `npm run new-project -- <project>`; it starts with `src/theme.ts` (the palette, the camera and the materials, to make your own), an empty `sheets/` and a `.gitignore` for `review/`.
-
-Soulkeeper, the sample game (`examples/soulkeeper`), shows the tool at work in one genre: a small dark-fantasy JRPG set in a necropolis, whose playable slice (a crypt and its battle) comes with the game packages. For now it is its art, 198 sheets. It has eight characters (a guard, a captain, the necromancer Malvek, a warden, a villager, the boss Ingrid the Valkyrie, a wolf and a spider) with a gear kit of 47 parts, a scenery kit with floors, walls, fences, doors, a chest, a lever and breakable urns, four scenes, ten effects, 31 item icons and 11 HUD pieces. It is the worked example the skills point to; read its `src/` and `sheets/` in `examples/soulkeeper`, and run `npm run example` to make it a project of yours in `projects/soulkeeper`, exported and open in the viewer.
+Your projects live in `projects/<project>/`, laid out as above. Create one with `npm run new-project -- <project>`; it starts with `src/theme.ts` (the palette, the camera and the materials, a neutral start to make your own), an empty `sheets/` and a `.gitignore` for `review/`. The `diorama-style` skill takes a project from a brief to a look.
 
 ## Skills and documentation for agents
 
@@ -150,7 +156,7 @@ The `.agents/skills/` folder holds the instructions for coding agents:
 | [`diorama-setup`](.agents/skills/diorama-setup/SKILL.md) | Installing, the doctor, the tests, the first prop and the first character. |
 | [`diorama-review`](.agents/skills/diorama-review/SKILL.md) | Checking an export: `inspect`, contact sheets, motion checks and the viewer. |
 
-The guides explain when to use each module, and are indexed in [`docs/guides/`](docs/guides/README.md): [`docs/guides/volume/`](docs/guides/volume/) (space and camera, volumes and the stage, props and armor, scenery kits, living scenery, effects, items and the HUD), [`docs/guides/rig/`](docs/guides/rig/) (skeletons, gaits and clips, skins, the atlas contract, gear and outfits) and [`core/draw/README.md`](core/draw/README.md). The API reference is generated in [`docs/api/`](docs/api/), and the folder architecture is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+The guides explain when to use each module, and are indexed in [`docs/guides/`](docs/guides/README.md): [`docs/guides/volume/`](docs/guides/volume/) (space and camera, volumes and the stage, props and equipment, scenery kits, living scenery, effects, items and the HUD), [`docs/guides/rig/`](docs/guides/rig/) (skeletons, gaits and clips, skins, the atlas contract, gear and outfits) and [`core/draw/README.md`](core/draw/README.md). The API reference is generated in [`docs/api/`](docs/api/), and the folder architecture is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Contributing
 
@@ -164,4 +170,4 @@ Diorama is released under the [MIT License](LICENSE). Third-party components and
 
 **Special thanks to [MrMagma](https://www.youtube.com/channel/UCNYXxX72LuCUCpuSz_R42zg)**, the creator of NoctAssetForge. Diorama grew out of his tool: it started as an extension of NoctAssetForge, and parts of its code (the drawing layer, the asset and export pipeline, the CLI) come from it, used and relicensed here with his permission. Thank you for building it and for letting it become an open-source project.
 
-Diorama is developed with [Claude Code](https://claude.com/claude-code): most of its code, guides and sample art were written by Claude (Anthropic) working with the maintainer, and commits carry a `Co-Authored-By` line saying so. The banner above is a scene, characters and effects exported from the sample project.
+Diorama is developed with [Claude Code](https://claude.com/claude-code): most of its code, guides and sample art were written by Claude (Anthropic) working with the maintainer, and commits carry a `Co-Authored-By` line saying so. The banner above was exported with Diorama.

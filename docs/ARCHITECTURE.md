@@ -34,7 +34,7 @@ diorama/
 │   ├── phaser/           the Phaser package: its loader in node, a smoke test in Chromium, standalone compile
 │   └── cli/              commands, including the layout check
 ├── viewer/               the app (src/) and its dev server (server/)
-├── examples/             the versioned samples: Soulkeeper, the sample game (examples/soulkeeper); the viewer does not
+├── examples/             the versioned samples (examples/<name>); the viewer does not
 │                         browse them (npm run example copies one into projects/); their assets/ and review/ are not versioned
 ├── projects/             your projects, one folder each, and what the viewer shows: not versioned by Diorama
 │                         (only projects/README.md); each project can be its own git repository
@@ -44,7 +44,7 @@ diorama/
     index.html (the viewer's entry), dev.sh and dev.bat (start the viewer and open it), components.json and skills-lock.json (shadcn, for the viewer)
 ```
 
-`projects/` is what the app shows: the viewer lists, opens and saves into the projects of `projects/` alone. `examples/` holds the samples, versioned with Diorama, which the viewer does not browse or edit, so nothing it saves ever changes a sample; `npm run example` copies Soulkeeper to `projects/soulkeeper` (everything but `review/`, every file with its times) and exports it there, and that copy is the user's. Commands find a project by name in `projects/` first, then in `examples/`; `projects/<name>` or `examples/<name>` names one folder exactly, so CI, the tests and the maintainers of the sample reach it as `examples/soulkeeper` whether or not a copy exists. Generated files are never versioned: `assets/` and `review/` of every project, `node_modules/`, builds.
+`projects/` is what the app shows: the viewer lists, opens and saves into the projects of `projects/` alone. `examples/` holds the samples, versioned with Diorama, which the viewer does not browse or edit, so nothing it saves ever changes a sample; `npm run example` copies the sample to `projects/<name>` (everything but `review/`, every file with its times) and exports it there, and that copy is the user's. Commands find a project by name in `projects/` first, then in `examples/`; `projects/<name>` or `examples/<name>` names one folder exactly, so CI, the tests and the maintainers of the sample reach it by its `examples/` path whether or not a copy exists (`npm run export:sample` and `npm run check:sample` name it for them). Generated files are never versioned: `assets/` and `review/` of every project, `node_modules/`, builds.
 
 The module guides live in [docs/guides/](guides/README.md) and answer "when do I use this"; the generated [API reference](api/) answers "what is the exact signature". The skills in `.agents/skills/` route an agent to both.
 
@@ -84,7 +84,7 @@ draw  <-  volume  <-  rig                 core/: the engine, the producer of the
 │   ├── space.ts                space profile: grid, scale against the characters, walls
 │   ├── characters/
 │   │   ├── shared/             clip factories, skeletons and skins used by several characters, and a body plan
-│   │   │                       kept apart from its character (the sample's wolf and spider bodies)
+│   │   │                       kept apart from its character (a body plan reused by several characters)
 │   │   └── <id>/               character.ts, spec.ts, outfit.ts, skeleton.ts, clips/<clip>.ts, and the helpers its clips share
 │   ├── gear/                   parts by family + catalog.ts + index.ts
 │   ├── scenery/                pieces by family + catalog.ts + index.ts
@@ -109,7 +109,7 @@ draw  <-  volume  <-  rig                 core/: the engine, the producer of the
 └── game/                       optional: a game that plays the exports (index.html and its code; rule 8)
 ```
 
-Soulkeeper, the sample game (`examples/soulkeeper`), has every part of this tree but `game/`: five characters, a gear kit, a scenery kit with four scenes, effects, item icons and 11 HUD pieces, 163 sheets. Its game comes later; until then, once `npm run example` has copied it to `projects/soulkeeper`, the Playground and the Customize tab of the viewer are where its assets are tried, and the test bench of `@diorama/phaser` plays its characters in Phaser.
+The sample in `examples/` has every part of this tree but `game/`. It exists to prove the layout and the export, and to give the viewer something to open (`npm run example`); it is not where to learn technique, which the guides and the skills teach.
 
 ### The four places
 
@@ -143,7 +143,7 @@ Generated sheets are one per entry of a kit's catalog. Each starts with a `// Ge
 | `sheets/vfx/` | `npm run vfx-items` | `src/vfx/catalog.ts` |
 | `sheets/icons/` | `npm run item-icons` | `src/items/catalog.ts` |
 
-The names of a sheet's states and clips join with `--` (`scenery/crypt-door--open`).
+The names of a sheet's states and clips join with `--` (`scenery/oak-door--open`).
 
 ### Kits
 
@@ -162,7 +162,7 @@ A kit is a folder of `src/` that describes a set of related assets as data: `gea
 | `vfx` | a spark burst in `bursts.ts` (`VFX`) | `vfx-items`, export `vfx/` |
 | `items` | a gem in `gems.ts`, with two rarity tiers (`ITEMS`) | `item-icons`, export `icons/` |
 
-The first piece is a block-out that renders, so the kit's command, the export and `npm run check -- <project> --strict` pass on it at once; then it becomes the project's own, and the next pieces are added to the family files and the catalog by hand. `npm run check -- <project>` reports a `catalog.ts` that has no `index.ts`. [Guide 04 §5](guides/volume/04-scenery-kits.md) lists what a scenery catalog needs at least, and the catalogs of the sample's kits (`examples/soulkeeper/src/<kit>/catalog.ts`) are the full form.
+The first piece is a block-out that renders, so the kit's command, the export and `npm run check -- <project> --strict` pass on it at once; then it becomes the project's own, and the next pieces are added to the family files and the catalog by hand. `npm run check -- <project>` reports a `catalog.ts` that has no `index.ts`. [Guide 04 §5](guides/volume/04-scenery-kits.md) lists what a scenery catalog needs at least, and the gear, effect and item catalogs are described by `PartInfo`, `EffectInfo` and `ItemInfo` ([rig guide 05 §5](guides/rig/05-gear-and-outfits.md), [volume guide 06](guides/volume/06-effects-items-and-hud.md)).
 
 ### Where a new thing goes
 
@@ -209,7 +209,7 @@ They are errors. `src/theme.ts` holds the palette, so its color literals are the
 
 ### Type errors stop the export
 
-`npm run export` runs the type check of `npm run check` first (the project's `src/` and `sheets/`, about 2 s for the sample, once per run; not `game/`, which draws nothing that is exported) and exports nothing while the project has a type error; `--force` skips it for experiments. `scenery-test`, a review render, skips it too.
+`npm run export` runs the type check of `npm run check` first (the project's `src/` and `sheets/`, a few seconds, once per run; not `game/`, which draws nothing that is exported) and exports nothing while the project has a type error; `--force` skips it for experiments. `scenery-test`, a review render, skips it too.
 
 ### How the export runs
 
@@ -221,8 +221,8 @@ They are errors. `src/theme.ts` holds the palette, so its color literals are the
 
 | Rule | Enforced by |
 | :--- | :--- |
-| The layout of a project (the eight rules above) | `npm run check -- <project>` and `npm run layout -- <project>`; `tests/cli/cli.test.ts` breaks each rule on purpose and checks the message (rule 8 four ways through the commands: an image in `game/`, a game importing `@core` or `../src`, `src/` importing the game), and checks that `examples/soulkeeper` follows them; `tests/cli/layout.test.ts` breaks rule 8 every way above (root-absolute paths, aliases, `baseUrl`, other packages, globs, computed and template imports, `new URL`, CSS, a page's inline scripts, attributes and import map; `src/` and `sheets/` reaching a game through paths, `baseUrl`, root paths, globs and another project) and checks that the allowed forms pass |
-| Determinism (no `Math.random`, no clock, no raw colors outside `src/theme.ts`) | `npm run check -- <project>` (`tools/lint.ts`); `tests/cli/cli.test.ts` writes each pattern and checks the message, and checks that `examples/soulkeeper` passes |
+| The layout of a project (the eight rules above) | `npm run check -- <project>` and `npm run layout -- <project>`; `tests/cli/cli.test.ts` breaks each rule on purpose and checks the message (rule 8 four ways through the commands: an image in `game/`, a game importing `@core` or `../src`, `src/` importing the game), and checks that the sample follows them; `tests/cli/layout.test.ts` breaks rule 8 every way above (root-absolute paths, aliases, `baseUrl`, other packages, globs, computed and template imports, `new URL`, CSS, a page's inline scripts, attributes and import map; `src/` and `sheets/` reaching a game through paths, `baseUrl`, root paths, globs and another project) and checks that the allowed forms pass |
+| Determinism (no `Math.random`, no clock, no raw colors outside `src/theme.ts`) | `npm run check -- <project>` (`tools/lint.ts`); `tests/cli/cli.test.ts` writes each pattern and checks the message, and checks that the sample passes |
 | No export from code with type errors | `npm run export` (`tools/typecheck.ts`, shared with `check`); `tests/cli/cli.test.ts` checks the refusal and `--force` |
 | The export is the same with any `--jobs`, and `--changed` exports what is out of date and nothing else | `tests/cli/cli.test.ts` compares the files of `--jobs 3` with `--jobs 1` byte for byte, and touches a file two imports below one sheet |
 | The viewer shows `projects/` only, and `npm run example` brings the sample in | `tests/viewer/catalog.test.ts` (a sample of `examples/` is in neither catalog, its copy in `projects/` is), `tests/viewer/delete.test.ts` (no delete or restore reaches a sample), `tests/cli/cli.test.ts` (`example` copies everything but `review/` with its times, keeps an existing copy, and `--force` moves that one to the trash, where the viewer's restore finds it) |
@@ -231,7 +231,7 @@ They are errors. `src/theme.ts` holds the palette, so its color literals are the
 | The runtime compiles alone (lib ES2022, no DOM, no dependencies) and core's producer types fit its contract types | `tests/runtime/standalone.test.ts`; `tests/runtime/contract.test.ts` (it compiles itself, and is part of `npx tsc --noEmit -p .`) |
 | The Phaser package compiles alone (the DOM, Phaser's types and the runtime), loads by the contract and draws frames pixel for pixel | `tests/phaser/standalone.test.ts`; `tests/phaser/loader.test.ts` (node); `tests/phaser/smoke.test.ts` (Chromium, canvas renderer, generated sheets) |
 | Snippets in the guides and skills compile; every markdown link, heading link and backticked repository path exists | `tests/docs/docs.test.ts` |
-| The engine, the runtime, the Phaser package, the commands and the viewer's logic | `tests/engine/`, `tests/runtime/` (with conformance traces of the sample's characters, `tests/runtime/conformance/`), `tests/phaser/`, `tests/cli/`, `tests/viewer/` |
+| The engine, the runtime, the Phaser package, the commands and the viewer's logic | `tests/engine/`, `tests/runtime/` (with conformance traces recorded from exported characters, `tests/runtime/conformance/`), `tests/phaser/`, `tests/cli/`, `tests/viewer/` |
 
 `npm test` runs all six suites through `tests/run.ts` (every `*.test.ts` under `tests/engine/`, `tests/docs/`, `tests/runtime/`, `tests/viewer/`, `tests/phaser/` and `tests/cli/`, in that order, then a summary of which passed); `npm run test:engine`, `test:docs`, `test:runtime`, `test:viewer`, `test:phaser` and `test:cli` run one. A test file outside those folders fails the run, so a new test cannot be left out.
 

@@ -2,8 +2,8 @@
  * Project theme: the single source of truth for colors, line weights, the camera and the materials.
  * Asset files compose these tokens; they never write raw hex colors or stroke settings.
  *
- * The values are a neutral start (muted materials, one warm accent, a Hades-like 3/4 view lit from
- * the upper left). Make them the project's own (STYLE.md says how), keep the structure:
+ * The values are a neutral start (muted materials, one warm accent, a 3/4 view from above lit from
+ * the upper left). Make them the project's own (the diorama-style skill says how), keep the structure:
  * PALETTES -> RAMPS -> STROKES -> CONTOUR and CAMERA -> VOLUMES, and SHAPE_STYLES for flat marks.
  */
 
@@ -107,6 +107,6 @@ export const VOLUMES = {
   wood: { ramp: RAMPS.wood, stroke: inner(RAMPS.wood, 1), edge },
   stone: { ramp: RAMPS.stone, stroke: inner(RAMPS.stone, 1), edge },
   metal: { ramp: RAMPS.metal, stroke: inner(RAMPS.metal), edge: inner(RAMPS.metal, 0.6), form: { highlight: { ratio: 0.2, min: 0.6, max: 1.6 } } },
-  // The accent as a material: gems, runes, a flame's body. Glows take GLOWS.accent as their shadow.
+  // The accent as a material: a gem, a flame, a status light, a selected slot. Glows take GLOWS.accent as their shadow.
   accent: { ramp: RAMPS.accent, stroke: inner(RAMPS.accent, 0.8), edge: inner(RAMPS.accent, 0.6), form: { highlight: { ratio: 0.2, min: 0.6, max: 1.6 } } },
 } satisfies Record<string, VolumeStyle>;
