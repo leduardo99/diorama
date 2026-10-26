@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { GearCatalog, OutfitCharacterInfo, OutfitData, Skin } from '@core/rig';
-import { PauseIcon, PlayIcon, TriangleAlertIcon } from 'lucide-react';
+import { GripVerticalIcon, PauseIcon, PlayIcon, SquareSplitHorizontalIcon, TriangleAlertIcon } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { CompareSlider, CompareSliderAfter, CompareSliderBefore, CompareSliderHandle } from '@/components/ui/compare-slider';
 import { Field, FieldLabel } from '@/components/ui/field';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
+import { Toggle } from '@/components/ui/toggle';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useT } from '@/i18n';
 import { buildSkin, clipOf, directionLabel, framesOf, paintFrame } from '@/lib/outfit/render';
 import { usePref } from '@/lib/use-pref';
@@ -24,7 +28,9 @@ interface Props {
 
 /**
  * The character as the export would draw it, live: one big frame that plays, and the eight facings. The engine draws
- * only when the outfit, the clip, the frame, the facing or the zoom change.
+ * only when the outfit, the clip, the frame, the facing or the zoom change. "Compare" puts the character's own outfit
+ * (as the kit saves it) under the edited one, split by a handle that is dragged or moved with the arrows; the saved one
+ * is built and drawn only while the comparison is on.
  */
 export function PreviewPanel({ character, catalog, outfit, unusable }: Props) {
   const { t, plural, number } = useT();
@@ -51,6 +57,12 @@ export function PreviewPanel({ character, catalog, outfit, unusable }: Props) {
   const [zoom, setZoom] = usePref<number>('customize.zoom', 2);
   const [drawError, setDrawError] = useState<string | null>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
+  const [compare, setCompare] = useState(false);
+  // Where the handle stands, in percent of the width: the left of it shows the saved outfit.
+  const [compareShown, setCompareShown] = useState(50);
+  // The outfit as saved: built once when the comparison is turned on (it never changes while the character is open).
+  const savedSkin = useMemo(() => (compare ? buildSkin(character.outfit, catalog).skin : null), [compare, character.outfit, catalog]);
+  const savedCanvas = useRef<HTMLCanvasElement>(null);
 
   // The clip's own clock: the frame advances at the exported fps, and the page redraws only when it changes.
   useEffect(() => {
@@ -74,10 +86,17 @@ export function PreviewPanel({ character, catalog, outfit, unusable }: Props) {
     // Restarted only when the clip or the play state change; the frame it starts from is the one on screen.
   }, [playing, clipKey, fps, frames]);
 
+  // `compare` is a dependency: turning it on or off puts a new canvas on the page, which must be drawn even while paused.
   useEffect(() => {
     if (!canvas.current || !skin) return;
     setDrawError(paintFrame(canvas.current, character, skin, clipKey, frame, direction, zoom * (window.devicePixelRatio || 1), t));
-  }, [character, skin, clipKey, frame, direction, zoom, t]);
+  }, [character, skin, clipKey, frame, direction, zoom, t, compare]);
+  useEffect(() => {
+    if (!savedCanvas.current || !savedSkin) return;
+    paintFrame(savedCanvas.current, character, savedSkin, clipKey, frame, direction, zoom * (window.devicePixelRatio || 1), t);
+  }, [character, savedSkin, clipKey, frame, direction, zoom, t]);
+  const size = { width: character.width * zoom, height: character.height * zoom };
+  const label = t('customize.preview.canvas', { character: character.label, direction: directionLabel(direction) });
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 p-4">
@@ -108,6 +127,15 @@ export function PreviewPanel({ character, catalog, outfit, unusable }: Props) {
             {ZOOMS.map((z) => <ToggleGroupItem key={z} value={z}>{t('units.times', { value: z })}</ToggleGroupItem>)}
           </ToggleGroup>
         </Field>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Toggle variant="outline" size="sm" pressed={compare} onPressedChange={setCompare} disabled={!skin}>
+              <SquareSplitHorizontalIcon data-icon="inline-start" />
+              {t('customize.preview.compare')}
+            </Toggle>
+          </TooltipTrigger>
+          <TooltipContent>{t('customize.preview.compareHint')}</TooltipContent>
+        </Tooltip>
         <span className="font-mono text-muted-foreground tabular-nums">{t('customize.preview.status', { direction: directionLabel(direction), frame, last: frames - 1, fps: number(fps, { maximumFractionDigits: 1 }) })}</span>
       </div>
 
@@ -132,8 +160,30 @@ export function PreviewPanel({ character, catalog, outfit, unusable }: Props) {
       )}
 
       <div className="checker pixelated relative grid min-h-0 flex-1 place-items-center overflow-auto rounded-lg border p-4">
-        {skin ? (
-          <canvas ref={canvas} style={{ width: character.width * zoom, height: character.height * zoom }} aria-label={t('customize.preview.canvas', { character: character.label, direction: directionLabel(direction) })} />
+        {skin && compare ? (
+          <>
+            {/* The saved outfit on the left of the handle, the edited one on its right: Dice UI's "before" layer is the one
+                shown right of the handle, so the edited canvas goes in it. */}
+            <Badge variant="secondary" className="absolute top-2 left-2">{t('customize.preview.saved')}</Badge>
+            <Badge variant="secondary" className="absolute top-2 right-2">{t('customize.preview.edited')}</Badge>
+            <CompareSlider className="shrink-0" style={size} aria-label={t('customize.preview.compareSlider')} aria-valuetext={t('customize.preview.compareValue', { percent: Math.round(compareShown) })} onValueChange={setCompareShown} defaultValue={compareShown}>
+              <CompareSliderBefore aria-hidden={false} aria-label={t('customize.preview.edited')}>
+                <canvas ref={canvas} style={size} aria-label={label} />
+              </CompareSliderBefore>
+              <CompareSliderAfter aria-hidden={false} aria-label={t('customize.preview.saved')}>
+                <canvas ref={savedCanvas} style={size} aria-label={label} />
+              </CompareSliderAfter>
+              {/* A thin line with its grip at the foot: the default round knob sits mid-height, over the character's head. */}
+              <CompareSliderHandle>
+                <div className="absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 bg-primary" />
+                <div className="absolute bottom-1 grid size-5 place-items-center rounded-full border bg-background text-muted-foreground">
+                  <GripVerticalIcon className="size-3" />
+                </div>
+              </CompareSliderHandle>
+            </CompareSlider>
+          </>
+        ) : skin ? (
+          <canvas ref={canvas} style={size} aria-label={label} />
         ) : (
           <p className="text-muted-foreground">{t('customize.preview.fix')}</p>
         )}

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import type { GearCatalog, OutfitData, PartInfo } from '../../core/rig';
 import {
-  addPiece, canMove, hostCandidates, isPaired, movePiece, optionValue, partsBySlot, removePiece, rolesOf,
+  addPiece, canMove, hostCandidates, isPaired, movePiece, optionValue, partsBySlot, pieceKeys, removePiece, reorderPiece, rolesOf,
   setBase, setHost, setMaterial, setOption, setPieceMaterial, setSide, setSlot, splitRoles,
 } from '../../viewer/src/lib/outfit/edit';
 
@@ -63,6 +63,32 @@ assert.equal(canMove(stacked, 1, -1), false, 'the crest cannot go before the hel
 assert.equal(canMove(stacked, 0, 1), false, 'nor the helm after the crest');
 assert.deepEqual(movePiece(stacked, 1, -1), stacked, 'a blocked move changes nothing');
 assert.deepEqual(movePiece(outfit, 1, 1).pieces.map((p) => p.id).slice(0, 3), ['helm', 'pauldron-left', 'pauldron-right']);
+
+// 3b. A drag in the list moves a piece over several places at once, under the same rule as the arrows.
+const ids = (o: OutfitData) => o.pieces.map((p) => p.id);
+assert.deepEqual(ids(outfit), ['helm', 'pauldron-right', 'pauldron-left', 'pauldron-right-2', 'crest']);
+assert.deepEqual(ids(reorderPiece(outfit, 3, 1)), ['helm', 'pauldron-right-2', 'pauldron-right', 'pauldron-left', 'crest'], 'up two places');
+assert.deepEqual(ids(reorderPiece(outfit, 1, 3)), ['helm', 'pauldron-left', 'pauldron-right-2', 'pauldron-right', 'crest'], 'down two places');
+assert.deepEqual(ids(reorderPiece(outfit, 0, 3)), ['pauldron-right', 'pauldron-left', 'pauldron-right-2', 'helm', 'crest'], 'the helm may pass what does not rest on it');
+assert.deepEqual(ids(reorderPiece(outfit, 4, 1)), ['helm', 'crest', 'pauldron-right', 'pauldron-left', 'pauldron-right-2'], 'the crest may go up to just after its helm');
+assert.equal(reorderPiece(outfit, 4, 0), outfit, 'the crest never goes before its helm: the outfit comes back as it was');
+assert.equal(reorderPiece(outfit, 0, 4), outfit, 'nor the helm after its crest');
+assert.equal(reorderPiece(outfit, 2, 2), outfit, 'no move, no new outfit (no undo step)');
+assert.equal(reorderPiece(outfit, 2, 9), outfit, 'a place outside the list is refused');
+assert.equal(outfit.pieces.length, 5, 'the outfit it was given is left alone');
+
+// 3c. Keys that follow the pieces when the order changes: ids when they have them, else part, place and side, counted.
+assert.deepEqual(pieceKeys(reorderPiece(outfit, 3, 1)), ['id:helm', 'id:pauldron-right-2', 'id:pauldron-right', 'id:pauldron-left', 'id:crest']);
+const anonymous: OutfitData = { ...empty, pieces: [
+  { part: 'pauldron', slot: 'shoulder', side: 1 },
+  { part: 'pauldron', slot: 'shoulder', side: -1 },
+  { part: 'pauldron', slot: 'shoulder', side: 1 },
+  { part: 'helm', slot: 'head' },
+] };
+const keys = pieceKeys(anonymous);
+assert.deepEqual(keys, ['part:pauldron:shoulder:1', 'part:pauldron:shoulder:-1', 'part:pauldron:shoulder:1#2', 'part:helm:head:0']);
+assert.equal(new Set(keys).size, keys.length, 'every key is unique, alike pieces included');
+assert.deepEqual(pieceKeys(reorderPiece(anonymous, 3, 0)), [keys[3], keys[0], keys[1], keys[2]], 'each piece keeps its key when another passes it');
 
 // 4. Slots and sides.
 const moved = setSlot(addPiece(empty, pauldron, { slot: 'shoulder', sides: [-1] }), 0, 'upperArm');

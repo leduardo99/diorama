@@ -1,7 +1,7 @@
 import { PauseIcon, PlayIcon, SkipBackIcon, SkipForwardIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useT } from '@/i18n';
-import { cn } from '@/lib/utils';
 import type { Player } from './use-player';
 
 /** Play/pause, frame stepping and a clickable timeline that marks the frames with events. */
@@ -30,18 +30,22 @@ export function Transport({ player }: { player: Player }) {
         {frames.map((_, i) => {
           const names = events.get(i);
           return (
-            <Button
-              key={i}
-              variant={i === index ? 'default' : 'secondary'}
-              size="sm"
-              title={names?.join(', ') ?? t('details.transport.frame', { index: i })}
-              aria-label={names ? t('details.transport.frameWithEvents', { index: i, names: names.join(', ') }) : t('details.transport.frame', { index: i })}
-              className={cn('relative h-6 min-w-1 flex-1 px-0 text-[0.625rem] tabular-nums')}
-              onClick={() => seek(i)}
-            >
-              {frames.length <= 24 && i}
-              {names && <span className="absolute -top-1 left-1/2 size-1.5 -translate-x-1/2 rounded-full bg-primary ring-2 ring-background" />}
-            </Button>
+            <Tooltip key={i}>
+              <TooltipTrigger asChild>
+                {/* The xs size is the strip's type size; the buttons share the row, as narrow as a frame needs. */}
+                <Button
+                  variant={i === index ? 'default' : 'secondary'}
+                  size="xs"
+                  aria-label={names ? t('details.transport.frameWithEvents', { index: i, names: names.join(', ') }) : t('details.transport.frame', { index: i })}
+                  className="relative min-w-1 flex-1 px-0 tabular-nums"
+                  onClick={() => seek(i)}
+                >
+                  {frames.length <= 24 && i}
+                  {names && <span className="absolute -top-1 left-1/2 size-1.5 -translate-x-1/2 rounded-full bg-primary ring-2 ring-background" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{names ? t('details.transport.frameWithEvents', { index: i, names: names.join(', ') }) : t('details.transport.frame', { index: i })}</TooltipContent>
+            </Tooltip>
           );
         })}
       </div>

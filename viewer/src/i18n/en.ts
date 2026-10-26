@@ -7,12 +7,21 @@
  * shown as they are and never go through here.
  */
 export const en = {
+  noKit: {
+    terminal: 'In a terminal',
+    copyCommand: 'Copy the command',
+    commandLabel: 'Command',
+    tryBuiltIn: 'Try the built-in kit',
+    builtInHint: 'The built-in kit is a small one that comes with the viewer, to try this tab: what you make with it cannot be saved to this project.',
+  },
   common: {
     cancel: 'Cancel',
     close: 'Close',
     create: 'Create',
     export: 'Export',
     undo: 'Undo',
+    redo: 'Redo',
+    history: 'History',
     loading: 'Loading…',
     more: 'More',
     breadcrumb: 'Breadcrumb',
@@ -74,7 +83,8 @@ export const en = {
       sampleRunning: 'Bringing in the sample…',
       sampleHint: 'Copies <code>examples/soulkeeper</code> to <code>projects/soulkeeper</code> and exports it there: a minute or two the first time. The copy is yours to change.',
       copying: 'Copying the sample…',
-      exporting: 'Exporting the sheets: {done} of {total} done',
+      exporting: 'Exporting the sheets…',
+      exportCount: '{done} of {total}',
       terminal: 'In a terminal',
       copyCommand: 'Copy the command',
       commandLabel: 'Command',
@@ -555,6 +565,7 @@ export const en = {
       modified: 'Modified',
       filePathLabel: 'Path of the file',
       sheetPathLabel: 'Path of the .ts',
+      clickToCopy: 'Click to copy',
     },
     vfx: {
       title: 'Effect',
@@ -712,7 +723,7 @@ export const en = {
   customize: {
     noKit: {
       title: 'This project has no gear kit',
-      description: 'To customize characters, the project needs <code>src/gear/catalog.ts</code> exporting <code>CATALOG</code> (gear, bodies and materials) and <code>CHARACTERS</code> (the characters that can be dressed). Start one with <code>npm run new-kit -- {project} gear</code>.',
+      description: 'To customize characters, the project needs <code>src/gear/catalog.ts</code> exporting <code>CATALOG</code> (gear, bodies and materials) and <code>CHARACTERS</code> (the characters that can be dressed). Start one with the command below.',
     },
     noCharacters: {
       title: 'No character to dress',
@@ -738,6 +749,12 @@ export const en = {
       none: 'No pieces',
       noneHint: 'The character appears with the body only. Add pieces from the kit.',
       alsoRemoved: { one: 'Also removed {count} add-on that depended on it', other: 'Also removed {count} add-ons that depended on it' },
+      reorderRefused: 'A piece stays after the one it rests on',
+      dragInstructions: 'To move a piece, press Space or Enter on its handle. Move it with the up and down arrows, then press Space or Enter to drop it, or Escape to cancel.',
+      dragStart: 'Picked up {name}, at {position} of {total}.',
+      dragOver: '{name} is over place {position} of {total}.',
+      dragEnd: '{name} dropped at {position} of {total}.',
+      dragCancel: 'Moving cancelled: {name} is back at {position} of {total}.',
     },
     basics: {
       body: 'Body',
@@ -768,6 +785,7 @@ export const en = {
       open: 'Open {name}',
       close: 'Close {name}',
       unknown: 'unknown',
+      drag: 'Drag {name} to reorder',
       moveUp: 'Move up',
       moveDown: 'Move down',
       remove: 'Remove piece',
@@ -808,12 +826,18 @@ export const en = {
       frame: 'Frame',
       madeFor: 'Made for {needs}',
       noClip: 'The character has no clip "{clip}".',
+      compare: 'Compare',
+      compareHint: 'The saved outfit and the edited one side by side, split by a handle',
+      compareSlider: 'Saved and edited outfit',
+      compareValue: 'Saved outfit on the left {percent}% of the width',
+      saved: 'Saved',
+      edited: 'Edited',
     },
   },
   scenery: {
     noKit: {
       title: 'This project has no scenery kit',
-      description: 'To paint scenes, the project needs <code>src/scenery/catalog.ts</code> exporting <code>SCENERY</code> (pieces, materials, grid and camera). Start one with <code>npm run new-kit -- {project} scenery</code>.',
+      description: 'To paint scenes, the project needs <code>src/scenery/catalog.ts</code> exporting <code>SCENERY</code> (pieces, materials, grid and camera). Start one with the command below.',
     },
     sceneLabel: 'Scene',
     piecesLabel: 'Pieces',
@@ -911,7 +935,6 @@ export const en = {
       variants: '{count} variants',
     },
     toolbar: {
-      history: 'History',
       layersLabel: 'Visible layers',
       hideLayer: 'Hide {layer}',
       showLayer: 'Show {layer}',

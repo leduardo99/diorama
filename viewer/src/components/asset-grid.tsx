@@ -2,6 +2,7 @@ import { useEffect, useState, type RefObject } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Card, CardAction, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { ColorSwatch } from '@/components/ui/color-swatch';
 import { cn } from '@/lib/utils';
 import { useT } from '@/i18n';
 import { dirname } from '@/lib/format';
@@ -26,7 +27,7 @@ function ItemBadges({ asset }: { asset: AssetFileMeta }) {
     <>
       {info.rarity && (
         <Badge variant="outline" className="gap-1.5">
-          <span aria-hidden className="size-2 rounded-full" style={{ backgroundColor: info.rarity.color }} />
+          <ColorSwatch size="xs" color={info.rarity.color} aria-hidden />
           {info.rarity.label}
         </Badge>
       )}

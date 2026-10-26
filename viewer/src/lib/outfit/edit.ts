@@ -62,6 +62,36 @@ export function movePiece(outfit: OutfitData, index: number, delta: -1 | 1): Out
   return { ...outfit, pieces };
 }
 
+/**
+ * Moves a piece from one place in the drawing order to another (a drag in the list), as that many single moves: it passes
+ * every piece between, so it is refused, and the outfit returned as it was, when one of them is the piece it rests on (going
+ * up) or rests on it (going down), the rule `canMove` keeps.
+ */
+export function reorderPiece(outfit: OutfitData, from: number, to: number): OutfitData {
+  if (from === to || from < 0 || to < 0 || from >= outfit.pieces.length || to >= outfit.pieces.length) return outfit;
+  const delta = to > from ? 1 : -1;
+  let next = outfit;
+  for (let at = from; at !== to; at += delta) {
+    if (!canMove(next, at, delta)) return outfit;
+    next = movePiece(next, at, delta);
+  }
+  return next;
+}
+
+/**
+ * A key for each piece that stays with it when the order changes (a drag, the arrows): its id, else its part, place and
+ * side with a count for repeats. Two pieces without an id that share all of these are alike, so either key fits either.
+ */
+export function pieceKeys(outfit: OutfitData): string[] {
+  const seen = new Map<string, number>();
+  return outfit.pieces.map((piece) => {
+    const base = piece.id !== undefined ? `id:${piece.id}` : `part:${piece.part}:${piece.slot}:${piece.side ?? 0}`;
+    const count = seen.get(base) ?? 0;
+    seen.set(base, count + 1);
+    return count === 0 ? base : `${base}#${count + 1}`;
+  });
+}
+
 function replace(outfit: OutfitData, index: number, piece: Piece): OutfitData {
   return { ...outfit, pieces: outfit.pieces.map((p, i) => (i === index ? piece : p)) };
 }

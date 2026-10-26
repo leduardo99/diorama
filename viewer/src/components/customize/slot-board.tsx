@@ -92,8 +92,8 @@ export function SlotBoard({ project, catalog, outfit, skeleton, onEdit, onUndo }
     return (
       <div key={keyOf(index)} className={cn('flex flex-col gap-1', depth > 0 && 'ml-4 border-l pl-2')}>
         <div className="flex items-center gap-1">
-          <PartPicker catalog={catalog} outfit={outfit} place={place} replacing={index} thumbs={thumbs} onChoose={(next, both) => swap(index, next, both)} onRemove={() => remove(index)}>
-            <Button variant="outline" className="h-auto min-w-0 flex-1 justify-start gap-2 p-1.5 text-left font-normal" aria-label={t('customize.board.swap', { name: info?.label ?? piece.part })} title={t('customize.board.swapHint')}>
+          <PartPicker catalog={catalog} outfit={outfit} place={place} replacing={index} thumbs={thumbs} hint={t('customize.board.swapHint')} onChoose={(next, both) => swap(index, next, both)} onRemove={() => remove(index)}>
+            <Button variant="outline" className="h-auto min-w-0 flex-1 justify-start gap-2 p-1.5 text-left font-normal" aria-label={t('customize.board.swap', { name: info?.label ?? piece.part })}>
               <PartThumb asset={thumbs.get(piece.part)} className={depth > 0 ? 'size-7' : undefined} />
               <span className="flex min-w-0 flex-col">
                 <span className="truncate font-medium">{info?.label ?? piece.part}</span>

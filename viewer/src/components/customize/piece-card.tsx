@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { GearCatalog, OutfitData, PartInfo, Slot } from '@core/rig';
-import { ArrowDownIcon, ArrowUpIcon, ChevronRightIcon, TriangleAlertIcon, XIcon } from 'lucide-react';
+import { ArrowDownIcon, ArrowUpIcon, ChevronRightIcon, GripVerticalIcon, TriangleAlertIcon, XIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -8,6 +8,7 @@ import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Card } from '@/components/ui/card';
+import { SortableItemHandle } from '@/components/ui/sortable';
 import { canMove, hostCandidates, isPaired, optionValue, partOf, setHost, setOption, setPieceMaterial, setSide, setSlot, splitRoles, type Piece, type Side } from '@/lib/outfit/edit';
 import { useT } from '@/i18n';
 import { sideLabel, slotLabel } from '@/lib/outfit/labels';
@@ -31,7 +32,7 @@ interface Props {
 
 const sideOf = (piece: Piece, t: TFn) => (isPaired(piece.slot) ? ` · ${sideLabel(t, piece.side ?? 1).toLowerCase()}` : '');
 
-/** One piece of the outfit: its place, options and materials, folded away until opened. */
+/** One piece of the outfit: its place, options and materials, folded away until opened; a handle to drag it to another place in the order. Lives in a `SortableItem`. */
 export function PieceCard({ catalog, outfit, index, onEdit, onMove, onRemove }: Props) {
   const { t } = useT();
   const piece = outfit.pieces[index];
@@ -43,6 +44,11 @@ export function PieceCard({ catalog, outfit, index, onEdit, onMove, onRemove }: 
     <Collapsible open={open} onOpenChange={setOpen} asChild>
       <Card size="sm" className={cn('gap-0 py-0', !info && 'ring-destructive/50')}>
         <div className="flex items-center gap-1 p-1.5">
+          <SortableItemHandle asChild>
+            <Button variant="ghost" size="icon-xs" aria-label={t('customize.piece.drag', { name: info?.label ?? piece.part })}>
+              <GripVerticalIcon />
+            </Button>
+          </SortableItemHandle>
           <CollapsibleTrigger asChild>
             <Button variant="ghost" size="sm" className="min-w-0 flex-1 justify-start" aria-label={t(open ? 'customize.piece.close' : 'customize.piece.open', { name: info?.label ?? piece.part })}>
               <ChevronRightIcon data-icon="inline-start" className={cn('transition-transform', open && 'rotate-90')} />
@@ -73,7 +79,6 @@ export function PieceCard({ catalog, outfit, index, onEdit, onMove, onRemove }: 
 export function PieceFields({ uid, catalog, outfit, index, info, onEdit, compact = false }: Pick<Props, 'catalog' | 'outfit' | 'index' | 'onEdit'> & { uid: string; info: PartInfo; compact?: boolean }) {
   const { t } = useT();
   const piece = outfit.pieces[index];
-  const materials = Object.keys(catalog.materials);
   const hosts = hostCandidates(outfit, index, info);
   const hostIndex = piece.on ? outfit.pieces.findIndex((p) => p.id === piece.on) : -1;
   const showHost = (info.requires !== undefined || piece.on !== undefined) && !(compact && hosts.length <= 1);
@@ -138,9 +143,10 @@ export function PieceFields({ uid, catalog, outfit, index, info, onEdit, compact
           <RoleFields
             idPrefix={`${uid}-mat`}
             {...splitRoles(info.roles)}
-            materials={materials}
+            materials={catalog.materials}
             value={piece.materials}
             noneLabel={(role) => (outfit.materials[role] ? t('customize.piece.fromOutfitWith', { material: outfit.materials[role] }) : t('customize.piece.fromOutfit'))}
+            noneMaterial={(role) => outfit.materials[role]}
             advancedTitle={t('customize.piece.moreRoles')}
             onChange={(role, name) => onEdit((o) => setPieceMaterial(o, index, role, name))}
           />

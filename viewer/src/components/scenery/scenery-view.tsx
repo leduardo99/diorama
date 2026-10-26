@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import NiceModal from '@ebay/nice-modal-react';
 import { keepPreviousData, useQuery, useSuspenseQuery } from '@tanstack/react-query';
+import { Link } from '@tanstack/react-router';
 import { useSelector } from '@tanstack/react-store';
 import { validateScene, type SceneData, type ScenePieceInfo, type SceneryCatalog, type SpaceHeight } from '@core/volume';
-import { MapIcon, TriangleAlertIcon } from 'lucide-react';
+import { FlaskConicalIcon, MapIcon, TriangleAlertIcon } from 'lucide-react';
+import { NoKit } from '@/components/no-kit';
 import { SidePanelLayout } from '@/components/side-panel-layout';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
+import { Button } from '@/components/ui/button';
 import { Rich, useT } from '@/i18n';
 import { historyCommand, isTyping, useWindowKeydown } from '@/lib/hotkeys';
 import { projectsQuery } from '@/lib/queries';
@@ -47,15 +49,20 @@ export function SceneryView() {
 
   if (!catalog) {
     return (
-      <Empty className="h-full">
-        <EmptyHeader>
-          <EmptyMedia variant="icon"><MapIcon /></EmptyMedia>
-          <EmptyTitle>{t('scenery.noKit.title')}</EmptyTitle>
-          <EmptyDescription>
-            <Rich id="scenery.noKit.description" vars={{ project }} />
-          </EmptyDescription>
-        </EmptyHeader>
-      </Empty>
+      <NoKit
+        icon={<MapIcon />}
+        title={t('scenery.noKit.title')}
+        description={<Rich id="scenery.noKit.description" />}
+        command={`npm run new-kit -- ${project} scenery`}
+        tryBuiltIn={
+          <Button variant="outline" asChild>
+            <Link to="/p/$project/scenery" params={{ project }} search={{ fixture: true }}>
+              <FlaskConicalIcon data-icon="inline-start" />
+              {t('noKit.tryBuiltIn')}
+            </Link>
+          </Button>
+        }
+      />
     );
   }
   return <Painter key={`${project}:${fixture}`} project={project} catalog={catalog} fixture={fixture} sceneNames={meta?.scenes ?? []} />;

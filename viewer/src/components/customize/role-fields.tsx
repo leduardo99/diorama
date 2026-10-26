@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { VolumeStyle } from '@core/volume';
 import { ChevronRightIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,25 +16,27 @@ interface Props {
   /** Roles a material should be chosen for, and the refinements that fall back to another role. */
   main: string[];
   advanced: string[];
-  /** Names of the theme materials. */
-  materials: string[];
+  /** The theme materials, by name. */
+  materials: Record<string, VolumeStyle>;
   /** The material chosen for each role. */
   value: Record<string, string> | undefined;
   /** What "no material" means for a role: nothing, or the outfit's own. */
   noneLabel: (role: string) => string;
+  /** The material "no material" stands for in a role, when it names one: its tones are shown with it. */
+  noneMaterial?: (role: string) => string | undefined;
   /** Title of the folded section. */
   advancedTitle: string;
   onChange: (role: string, name: string | undefined) => void;
 }
 
 /** A material for each role. Refinements ('metal accent') wait in a folded section: left alone they take the base role's. */
-export function RoleFields({ idPrefix, main, advanced, materials, value, noneLabel, advancedTitle, onChange }: Props) {
+export function RoleFields({ idPrefix, main, advanced, materials, value, noneLabel, noneMaterial, advancedTitle, onChange }: Props) {
   const [open, setOpen] = useState(false);
   const { t } = useT();
   const row = (role: string) => (
     <Field key={role} orientation="horizontal" className="items-center">
       <FieldLabel htmlFor={`${idPrefix}-${role}`} className="w-24 shrink-0 font-normal">{roleLabel(role)}</FieldLabel>
-      <MaterialSelect id={`${idPrefix}-${role}`} materials={materials} value={value?.[role]} noneLabel={noneLabel(role)} onChange={(name) => onChange(role, name)} />
+      <MaterialSelect id={`${idPrefix}-${role}`} materials={materials} value={value?.[role]} noneLabel={noneLabel(role)} noneMaterial={noneMaterial?.(role)} onChange={(name) => onChange(role, name)} />
     </Field>
   );
   const set = advanced.filter((role) => value?.[role]).length;

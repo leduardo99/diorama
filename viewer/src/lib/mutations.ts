@@ -1,9 +1,11 @@
+import { createElement } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useRouter } from '@tanstack/react-router';
 import { toast } from 'sonner';
 import { api } from './api';
 import { exportFailureText } from './export-errors';
-import { exportTarget, pendingExports } from './export-state';
+import { exportTarget, pendingExports, progressPercent } from './export-state';
+import { ToastProgress } from '../components/toast-progress';
 import { useT } from '../i18n';
 import { stripExtension } from './format';
 import { projectDir } from './project-paths';
@@ -176,12 +178,15 @@ export function useExportSheets() {
       let done = 0;
       try {
         for (const sheet of sheets) {
-          toast.loading(t('toasts.exportingProgress', { current: done + 1, total: sheets.length }), { id: toastId, description: sheet });
+          const title = t('toasts.exportingProgress', { current: done + 1, total: sheets.length });
+          // The bar fills with the sheets already on disk; the title counts the one being exported.
+          toast.loading(title, { id: toastId, description: createElement(ToastProgress, { detail: sheet, value: progressPercent(done, sheets.length), label: title }) });
           const result = await api.cli({ command: 'export', project, subpath: exportTarget(sheet) });
           if (!result.ok) throw new Error(`${sheet}\n${exportFailureText(result.output, t('toasts.fixTypeErrors'))}`);
           done++;
         }
-        toast.success(plural('toasts.assetsExported', done), { id: toastId });
+        // The bar goes with the run: the toast that counted it says only how many were exported.
+        toast.success(plural('toasts.assetsExported', done), { id: toastId, description: null });
       } catch (error) {
         toast.error(done > 0 ? t('toasts.exportStopped', { done, total: sheets.length }) : t('toasts.exportFailed'), {
           id: toastId,

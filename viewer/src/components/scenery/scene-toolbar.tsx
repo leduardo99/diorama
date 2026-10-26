@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { EyeIcon, EyeOffIcon, GridIcon, KeyboardIcon, MinusIcon, RouteIcon, PanelRightCloseIcon, PanelRightOpenIcon, PlusIcon, Redo2Icon, SaveIcon, ScanIcon, Undo2Icon } from 'lucide-react';
+import { EyeIcon, EyeOffIcon, GridIcon, KeyboardIcon, MinusIcon, RouteIcon, PanelRightCloseIcon, PanelRightOpenIcon, PlusIcon, SaveIcon, ScanIcon } from 'lucide-react';
+import { HistoryButtons } from '@/components/history-buttons';
 import { ShortcutList } from '@/components/shortcut-list';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup, ButtonGroupText } from '@/components/ui/button-group';
@@ -48,20 +49,7 @@ export function SceneToolbar(p: Props) {
     <div className="h-12 shrink-0 border-b *:h-full">
       <Scroller orientation="horizontal" hideScrollbar withNavigation scrollTriggerMode="click" scrollStep={160} className="@container flex h-full items-center gap-3 px-3">
         <div className="shrink-0">{p.leading}</div>
-        <ButtonGroup aria-label={t('scenery.toolbar.history')} className="shrink-0">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="outline" size="icon-sm" aria-label={t('common.undo')} disabled={!p.canUndo} onClick={p.onUndo}><Undo2Icon /></Button>
-            </TooltipTrigger>
-            <TooltipContent>{t('common.undo')} <Kbd>⌘Z</Kbd></TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="outline" size="icon-sm" aria-label={t('scenery.toolbar.keys.redo')} disabled={!p.canRedo} onClick={p.onRedo}><Redo2Icon /></Button>
-            </TooltipTrigger>
-            <TooltipContent>{t('scenery.toolbar.keys.redo')} <Kbd>⇧⌘Z</Kbd></TooltipContent>
-          </Tooltip>
-        </ButtonGroup>
+        <HistoryButtons className="shrink-0" canUndo={p.canUndo} canRedo={p.canRedo} onUndo={p.onUndo} onRedo={p.onRedo} />
 
         <ToggleGroup
           type="multiple"
@@ -73,12 +61,22 @@ export function SceneToolbar(p: Props) {
           value={LAYERS.filter((layer) => p.visible[layer])}
           onValueChange={(next) => LAYERS.forEach((layer) => next.includes(layer) !== p.visible[layer] && p.onVisible(layer, next.includes(layer)))}
         >
-          {LAYERS.map((layer) => (
-            <ToggleGroupItem key={layer} value={layer} aria-label={t(p.visible[layer] ? 'scenery.toolbar.hideLayer' : 'scenery.toolbar.showLayer', { layer: t(`scenery.layers.${layer}`).toLowerCase() })} title={t(`scenery.layers.${layer}`)}>
-              {p.visible[layer] ? <EyeIcon data-icon="inline-start" /> : <EyeOffIcon data-icon="inline-start" />}
-              <span className="hidden @3xl:inline">{t(`scenery.layers.${layer}`)}</span>
-            </ToggleGroupItem>
-          ))}
+          {LAYERS.map((layer) => {
+            const action = t(p.visible[layer] ? 'scenery.toolbar.hideLayer' : 'scenery.toolbar.showLayer', { layer: t(`scenery.layers.${layer}`).toLowerCase() });
+            // The tooltip names the layer when the bar is too narrow for its word. Pressed items are styled by
+            // `aria-pressed`, which the trigger leaves alone (it replaces `data-state`).
+            return (
+              <Tooltip key={layer}>
+                <TooltipTrigger asChild>
+                  <ToggleGroupItem value={layer} aria-label={action}>
+                    {p.visible[layer] ? <EyeIcon data-icon="inline-start" /> : <EyeOffIcon data-icon="inline-start" />}
+                    <span className="hidden @3xl:inline">{t(`scenery.layers.${layer}`)}</span>
+                  </ToggleGroupItem>
+                </TooltipTrigger>
+                <TooltipContent>{action}</TooltipContent>
+              </Tooltip>
+            );
+          })}
         </ToggleGroup>
 
         <div className="ml-auto flex shrink-0 items-center gap-2">
@@ -143,10 +141,15 @@ export function SceneToolbar(p: Props) {
             </PopoverContent>
           </Popover>
 
-          <Button size="sm" aria-label={t('scenery.toolbar.save')} title={t('scenery.toolbar.save')} onClick={p.onSave}>
-            <SaveIcon data-icon="inline-start" />
-            <span className="hidden @2xl:inline">{t('scenery.toolbar.save')}</span>
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button size="sm" aria-label={t('scenery.toolbar.save')} onClick={p.onSave}>
+                <SaveIcon data-icon="inline-start" />
+                <span className="hidden @2xl:inline">{t('scenery.toolbar.save')}</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('scenery.toolbar.save')}</TooltipContent>
+          </Tooltip>
         </div>
       </Scroller>
     </div>

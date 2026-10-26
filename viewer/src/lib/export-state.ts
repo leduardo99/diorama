@@ -19,6 +19,9 @@ export function pendingExports(assets: AssetFileMeta[], project: ProjectMeta | u
   return { stale: assets.filter(isStale), missing: project?.pendingSheets ?? [] };
 }
 
+/** How far a run of `total` steps is with `done` of them finished, as the percentage a progress bar takes (0 to 100). */
+export const progressPercent = (done: number, total: number): number => (total > 0 ? Math.min(100, Math.max(0, (done / total) * 100)) : 0);
+
 /** What `tools/export.ts` takes to export one sheet: its path under sheets/ without the extension. */
 export const exportTarget = (sheet: string) => sheet.replace(/\.[^/.]+$/, '');
 

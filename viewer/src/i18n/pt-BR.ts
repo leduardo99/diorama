@@ -5,12 +5,21 @@ export type Shape<T> = { [K in keyof T]: T[K] extends string ? string : Shape<T[
 
 /** The interface in Brazilian Portuguese. It must have exactly the keys of `en.ts` (a missing or an extra one is a type error). */
 export const ptBR: Shape<typeof en> = {
+  noKit: {
+    terminal: 'Num terminal',
+    copyCommand: 'Copiar o comando',
+    commandLabel: 'Comando',
+    tryBuiltIn: 'Experimentar o kit embutido',
+    builtInHint: 'O kit embutido é um kit pequeno que vem com o viewer, para experimentar esta aba: o que você fizer com ele não pode ser salvo neste projeto.',
+  },
   common: {
     cancel: 'Cancelar',
     close: 'Fechar',
     create: 'Criar',
     export: 'Exportar',
     undo: 'Desfazer',
+    redo: 'Refazer',
+    history: 'Histórico',
     loading: 'Carregando…',
     more: 'Mais',
     breadcrumb: 'Navegação estrutural',
@@ -72,7 +81,8 @@ export const ptBR: Shape<typeof en> = {
       sampleRunning: 'Trazendo o exemplo…',
       sampleHint: 'Copia <code>examples/soulkeeper</code> para <code>projects/soulkeeper</code> e o exporta lá: um ou dois minutos na primeira vez. A cópia é sua para mudar.',
       copying: 'Copiando o exemplo…',
-      exporting: 'Exportando os sheets: {done} de {total} prontos',
+      exporting: 'Exportando os sheets…',
+      exportCount: '{done} de {total}',
       terminal: 'Num terminal',
       copyCommand: 'Copiar o comando',
       commandLabel: 'Comando',
@@ -553,6 +563,7 @@ export const ptBR: Shape<typeof en> = {
       modified: 'Modificado',
       filePathLabel: 'Caminho do arquivo',
       sheetPathLabel: 'Caminho do .ts',
+      clickToCopy: 'Clique para copiar',
     },
     vfx: {
       title: 'Efeito',
@@ -710,7 +721,7 @@ export const ptBR: Shape<typeof en> = {
   customize: {
     noKit: {
       title: 'Este projeto não tem um kit de gear',
-      description: 'Para customizar personagens, o projeto precisa de <code>src/gear/catalog.ts</code> exportando <code>CATALOG</code> (gear, corpos e materiais) e <code>CHARACTERS</code> (os personagens que podem ser vestidos). Comece um com <code>npm run new-kit -- {project} gear</code>.',
+      description: 'Para customizar personagens, o projeto precisa de <code>src/gear/catalog.ts</code> exportando <code>CATALOG</code> (gear, corpos e materiais) e <code>CHARACTERS</code> (os personagens que podem ser vestidos). Comece um com o comando abaixo.',
     },
     noCharacters: {
       title: 'Nenhum personagem para vestir',
@@ -736,6 +747,12 @@ export const ptBR: Shape<typeof en> = {
       none: 'Nenhuma peça',
       noneHint: 'O personagem aparece só com o corpo. Adicione peças do kit.',
       alsoRemoved: { one: 'Removeu também {count} complemento que dependia dela', other: 'Removeu também {count} complementos que dependiam dela' },
+      reorderRefused: 'Uma peça fica depois daquela em que se apoia',
+      dragInstructions: 'Para mover uma peça, pressione Espaço ou Enter na alça dela. Mova com as setas para cima e para baixo e pressione Espaço ou Enter para soltar, ou Esc para cancelar.',
+      dragStart: 'Peça {name} levantada, na posição {position} de {total}.',
+      dragOver: 'Peça {name} sobre a posição {position} de {total}.',
+      dragEnd: 'Peça {name} solta na posição {position} de {total}.',
+      dragCancel: 'Movimento cancelado: a peça {name} voltou à posição {position} de {total}.',
     },
     basics: {
       body: 'Corpo',
@@ -766,6 +783,7 @@ export const ptBR: Shape<typeof en> = {
       open: 'Abrir {name}',
       close: 'Fechar {name}',
       unknown: 'desconhecida',
+      drag: 'Arrastar {name} para reordenar',
       moveUp: 'Subir',
       moveDown: 'Descer',
       remove: 'Remover peça',
@@ -806,12 +824,18 @@ export const ptBR: Shape<typeof en> = {
       frame: 'Frame',
       madeFor: 'Feito para {needs}',
       noClip: 'O personagem não tem o clipe "{clip}".',
+      compare: 'Comparar',
+      compareHint: 'O outfit salvo e o editado lado a lado, divididos por uma alça',
+      compareSlider: 'Outfit salvo e editado',
+      compareValue: 'Outfit salvo nos {percent}% da esquerda',
+      saved: 'Salvo',
+      edited: 'Editado',
     },
   },
   scenery: {
     noKit: {
       title: 'Este projeto não tem um kit de cenário',
-      description: 'Para pintar cenas, o projeto precisa de <code>src/scenery/catalog.ts</code> exportando <code>SCENERY</code> (peças, materiais, grade e câmera). Comece um com <code>npm run new-kit -- {project} scenery</code>.',
+      description: 'Para pintar cenas, o projeto precisa de <code>src/scenery/catalog.ts</code> exportando <code>SCENERY</code> (peças, materiais, grade e câmera). Comece um com o comando abaixo.',
     },
     sceneLabel: 'Cena',
     piecesLabel: 'Peças',
@@ -909,7 +933,6 @@ export const ptBR: Shape<typeof en> = {
       variants: '{count} variações',
     },
     toolbar: {
-      history: 'Histórico',
       layersLabel: 'Camadas visíveis',
       hideLayer: 'Esconder {layer}',
       showLayer: 'Mostrar {layer}',

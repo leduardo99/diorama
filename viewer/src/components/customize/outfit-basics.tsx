@@ -11,7 +11,6 @@ const NO_BASE = '__none';
 /** The body underneath and the material that plays each role, for the whole outfit: what both views of the editor start with. */
 export function OutfitBasics({ catalog, outfit, onEdit }: { catalog: GearCatalog; outfit: OutfitData; onEdit: Edit }) {
   const { t } = useT();
-  const materials = Object.keys(catalog.materials);
   const roles = rolesOf(outfit, catalog);
   return (
     <div className="flex flex-col gap-5">
@@ -39,7 +38,7 @@ export function OutfitBasics({ catalog, outfit, onEdit }: { catalog: GearCatalog
             idPrefix="outfit-mat"
             main={roles.main}
             advanced={roles.advanced}
-            materials={materials}
+            materials={catalog.materials}
             value={outfit.materials}
             noneLabel={() => t('common.none')}
             advancedTitle={t('customize.basics.advanced')}

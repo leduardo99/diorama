@@ -7,6 +7,7 @@ import { Kbd } from '@/components/ui/kbd';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Rich, useT } from '@/i18n';
 import { copyText } from '@/lib/clipboard';
 import { COMPASS, eventsOf, type Atlas } from '@/lib/atlas';
@@ -107,10 +108,18 @@ export function Inspector({ player, asset, directionIndex, onDirection, onHighli
               // The middle of the compass stays empty: the highlighted point already names the direction.
               if (!name) return <span key={i} aria-hidden />;
               const at = facings.indexOf(name);
-              return (
-                <ToggleGroupItem key={name} value={at < 0 ? `missing-${name}` : String(at)} disabled={at < 0} className="w-11 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground" title={at < 0 ? t('details.inspector.directionMissing', { name }) : `${name} · ${at + 1}`}>
+              // The trigger takes the item's `data-state`: the chosen point is styled by `aria-checked`. A missing point
+              // is disabled, so its tooltip hangs on a span round it (a disabled button gets no pointer events).
+              const item = (
+                <ToggleGroupItem value={at < 0 ? `missing-${name}` : String(at)} disabled={at < 0} className="w-11 aria-checked:bg-primary aria-checked:text-primary-foreground">
                   {name}
                 </ToggleGroupItem>
+              );
+              return (
+                <Tooltip key={name}>
+                  <TooltipTrigger asChild>{at < 0 ? <span className="inline-flex">{item}</span> : item}</TooltipTrigger>
+                  <TooltipContent>{at < 0 ? t('details.inspector.directionMissing', { name }) : `${name} · ${at + 1}`}</TooltipContent>
+                </Tooltip>
               );
             })}
           </ToggleGroup>
@@ -254,17 +263,29 @@ function Info({ atlas, asset, rows, frameCount }: { atlas: Atlas | undefined; as
           </div>
         ))}
       </dl>
-      {/* A path is cut to the column; its title shows it whole on hover (it is data, so a plain title, as on the compass). */}
+      {/* A path is cut to the column; its tooltip shows it whole, and a click copies it. */}
       <div className="flex flex-col gap-1">
-        <Button variant="outline" size="sm" className="justify-start font-mono" title={exportedPath} onClick={() => void copyText(exportedPath, t('details.data.filePathLabel'))}>
-          <span className="truncate">{exportedPath}</span>
-        </Button>
-        {sheetPath && (
-          <Button variant="outline" size="sm" className="justify-start font-mono" title={sheetPath} onClick={() => void copyText(sheetPath, t('details.data.sheetPathLabel'))}>
-            <span className="truncate">{sheetPath}</span>
-          </Button>
-        )}
+        <PathButton path={exportedPath} label={t('details.data.filePathLabel')} />
+        {sheetPath && <PathButton path={sheetPath} label={t('details.data.sheetPathLabel')} />}
       </div>
     </>
+  );
+}
+
+/** A path of the asset, cut to the column, whole in its tooltip; a click copies it. */
+function PathButton({ path, label }: { path: string; label: string }) {
+  const { t } = useT();
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button variant="outline" size="sm" className="justify-start font-mono" onClick={() => void copyText(path, label)}>
+          <span className="truncate">{path}</span>
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent className="flex-col items-start gap-0.5">
+        <span className="font-mono break-all">{path}</span>
+        <span className="text-background/70">{t('details.data.clickToCopy')}</span>
+      </TooltipContent>
+    </Tooltip>
   );
 }

@@ -7,10 +7,13 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
 import { Badge } from '@/components/ui/badge';
+import { Field, FieldLabel } from '@/components/ui/field';
+import { Progress } from '@/components/ui/progress';
 import { Spinner } from '@/components/ui/spinner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Rich, useT } from '@/i18n';
 import { copyText } from '@/lib/clipboard';
+import { progressPercent } from '@/lib/export-state';
 import { SAMPLE_COMMAND, SAMPLE_PROJECT, useTrySample } from '@/lib/mutations';
 import { exampleRunQuery, projectsQuery } from '@/lib/queries';
 import { NewModal } from '@/modals/new-modal';
@@ -59,6 +62,7 @@ function NoProjects() {
   // This page's last run failed, unless the copy has every sheet exported since (by a run in a terminal or another tab).
   const done = copy !== undefined && copy.pendingSheets.length === 0;
   const failure = running || done ? null : sample.isError ? sample.error.message : result && !result.ok && !result.running ? result.output : null;
+  const exportedCount = copy ? t('projects.none.exportCount', { done: number(copy.sheetCount - copy.pendingSheets.length), total: number(copy.sheetCount) }) : undefined;
   const openSample = () => void navigate({ to: '/p/$project', params: { project: SAMPLE_PROJECT } });
 
   return (
@@ -87,13 +91,22 @@ function NoProjects() {
             </Button>
           )}
         </div>
-        <p className="text-muted-foreground" aria-live="polite">
-          {running
-            ? copy
-              ? t('projects.none.exporting', { done: number(copy.sheetCount - copy.pendingSheets.length), total: number(copy.sheetCount) })
-              : t('projects.none.copying')
-            : <Rich id={there ? 'projects.none.sampleThereHint' : 'projects.none.sampleHint'} />}
-        </p>
+        {running ? (
+          // The copy first (no count yet: the bar waits), then its sheets get their exports, counted from the catalog.
+          <Field aria-live="polite">
+            <FieldLabel id="sample-progress-label" className="font-normal text-muted-foreground">
+              <span>{copy ? t('projects.none.exporting') : t('projects.none.copying')}</span>
+              {copy && <span className="ml-auto tabular-nums">{exportedCount}</span>}
+            </FieldLabel>
+            <Progress
+              aria-labelledby="sample-progress-label"
+              value={copy ? progressPercent(copy.sheetCount - copy.pendingSheets.length, copy.sheetCount) : null}
+              getValueLabel={() => exportedCount ?? t('projects.none.copying')}
+            />
+          </Field>
+        ) : (
+          <p className="text-muted-foreground"><Rich id={there ? 'projects.none.sampleThereHint' : 'projects.none.sampleHint'} /></p>
+        )}
         <div className="flex w-full items-center gap-2 rounded-md bg-muted/50 p-2 text-left">
           <Badge variant="outline">CLI</Badge>
           <span className="sr-only">{t('projects.none.terminal')}</span>

@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path';
 import { buildAssetCatalog, buildProjectCatalog } from '../../viewer/server/catalog';
 import { createTranslator } from '../../viewer/src/i18n/core';
 import { characterLabel, detailsTitle, readableName, roleDetail, roleOf } from '../../viewer/src/lib/asset-role';
-import { exportTarget, isStale, pendingExports, projectTotals } from '../../viewer/src/lib/export-state';
+import { exportTarget, isStale, pendingExports, progressPercent, projectTotals } from '../../viewer/src/lib/export-state';
 import { clipsOf, groupAnimations } from '../../viewer/src/lib/groups';
 import type { AssetFileMeta, AtlasInfo } from '../../viewer/src/lib/types';
 
@@ -196,6 +196,13 @@ try {
   const [english, portuguese] = [createTranslator('en'), createTranslator('pt-BR')];
   assert.equal(projectTotals({ ...meta, totalSize: mb }, 4, english), '4 assets · 2.50 MB · 2 not exported', 'sheets show only as what is not exported yet');
   assert.equal(projectTotals({ ...meta, pendingSheets: [], totalSize: 1536 }, 1, english), '1 asset · 1.5 kB', 'all exported: one count and the size');
+  // The bars that count an export: done of total as a percentage, never past either end, and empty for nothing to do.
+  assert.equal(progressPercent(3, 12), 25);
+  assert.equal(progressPercent(0, 40), 0);
+  assert.equal(progressPercent(40, 40), 100);
+  assert.equal(progressPercent(5, 4), 100, 'more done than counted (the catalog read late) stays a full bar');
+  assert.equal(progressPercent(-1, 4), 0);
+  assert.equal(progressPercent(0, 0), 0, 'no step to take is an empty bar, not NaN');
   assert.equal(projectTotals({ ...meta, totalSize: mb }, 4, portuguese), '4 assets · 2,50 MB · 2 sem export');
   assert.equal(projectTotals({ ...meta, pendingSheets: ['a.ts'], totalSize: 0 }, 0, portuguese), '0 asset · 0 B · 1 sem export', 'Portuguese counts zero as one');
   assert.doesNotMatch(projectTotals(meta, assets.length, english), /sheet/, 'assets and sheets are not two totals');

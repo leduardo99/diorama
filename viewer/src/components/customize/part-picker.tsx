@@ -5,6 +5,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Field, FieldLabel } from '@/components/ui/field';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useT } from '@/i18n';
 import { isPaired, partOf } from '@/lib/outfit/edit';
 import { groupLabel, sideLabel, slotLabel } from '@/lib/outfit/labels';
@@ -21,6 +22,8 @@ interface Props {
   thumbs: Map<string, AssetFileMeta>;
   /** What opens the list: a row of the board. */
   children: ReactNode;
+  /** A tooltip for it: the trigger is wrapped here (Tooltip outside, Popover's trigger inside), since a Tooltip round the row would take the place of the trigger. */
+  hint?: ReactNode;
   /** A part was chosen; `both` says the other side of a pair is to get the same. */
   onChoose: (info: PartInfo, both: boolean) => void;
   /** Takes the piece out (only when swapping one). */
@@ -99,7 +102,7 @@ function Choices({ catalog, outfit, place, replacing, thumbs, paired, both, head
  * (or wears it, in an empty place) in one step. The parts that do the same job as the piece come first; a part that rests on
  * another waits, disabled, until that one is worn. For a pair, "On both sides" does the same on the other side.
  */
-export function PartPicker({ catalog, outfit, place, replacing, thumbs, children, onChoose, onRemove }: Props) {
+export function PartPicker({ catalog, outfit, place, replacing, thumbs, children, hint, onChoose, onRemove }: Props) {
   const { t } = useT();
   const [open, setOpen] = useState(false);
   const paired = isPaired(place.slot);
@@ -117,7 +120,16 @@ export function PartPicker({ catalog, outfit, place, replacing, thumbs, children
         if (next) setBoth(null);
       }}
     >
-      <PopoverTrigger asChild>{children}</PopoverTrigger>
+      {hint ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <PopoverTrigger asChild>{children}</PopoverTrigger>
+          </TooltipTrigger>
+          <TooltipContent>{hint}</TooltipContent>
+        </Tooltip>
+      ) : (
+        <PopoverTrigger asChild>{children}</PopoverTrigger>
+      )}
       <PopoverContent align="start" className="w-80 gap-0 p-0">
         <Choices
           catalog={catalog}

@@ -87,21 +87,26 @@ export function SelectionPopover({ selection, handle, anchorRef, boundaryRef }: 
               </div>
             )}
 
+            {/* Delete is shadcn's destructive button in a group of its own: nested groups stand apart, so its tint never runs into the outline buttons. */}
             <ButtonGroup className="w-full">
-              {selection.isCharacter && !selection.isPlayer && (
-                <Button variant="outline" size="sm" className="flex-1" onClick={() => run((scene) => scene.control())}>
-                  <GamepadIcon data-icon="inline-start" />
-                  {t('playground.popover.control')}
+              <ButtonGroup className="flex-1">
+                {selection.isCharacter && !selection.isPlayer && (
+                  <Button variant="outline" size="sm" className="flex-1" onClick={() => run((scene) => scene.control())}>
+                    <GamepadIcon data-icon="inline-start" />
+                    {t('playground.popover.control')}
+                  </Button>
+                )}
+                <Button variant="outline" size="sm" className="flex-1" onClick={() => run((scene) => scene.duplicate())}>
+                  <CopyIcon data-icon="inline-start" />
+                  {t('playground.popover.duplicate')}
                 </Button>
-              )}
-              <Button variant="outline" size="sm" className="flex-1" onClick={() => run((scene) => scene.duplicate())}>
-                <CopyIcon data-icon="inline-start" />
-                {t('playground.popover.duplicate')}
-              </Button>
-              <Button variant="outline" size="sm" className="flex-1 text-destructive hover:text-destructive" disabled={selection.isPlayer} onClick={() => run((scene) => scene.remove())}>
-                <Trash2Icon data-icon="inline-start" />
-                {t('playground.popover.delete')}
-              </Button>
+              </ButtonGroup>
+              <ButtonGroup>
+                <Button variant="destructive" size="sm" disabled={selection.isPlayer} onClick={() => run((scene) => scene.remove())}>
+                  <Trash2Icon data-icon="inline-start" />
+                  {t('playground.popover.delete')}
+                </Button>
+              </ButtonGroup>
             </ButtonGroup>
           </>
         )}

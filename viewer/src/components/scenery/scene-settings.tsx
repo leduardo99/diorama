@@ -51,7 +51,6 @@ function SizeField({ id, label, value, onCommit }: { id: string; label: string; 
 export function SceneSettings({ catalog, scene, saved, loaded, onEdit, onLoad }: Props) {
   const { t, plural } = useT();
   const roles = splitRoles(rolesInScene(scene, catalog));
-  const materials = Object.keys(catalog.materials);
 
   return (
     <div className="flex flex-col gap-5">
@@ -92,9 +91,10 @@ export function SceneSettings({ catalog, scene, saved, loaded, onEdit, onLoad }:
             idPrefix="scene-mat"
             main={roles.main}
             advanced={roles.advanced}
-            materials={materials}
+            materials={catalog.materials}
             value={scene.materials}
             noneLabel={(role) => (catalog.defaultMaterials[role] ? t('scenery.settings.defaultWith', { material: catalog.defaultMaterials[role] }) : t('scenery.settings.default'))}
+            noneMaterial={(role) => catalog.defaultMaterials[role]}
             advancedTitle={t('scenery.settings.advanced')}
             onChange={(role, name) => onEdit((s) => setSceneMaterial(s, role, name))}
           />

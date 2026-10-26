@@ -2,13 +2,15 @@ import { useMemo } from 'react';
 import NiceModal from '@ebay/nice-modal-react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import type { OutfitCharacterInfo } from '@core/rig';
-import { ChevronRightIcon, Redo2Icon, RefreshCwIcon, RotateCcwIcon, SaveIcon, ShirtIcon, Undo2Icon } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
+import { ChevronRightIcon, FlaskConicalIcon, RefreshCwIcon, RotateCcwIcon, SaveIcon, ShirtIcon } from 'lucide-react';
+import { HistoryButtons } from '@/components/history-buttons';
+import { NoKit } from '@/components/no-kit';
 import { SidePanelLayout } from '@/components/side-panel-layout';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
 import { Field, FieldLabel } from '@/components/ui/field';
-import { Kbd } from '@/components/ui/kbd';
 import { Spinner } from '@/components/ui/spinner';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -42,15 +44,20 @@ export function CustomizeView() {
 
   if (!kit) {
     return (
-      <Empty className="h-full">
-        <EmptyHeader>
-          <EmptyMedia variant="icon"><ShirtIcon /></EmptyMedia>
-          <EmptyTitle>{t('customize.noKit.title')}</EmptyTitle>
-          <EmptyDescription>
-            <Rich id="customize.noKit.description" vars={{ project }} />
-          </EmptyDescription>
-        </EmptyHeader>
-      </Empty>
+      <NoKit
+        icon={<ShirtIcon />}
+        title={t('customize.noKit.title')}
+        description={<Rich id="customize.noKit.description" />}
+        command={`npm run new-kit -- ${project} gear`}
+        tryBuiltIn={
+          <Button variant="outline" asChild>
+            <Link to="/p/$project/customize" params={{ project }} search={{ fixture: true }}>
+              <FlaskConicalIcon data-icon="inline-start" />
+              {t('noKit.tryBuiltIn')}
+            </Link>
+          </Button>
+        }
+      />
     );
   }
   if (kit.characters.length === 0) {
@@ -116,20 +123,7 @@ function Customizer({ project, kit, character }: { project: string; kit: GearKit
           <p className="text-muted-foreground">
             {plural('customize.clips', Object.keys(character.clips).length)} · {plural('customize.pieces', outfit.pieces.length)}
           </p>
-          <div className="flex items-center gap-0.5">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon-xs" aria-label={t('customize.undo')} disabled={!canUndo} onClick={undo}><Undo2Icon /></Button>
-              </TooltipTrigger>
-              <TooltipContent>{t('customize.undo')} <Kbd>⌘Z</Kbd></TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon-xs" aria-label={t('customize.redo')} disabled={!canRedo} onClick={redo}><Redo2Icon /></Button>
-              </TooltipTrigger>
-              <TooltipContent>{t('customize.redo')} <Kbd>⇧⌘Z</Kbd></TooltipContent>
-            </Tooltip>
-          </div>
+          <HistoryButtons canUndo={canUndo} canRedo={canRedo} onUndo={undo} onRedo={redo} />
         </div>
         <div className="flex items-center justify-between gap-2">
           <Tabs value={mode} onValueChange={setMode}>

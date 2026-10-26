@@ -1,4 +1,4 @@
-import type { RefObject } from 'react';
+import type { ReactNode, RefObject } from 'react';
 import { heightsOf, type SceneData, type SceneryCatalog, type SpaceHeight } from '@core/volume';
 import { BrushIcon, CopyIcon, PersonStandingIcon, Trash2Icon, XIcon } from 'lucide-react';
 import { OptionField } from '@/components/customize/option-field';
@@ -11,6 +11,7 @@ import { Kbd } from '@/components/ui/kbd';
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
 import { canFlip, flipDoor, isDoor, isFlipped, pieceOf, rotateProp, setPropOption, setState, setVariant, setWallHeight, setWallOption, setWallVariant, validSelection, wallAt, wallsOnBorders, type Cell, type Selection } from '@/lib/scenery/edit';
 import { FacingControl, HeightSelect, SideControl, StateSelect, VariantSelect } from './prop-fields';
+import { cn } from '@/lib/utils';
 import { PieceThumb } from './piece-thumb';
 
 /** A piece the selection lends to a brush: a floor or a wall (at its height). */
@@ -98,13 +99,22 @@ function Header({ thumb, title, detail, run, onClose }: { thumb: React.ReactNode
   );
 }
 
-function DeleteButton({ run, onRemove, label }: { run: Run; onRemove: () => void; label?: string }) {
+/**
+ * The selection's actions: what it lends or copies, then Delete (or Clear), shadcn's destructive button. Delete is a group
+ * of its own beside the others (nested button groups stand apart), so its tint never runs into the outline buttons.
+ */
+function Actions({ children, run, onRemove, label }: { children?: ReactNode; run: Run; onRemove: () => void; label?: string }) {
   const { t } = useT();
   return (
-    <Button variant="outline" size="sm" className="flex-1 text-destructive hover:text-destructive" onClick={() => run(onRemove)}>
-      <Trash2Icon data-icon="inline-start" />
-      {label ?? t('scenery.popover.delete')} <Kbd>⌫</Kbd>
-    </Button>
+    <ButtonGroup className="w-full">
+      {children && <ButtonGroup className="flex-1">{children}</ButtonGroup>}
+      <ButtonGroup className={cn(!children && 'flex-1')}>
+        <Button variant="destructive" size="sm" className="flex-1" onClick={() => run(onRemove)}>
+          <Trash2Icon data-icon="inline-start" />
+          {label ?? t('scenery.popover.delete')} <Kbd>⌫</Kbd>
+        </Button>
+      </ButtonGroup>
+    </ButtonGroup>
   );
 }
 
@@ -160,15 +170,14 @@ function PropBody({ catalog, scene, index, run, onEdit, onClose, onDuplicate, on
           />
         ))}
       </FieldGroup>
-      <ButtonGroup className="w-full">
+      <Actions run={run} onRemove={onRemove}>
         {!door && (
           <Button variant="outline" size="sm" className="flex-1" onClick={() => run(onDuplicate)}>
             <CopyIcon data-icon="inline-start" />
             {t('scenery.popover.duplicate')} <Kbd>⌘D</Kbd>
           </Button>
         )}
-        <DeleteButton run={run} onRemove={onRemove} />
-      </ButtonGroup>
+      </Actions>
     </>
   );
 }
@@ -210,13 +219,12 @@ function WallBody({ catalog, scene, at, run, onEdit, onClose, onRemove, onUseBru
           />
         ))}
       </FieldGroup>
-      <ButtonGroup className="w-full">
+      <Actions run={run} onRemove={onRemove}>
         <Button variant="outline" size="sm" className="flex-1" onClick={() => run(() => onUseBrush({ piece: look.piece, height: look.height }))}>
           <BrushIcon data-icon="inline-start" />
           {t('scenery.popover.paintWithWall')}
         </Button>
-        <DeleteButton run={run} onRemove={onRemove} />
-      </ButtonGroup>
+      </Actions>
     </>
   );
 }
@@ -229,13 +237,12 @@ function FloorBody({ catalog, scene, at, run, onClose, onRemove, onUseBrush }: {
   return (
     <>
       <Header thumb={<PieceThumb catalog={catalog} info={info} size="sm" />} title={info.label} detail={`${t('scenery.groups.floor')} · ${where(t, at, false)}`} run={run} onClose={onClose} />
-      <ButtonGroup className="w-full">
+      <Actions run={run} onRemove={onRemove} label={t('scenery.popover.clear')}>
         <Button variant="outline" size="sm" className="flex-1" onClick={() => run(() => onUseBrush({ piece: id }))}>
           <BrushIcon data-icon="inline-start" />
           {t('scenery.popover.paintWithFloor')}
         </Button>
-        <DeleteButton run={run} onRemove={onRemove} label={t('scenery.popover.clear')} />
-      </ButtonGroup>
+      </Actions>
     </>
   );
 }
@@ -254,9 +261,7 @@ function FigureBody({ scene, index, run, onClose, onRemove }: { scene: SceneData
         onClose={onClose}
       />
       <p className="text-muted-foreground">{t('scenery.popover.figureHint')}</p>
-      <ButtonGroup className="w-full">
-        <DeleteButton run={run} onRemove={onRemove} />
-      </ButtonGroup>
+      <Actions run={run} onRemove={onRemove} />
     </>
   );
 }

@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { ColorSwatch } from '@/components/ui/color-swatch';
 import { Field, FieldDescription, FieldTitle } from '@/components/ui/field';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -181,7 +182,7 @@ export function IconDetails({ asset, projectAssets, onSelect }: { asset: AssetFi
                     <span className="truncate font-medium">{item.label}</span>
                     <div className="flex flex-wrap items-center gap-1.5">
                       <Badge variant="outline" className="gap-1.5">
-                        <span aria-hidden className="size-2 rounded-full" style={{ backgroundColor: item.rarityColor }} />
+                        <ColorSwatch size="xs" color={item.rarityColor} aria-hidden />
                         {item.rarityLabel ?? item.rarity}
                       </Badge>
                       <Badge variant="secondary">{item.kind}</Badge>
@@ -213,7 +214,7 @@ export function IconDetails({ asset, projectAssets, onSelect }: { asset: AssetFi
               <ul className="flex flex-col gap-1.5">
                 {rarities.map((rarity) => (
                   <li key={rarity.id} className="flex items-center gap-2">
-                    <span aria-hidden className="size-3 rounded-xs ring-1 ring-foreground/20" style={{ backgroundColor: rarity.color }} />
+                    <ColorSwatch size="xs" color={rarity.color} aria-hidden />
                     <span>{rarity.label}</span>
                     <span className="ml-auto font-mono text-muted-foreground">{rarity.color}</span>
                   </li>
