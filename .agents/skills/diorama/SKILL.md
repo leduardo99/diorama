@@ -12,7 +12,7 @@ This skill defines the workflow and the rules for the assets this repository bui
 | The job | Skill |
 | :--- | :--- |
 | A new checkout, `npm run doctor` fails, nothing runs yet | `diorama-setup` |
-| A project starts, the user describes the game or the look, the palette, the light or the sizes change | `diorama-style` |
+| A project starts, the user describes the game or the look, the palette, the light or the sizes change, or assets look plain (the tiers of detail) | `diorama-style` |
 | Props, scenery pieces, equipment parts, effects, item icons, HUD pieces | `diorama-volume` |
 | Characters and creatures with a skeleton: clips, skins, sockets | `diorama-rig` |
 | Scenery, gear, effects and items as catalog-driven sets; scenes and outfits made from them | `diorama-kits` |

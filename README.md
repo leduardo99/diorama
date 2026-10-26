@@ -79,7 +79,7 @@ Open this folder in a coding agent and ask:
 The skills are plain Markdown in `.agents/skills/`, read by path (most agents do not load them by themselves), so [AGENTS.md](AGENTS.md) and this README point to them. When the setup passes, ask for what you want to make, and the agent follows this order:
 
 1. `diorama` for the rules and the workflow, which routes to the skill for the job;
-2. `diorama-style` when a project starts or its look changes: the theme, the palette, the light, `STYLE.md`, and a first prop and character to prove the look;
+2. `diorama-style` when a project starts or its look changes: the theme, the palette, the light, `STYLE.md`, a first prop and character to prove the look, and the tiers of detail that make assets rich;
 3. `diorama-volume` (props, scenery pieces, equipment, effects, icons, HUD), `diorama-rig` (characters and creatures) and `diorama-kits` (scenery, gear, effects and items as catalog-driven sets) to make the assets;
 4. `diorama-review` to check them, and `diorama-game` to play them in a game.
 

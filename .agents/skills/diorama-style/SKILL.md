@@ -114,11 +114,34 @@ The mannequin skin is a blockout: it shows the palette, the lines and the light 
 
 Judge the probes with `diorama-review`: `contact --gray` for the value structure, every row for the light, the figure beside the crate for the scale. If the look is wrong, change the theme tokens (never a probe asset), export again and compare with `contact --with`. Show the user the probes before going on, and keep the ones that stay as the project's first assets.
 
-## 6. Ideation between looks
+## 6. Detail and richness
+
+The theme sets the style; it does not make an asset rich. Five projects that differ only in tokens look like one model painted five ways. Richness comes from geometry, tiers of detail and variation, and it is decided per asset, after the probes. Build it in this order, and check each tier in a contact sheet before adding the next.
+
+1. **Silhouette first.** Each character and big prop needs a shape of its own at 1×: proportions that differ from the others, and accessories that break the outline (a scarf tail, a bag, a hat brim, a cloak, a tool). Check it with `contact --gray`, and with the figure filled in your head: two characters that share a silhouette read as one.
+2. **Macro, meso, micro.** The big forms carry the read, the middle tier (planks, stones, battens, straps, folds, seams, hems, buckles) carries the richness, and the micro tier (grain, cracks, stitches, pebbles) is the finish. Make the middle tier real geometry: many small solids rather than one box with lines drawn on it, each set slightly proud or sunk and given a small tone variation from `pieceRng`. That way every piece catches its own lit edge. Put the most detail where the eye should go, and keep the rest calmer.
+3. **Marks on surfaces.** Lay cracks, grain, stitches and emblems on the face they belong to with `Decal.onFace` (any compound shape, for example a `Path` turned into a fill with `toShape`), rather than drawing projected lines by hand. Two or three decals per mark (a dark line and a lit lip) give relief. Bands go round the body with `visibleArc` and `bandOnEllipsoid`: belts, hems, sashes, barrel hoops, a cross-body strap as a tilted ring.
+4. **Materials that read as materials.**
+   - A ramp per material, with hue shifting: warmer toward the light, cooler in shadow.
+   - Cloth without a highlight (`form: { highlight: false }`); metal with a narrow, strong one.
+   - Reflected light at the edge with `form.rim`.
+   - An inner `stroke` per material, a darker shade of it, for selective lines.
+   - Textures (`Grit`, `Stipple`, `Hatch`) on stone, wood and earth, at a density that survives 1×.
+5. **Grounding and light.** Every standing thing has a contact shadow (`groundShadow`, and `floorGlow` for light sources in scenery). Darken the foot of walls and big props. Keep one light direction for everything.
+6. **Variation.**
+   - Floors in 4 to 6 variants (`floorTile` helpers: `spread`, `fit`, `bevelEdge` with `recessed` for a sunk path, `floorBlob`, tufts along `t.edge`). Check repetition with `scenery-test --field`.
+   - Walls and props in variants that tell a story (`variants` with `variantLabels`: plain, mossy, cracked, a window).
+   - Decals bigger than a tile for large patches, and small clutter decals on top.
+   - Foliage as clumps of round volumes, darker at the back and lighter on top, sorted back to front; leaf edges from `displace` on a `Path`.
+7. **Motion detail.** Secondary parts (a scarf, a tail, hair, a ribbon) follow the body with a lag read from the clip itself (`kit.poseAt(t - lag)`), so loops stay closed. Avoid one-pixel details that change shape every frame: they boil.
+
+Judge richness at the size the game shows. Detail that disappears at 1× is wasted, and detail that turns to noise at 1× hurts the read: test with `contact` at 1× and with `--gray`. When the project's references are rich (a dense pixel game, a painted one), compare a contact sheet with them side by side. If one tier is missing, add that tier; do not change the theme.
+
+## 7. Ideation between looks
 
 Only when the user asks to explore ("let's brainstorm", "show me variations"). Draft two or three looks as `src/drafts/<draft>.ts` with a sheet `sheets/drafts/<draft>.ts` (`npm run new-asset -- <project> drafts/<draft> --engine volume`), export them as mockups (`npm run export -- <project> drafts/<draft> --mockup`, written to `review/mockups/`, never to `assets/`), and put them side by side in contact sheets. Formalize `STYLE.md` and `src/theme.ts` only after the user chooses, then delete `src/drafts/` and `sheets/drafts/`. Without a request for it, go straight to the brief.
 
-## 7. Changing the look later
+## 8. Changing the look later
 
 Change tokens in `src/theme.ts` (and the notes in `STYLE.md`), never an asset. A theme edit makes every sheet stale, so export everything (`npm run export -- <project> --changed` exports them all) and compare a few assets before and after with `contact --with`. A change to the space profile or the character height also changes sizes: update the reference sizes, then check every kit piece against the figure.
 
@@ -136,6 +159,7 @@ Change tokens in `src/theme.ts` (and the notes in `STYLE.md`), never an asset. A
 3. `contact --gray` shows the value structure, and every row of the prop shows the light on the same side.
 4. The reference sizes in `STYLE.md` match `src/space.ts`.
 5. The user has seen the probes.
+6. Each asset has the tiers of detail it needs at 1× (section 6), checked in a contact sheet at 1× and with `--gray`.
 
 ## Reporting
 
