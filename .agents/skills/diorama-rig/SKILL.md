@@ -8,7 +8,8 @@ description: Create animated 2.5D characters and creatures with `@core/rig` in D
 The engine already does the mechanics:
 - skeletons as data, IK with exact bone lengths;
 - gaits with planted feet and an exported ground speed, attack beats;
-- the sheet layout, and a motion check on every export.
+- the sheet layout, and a motion check on every export;
+- how a hand holds an item: the grip in the palm, the second hand on a two-handed item, the wrist's limits, and six grip checks on every export.
 
 Your job is what it cannot decide: the body plan, the timing, and an art skin that clears the quality bar. Read `diorama` (production) and `diorama-volume` (2.5D) first, and `diorama-style` when the project has no look yet.
 
@@ -21,6 +22,7 @@ Your job is what it cannot decide: the body plan, the timing, and an art skin th
 | defineCharacter, writing a skin, sockets, sorting rules, cells, pivot | [guide 03](../../../docs/guides/rig/03-skins-and-character-assets.md) |
 | What the exported files promise to games and the playground (kinds, events, sockets, root motion, playing rules) | [guide 04](../../../docs/guides/rig/04-atlas-contract.md) |
 | Equipment as reusable parts; outfits and variants; materials by role; what a character holds | [guide 05](../../../docs/guides/rig/05-gear-and-outfits.md) and the `diorama-kits` skill |
+| Items in the hands: where a held item sits in the palm, how a fist closes on it (`PartContext.grip`), two-handed items, the wrist's limits, letting go, the grip checks and how to fix each | [guide 06](../../../docs/guides/rig/06-holding-items.md) |
 | Exact signatures | [rig API](../../../docs/api/rig.md), [volume API](../../../docs/api/volume.md) |
 | Timing: anticipation, holds, overshoot, smears, loops | [motion reference](../diorama-review/references/motion.md) |
 | The finish every skin must reach | [quality bar](../diorama-review/references/quality-bar.md) |
@@ -47,8 +49,9 @@ Your job is what it cannot decide: the body plan, the timing, and an art skin th
    - bands with `visibleArc` / `bandOnEllipsoid`;
    - one-sided parts sorted by depth;
    - effects through `custom`, started at the clip's events, and cued from the character with `effects` (volume guide 06 §1.1);
-   - sockets declared for everything a game attaches to (a hand, a tool tip, a mouth).
-5. **Export every clip and check** (gates below). Compare it side by side with a finished character of the project (`npm run contact -- <a.png> --with <b.png>`), and play it in the viewer's Playground.
+   - sockets declared for everything a game attaches to (a hand, a tool tip, a mouth);
+   - held items declare a `Hold`, are placed with `held(..., { hold })` and listed in the catalog with `wield.held`, and the hand parts close a fist on `ctx.grip` (guide 06).
+5. **Export every clip and check** (gates below). For a character that holds something, `inspect` also prints the `grips:` line (guide 06 §6). Compare it side by side with a finished character of the project (`npm run contact -- <a.png> --with <b.png>`), and play it in the viewer's Playground.
 6. **Iterate on what the review found.** Usual fixes:
    - a face hidden by a hat or helm;
    - a shield, apron or bag showing through the body when it turns;
@@ -69,6 +72,9 @@ Reject or rewrite character code that:
 - Leaves a clip without a meaningful `kind` (a generic `action` cannot be bound to a control), an attack without `hit`, a skill without `cast`/`release`, or a death without `hold`.
 - Repeats skeleton, cell, pivot or skin in every clip file instead of one `defineCharacter`; names a clip key differently from its file.
 - Builds trunk parts along world up, so they stand upright when the body lies down in a death.
+- Places a held item at the wrist (a `held` call without its `hold`), draws its handle anywhere but round the `grip` that call returns, or lists a held part in the catalog without `wield.held` or `wield.grip`, so its hands stay open and unchecked.
+- Draws an open hand while `ctx.grip` is set, closes a fist at the wrist instead of on `grip.at`, changes what an empty hand draws, or mirrors a hand to the other side to hold an item (the same hand holds it in all 8 facings).
+- Solves a second hand's IK inside a skin, or sets an item's angle in a clip without regard for the wrist's limits (flexion 80°, extension 70°, radial deviation 20°, ulnar deviation 30°; keep the handle about square to the forearm).
 - Moves the body across the cell during an action instead of declaring `travel` (root motion).
 - Uses different pivots or cell sizes between clips of the same character.
 - Mirrors facings of an asymmetric character, or builds in world coordinates instead of pose frames.
@@ -88,12 +94,16 @@ Reject or rewrite character code that:
    - For deaths, check that the last frame lies flat in every row.
    - For skills, check that the effect starts at `release` from its socket.
    - For other actions (a gather, a use, an emote), check the pose reads in every row and the event sits on the frame the game reacts on.
-5. **Consistency:** same camera, contour, scale and finish as the project's other characters.
+5. **Hands on items** (characters that hold something):
+   - `inspect` prints `grips: clean`, or the report says why each finding does not apply (guide 06 §6 lists the cause and the fix of each check).
+   - Zoomed crops of the hand in S, SE, E and N (`npm run contact -- <sheet.png> --rows S,SE,E,N --frames <n> --zoom 4`): the handle runs through the fist with no gap, the fingers lie over it, and the hand reads apart from the sleeve and the item.
+   - An empty hand draws what it drew before: compare an unarmed character's sheets before and after a change to a hand part.
+6. **Consistency:** same camera, contour, scale and finish as the project's other characters.
 
 ## Reporting
 
 Report:
 - the skeleton and clips made, and the gait numbers you changed;
 - the detail tiers of the skin;
-- each gate with its result;
+- each gate with its result, and for a character with items the `grips:` line of each armed sheet (errors, warnings, notes);
 - what still needs judging in motion (in the game, at speed).

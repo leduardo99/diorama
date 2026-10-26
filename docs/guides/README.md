@@ -28,6 +28,7 @@ Reference: [volume](../api/volume.md), and [core](../api/core.md) for the HUD he
 | [03 Skins and character assets](rig/03-skins-and-character-assets.md) | declare a character with `defineCharacter`, draw its skin, sockets, cells and pivot |
 | [04 The atlas contract](rig/04-atlas-contract.md) | what a game or the viewer's Playground can rely on in the exported files, and the playing rules |
 | [05 Gear and outfits](rig/05-gear-and-outfits.md) | build equipment (wearables, carried and held items, effects) as reusable parts and dress characters with them |
+| [06 Holding items](rig/06-holding-items.md) | make hands hold what a character holds: the item in the palm, a fist that closes on it, two-handed items, the wrist's limits and the grip checks |
 
 Reference: [rig](../api/rig.md).
 

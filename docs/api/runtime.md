@@ -76,7 +76,9 @@ Pure TypeScript with no DOM and no dependencies, shared by games and the viewer:
   - [`AtlasFrame`](#atlasframe)
   - [`AtlasMeta`](#atlasmeta)
   - [`AtlasSockets`](#atlassockets)
+  - [`ClipGrips`](#clipgrips)
   - [`ClipMotion`](#clipmotion)
+  - [`GripMeasure`](#gripmeasure)
   - [`Rect`](#rect)
   - [`Vec2`](#vec2)
   - [`CharacterManifest`](#charactermanifest)
@@ -815,6 +817,8 @@ interface AtlasData {
   travelUnits?: string;
   /** The export's own check of a character clip (bone drift, foot slide, loop gap, warnings): not needed to play it. */
   motion?: ClipMotion;
+  /** The export's check of how a character's hands hold what it holds, for a character holding an item that says how it is held: not needed to play it. */
+  grips?: ClipGrips;
   sockets?: AtlasSockets;
   /** The character's manifest on a character sheet; on a gear item only the id of the character it is worn by. */
   character?: string | CharacterManifest;
@@ -964,6 +968,24 @@ interface AtlasSockets {
 }
 ```
 
+### `ClipGrips`
+
+What the export measured on how a character's hands hold what it holds (`@core/rig` `checkGrips`): ratios of the hand, the arm and a palm.
+
+```ts
+interface ClipGrips {
+  gripGap: GripMeasure | null;
+  openHandHolding: GripMeasure | null;
+  wristLimit: GripMeasure | null;
+  reachStretch: GripMeasure | null;
+  gripDrift: GripMeasure | null;
+  handleTooShort: GripMeasure | null;
+  errors: string[];
+  warnings: string[];
+  notes: string[];
+}
+```
+
 ### `ClipMotion`
 
 What the export measured on a character clip (`@core/rig` `checkClip`), in world units.
@@ -976,6 +998,22 @@ interface ClipMotion {
   lowestJoint: number;
   loopGap: number;
   warnings: string[];
+}
+```
+
+### `GripMeasure`
+
+One grip check's worst value over a sheet's facings and frames (`@core/rig` `GripMeasure`).
+
+```ts
+interface GripMeasure {
+  worst: number;
+  /** The frame it is in, `<DIR>_<n>` as in `sockets`. */
+  frame: string;
+  hand: "right" | "left";
+  /** Frames past the check's limit, of those measured. */
+  failing: number;
+  of: number;
 }
 ```
 

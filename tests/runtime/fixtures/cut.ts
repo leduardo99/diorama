@@ -4,7 +4,8 @@
  * examples/soulkeeper/assets/ (export the sample first: `npm run export -- examples/soulkeeper`), less what the tests do not read,
  * so the files stay small:
  * - the cells' rects (`frames`), except on the sheets in `FRAMES`, whose cells the tests read;
- * - a clip's `motion` (`meta.data.motion`) and the space profile that scenery, scenes and effects repeat (`meta.data.space`).
+ * - a clip's own checks (`meta.data.motion`, and `meta.data.grips` for a character holding items) and the space profile that
+ *   scenery, scenes and effects repeat (`meta.data.space`).
  *
  * To add a fixture, copy the exported JSON to its path here and run this. The conformance traces may then need
  * `npx tsx tests/runtime/conformance.test.ts --update`.
@@ -31,6 +32,7 @@ function cut(path: string, sheet: Sheet): string {
   const data = sheet.meta.data;
   if (data) {
     delete data.motion;
+    delete data.grips;
     delete data.space;
   }
   if (!FRAMES.has(path)) sheet.frames = {};

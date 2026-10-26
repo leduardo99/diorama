@@ -41,6 +41,7 @@ Every sheet's JSON repeats the whole character manifest, so reading any one shee
 | `travel` | Root motion of an action that covers ground: world units along the facing from the start at each frame, then at the end (frames + 1 values). It is negative for movement backwards (a backstep, a knock-back). Move the sprite along the facing by the difference between frames. Absent for clips in place. |
 | `sockets` | `{ names, frames }`. `frames["<DIR>_<n>"]` holds one `[x, y, d]` per name: x, y in logical px from the cell's top-left corner; d is depth relative to the body's center (positive = in front of the body: draw the effect over the sprite). `head` and `center` are always present. |
 | `motion` | The export's own check: bone drift, foot slide, loop gap and warnings. Not needed to play the clip. |
+| `grips` | For a character holding an item that says how it is held: the export's check of its hands (`checkGrips` of `@core/rig`; what each check means and how to fix it is in [guide 06](06-holding-items.md)). `gripGap`, `openHandHolding`, `wristLimit`, `reachStretch`, `gripDrift` and `handleTooShort`, each the worst value over the sheet's facings and frames with its `frame`, `hand`, `failing` and `of`, then `errors`, `warnings` and `notes`. Absent otherwise. Not needed to play the clip. |
 | `character` | The manifest (§4). |
 
 ## 4. The manifest (`meta.data.character`)

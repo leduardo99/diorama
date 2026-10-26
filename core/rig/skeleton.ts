@@ -61,6 +61,11 @@ export interface ArmSpec {
   side: -1 | 1;
   /** Leg whose phase drives this arm's swing while walking (usually the opposite leg). */
   swingWith?: string;
+  /**
+   * Length of the hand, from the wrist to the fingertips: a held item's grip sits in its palm, a
+   * fraction of it past the wrist (`HAND.centroid`). Default a tenth of the skeleton's height (`HAND.length`).
+   */
+  hand?: number;
 }
 
 /** A tail (or any loose chain): segments from a root, hanging back and down at rest. */
@@ -124,6 +129,7 @@ export function defineSkeleton(spec: SkeletonSpec): SkeletonSpec {
     unique(arm.name);
     if (!trunk.has(arm.shoulder)) throw new Error(`skeleton "${spec.name}": arm "${arm.name}" hangs from unknown joint "${arm.shoulder}"`);
     if (arm.swingWith && !spec.legs.some(l => l.name === arm.swingWith)) throw new Error(`skeleton "${spec.name}": arm "${arm.name}" swings with unknown leg "${arm.swingWith}"`);
+    if (arm.hand !== undefined && !(Number.isFinite(arm.hand) && arm.hand > 0)) throw new Error(`skeleton "${spec.name}": arm "${arm.name}" hand length must be a positive number, got ${arm.hand}`);
   }
   for (const tail of spec.tails ?? []) {
     unique(tail.name);

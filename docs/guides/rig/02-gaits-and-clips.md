@@ -44,7 +44,7 @@ One gait has one `stride`, `duty` and `cadence` for every leg, because planted f
 - A custom idle (`defineClip({ ..., loop: true })`) may add taps, twitches and glows. Every term must close: sine terms with whole cycles per loop, and `bell` windows that end before t = 1 (a window from 0.9 to 1.02 leaves a jump at the seam).
 - `hit(skeleton, { strength, seconds })` and `death(skeleton)` work for any body:
   - `hit`: a snap back in a frame or two, a short freeze on the pose (hit-stop, what sells the impact), then the recovery. It has a `cancel` event, `extra.hurt` (0..1) for the skin, and a knock-back by root motion (negative `travel`). `strength` is 1 by default (0.6 a graze, 2 a heavy blow); `knockback` sets the distance (0 to stay put).
-  - `death`: held, with a `land` event and `extra.dead` (0 alive → 1 dead) for dimming eyes and glows.
+  - `death`: held, with a `land` event, `extra.dead` (0 alive → 1 dead) for dimming eyes and glows, and `extra.weaponRelease` / `offWeaponRelease` (0 held → 1 let go): the hands drop what they hold as the arms fall (guide 06).
     - Bipeds topple face down, the legs fold under the hips and the arms settle along the trunk.
     - Bodies with more legs collapse onto the belly: the head slumps to one side, the front legs splay and tails go limp.
   - Wrap a preset to add a character's own channels (a weapon falling, ears folding): `defineClip({ ...base, drive: t => ({ ...base.drive(t), extra: { ...} }) })`.

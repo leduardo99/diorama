@@ -262,13 +262,7 @@ const SAMPLE_NAMES = [
  * Names that may stay where they are, one entry per file and the reason. An entry that no longer matches anything fails,
  * so an exception cannot outlive the thing it excuses.
  */
-const SAMPLE_NAMES_ALLOWED: { file: string; names: RegExp[]; why: string }[] = [
-  {
-    file: 'docs/guides/rig/05-gear-and-outfits.md',
-    names: [/\bsoulkeeper\b/i, /\bmalvek\b/i, /\bsoul[- ]fire\b/i],
-    why: 'The holding and grip guide is being rewritten on another branch (feat/weapon-grip); this file is left to it. Remove the entry when that lands.',
-  },
-];
+const SAMPLE_NAMES_ALLOWED: { file: string; names: RegExp[]; why: string }[] = [];
 
 const usedExceptions = new Set<(typeof SAMPLE_NAMES_ALLOWED)[number]>();
 const scripts = new Set(Object.keys((JSON.parse(readFileSync(resolve('package.json'), 'utf8')) as { scripts: Record<string, string> }).scripts));

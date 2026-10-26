@@ -8,7 +8,7 @@
  * the screen. The contract is docs/guides/rig/04-atlas-contract.md.
  */
 
-export type { Atlas, AtlasData, AtlasEvent, AtlasFrame, AtlasMeta, AtlasSockets, ClipMotion, Rect, Vec2 } from './contract/atlas.js';
+export type { Atlas, AtlasData, AtlasEvent, AtlasFrame, AtlasMeta, AtlasSockets, ClipGrips, ClipMotion, GripMeasure, Rect, Vec2 } from './contract/atlas.js';
 export type { CharacterManifest, EffectCue, ManifestClip, WieldHand } from './contract/character.js';
 export type { EffectMeta } from './contract/effect.js';
 export type { ItemMeta } from './contract/item.js';

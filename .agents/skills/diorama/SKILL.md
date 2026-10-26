@@ -68,6 +68,7 @@ Read the guide for a module before using it (the [guides index](../../../docs/gu
 | Characters and creatures: skeletons, gaits, clips, skins (`@core/rig`) | [rig 01](../../../docs/guides/rig/01-skeletons-and-creatures.md), [02](../../../docs/guides/rig/02-gaits-and-clips.md), [03](../../../docs/guides/rig/03-skins-and-character-assets.md) and the `diorama-rig` skill | [rig](../../../docs/api/rig.md) |
 | Playing exported characters: manifest, controls, events, sockets (for games and the viewer's Playground) | [rig 04](../../../docs/guides/rig/04-atlas-contract.md) and `diorama-game` | [runtime](../../../docs/api/runtime.md), [phaser](../../../docs/api/phaser.md) |
 | Equipment as parts; outfits and variants | [rig 05](../../../docs/guides/rig/05-gear-and-outfits.md) and `diorama-kits` | [rig](../../../docs/api/rig.md) |
+| Items in the hands: the grip in the palm, a fist that closes on it, two-handed items, the wrist's limits, the grip checks | [rig 06](../../../docs/guides/rig/06-holding-items.md) | [rig](../../../docs/api/rig.md) |
 | The drawing layer under every volume, effect and HUD piece (`@core/draw`) | [draw README](../../../core/draw/README.md) | [draw-geometry](../../../docs/api/draw-geometry.md), [draw-paths](../../../docs/api/draw-paths.md), [draw-styles](../../../docs/api/draw-styles.md), [draw-textures](../../../docs/api/draw-textures.md) |
 | Asset contract, PRNG, noise, colors, sheet packing, interface assets (`@core`) | — | [core](../../../docs/api/core.md) |
 

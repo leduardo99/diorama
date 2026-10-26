@@ -358,8 +358,10 @@ export function dodge(skeleton: SkeletonSpec, options: DodgeOptions = {}): Clip 
 }
 
 /**
- * Death for any skeleton, held on its last frame, with `land` when the body hits the floor and
- * `extra.dead` (0 alive → 1 dead) for the skin to dim eyes or glows.
+ * Death for any skeleton, held on its last frame, with `land` when the body hits the floor,
+ * `extra.dead` (0 alive → 1 dead) for the skin to dim eyes or glows, and `extra.weaponRelease` and
+ * `extra.offWeaponRelease` (0 held → 1 let go): the hands let go of what they hold as the arms drop,
+ * and it settles on the floor (`held`). A death that keeps its weapon in hand sets them to 0.
  * - Bipeds: the knees buckle, the arms fling up, the body topples forward and lands flat, face
  *   down; the legs fold under the hips and the arms settle along the trunk, so nothing stands up
  *   from the lying body.
@@ -416,6 +418,8 @@ export function death(skeleton: SkeletonSpec, seconds = 0.9): Clip {
       const rebound = t > LAND ? 0.04 * bell(clamp01((t - LAND) / 0.25)) : 0;
       const down = clamp01(0.25 * buckle + 0.75 * fall - rebound);
       const dead = smooth(clamp01((t - 0.15) / (LAND + 0.2 - 0.15)));
+      // The hands let go as the arms drop after the fling, and what they held is on the floor when the body lands.
+      const release = smooth(clamp01((t - 0.3) / (LAND + 0.05 - 0.3)));
       if (biped) {
         const pitch = -90 * fall;
         // The solver pitches the trunk after adding offsets, so the shift is given in the pitched
@@ -440,7 +444,7 @@ export function death(skeleton: SkeletonSpec, seconds = 0.9): Clip {
           feet,
           arms,
           tails: Object.fromEntries((skeleton.tails ?? []).map(tl => [tl.name, { lift: -6 * down }])),
-          extra: { dead },
+          extra: { dead, weaponRelease: release, offWeaponRelease: release },
         };
       }
       // Creatures: collapse onto the belly, then the head end slumps a little after the landing.
@@ -468,7 +472,7 @@ export function death(skeleton: SkeletonSpec, seconds = 0.9): Clip {
         twist: 6 * slump,
         roll: 8 * down,
         tails: Object.fromEntries((skeleton.tails ?? []).map(tl => [tl.name, { lift: -12 * limp, curl: 40 * limp, sway: 110 * limp, phase: 3.77 }])),
-        extra: { dead },
+        extra: { dead, weaponRelease: release, offWeaponRelease: release },
       };
     },
   });

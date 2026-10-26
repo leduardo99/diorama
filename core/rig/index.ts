@@ -17,7 +17,7 @@ export { solvePose, partFrame, type Drive, type ArmDrive, type TailDrive, type P
 export { locomotion, idle, defineClip, restFeet, categoryOf, stepEvent, spawnEvent, EVENTS, LOCOMOTION_KINDS, type ActionKind, type Clip, type ClipEvent, type IdleOptions } from './clips.js';
 export { humanoid, quadruped, slash, bite, hit, death, jump, dodge, stepsAlong, type HitOptions, type JumpOptions, type DodgeOptions } from './presets.js';
 export { track, beat, bell, bump, BEAT, linear, smooth, easeOutCubic, easeInCubic, easeOutQuad, type Ease, type Key, type Beat } from './tracks.js';
-export { checkClip, type ClipCheck } from './verify.js';
+export { checkClip, checkGrips, gripSubject, GRIP_TOLERANCE, type ClipCheck, type GripCheck, type GripMeasure, type GripSubject } from './verify.js';
 export {
   defineCharacter,
   defineCharacterAsset,
@@ -53,12 +53,17 @@ export {
   held,
   outfit,
   outfitFromData,
+  outfitHolds,
+  holdPose,
+  holdsMoveArms,
   validateOutfit,
   type GearCatalog,
   type PartInfo,
   type PartKind,
   type WieldInfo,
   type WieldSocket,
+  type WieldHeld,
+  type WieldGrip,
   type PartOption,
   type BaseInfo,
   type OutfitData,
@@ -73,7 +78,32 @@ export {
   type PartContext,
   type OutfitPiece,
   type OutfitSpec,
+  type OutfitHold,
+  type HoldPose,
 } from './gear.js';
+export {
+  HAND,
+  WRIST,
+  HOLD_KINDS,
+  HOLD_DEFAULT,
+  GRIP_SLACK,
+  resolveHold,
+  handSize,
+  palmFrame,
+  palmGrip,
+  heldGrip,
+  curlFor,
+  secondHand,
+  restAxis,
+  type Hold,
+  type HoldKind,
+  type HoldDefaults,
+  type ResolvedHold,
+  type WristAngles,
+  type Palm,
+  type Grip,
+  type SecondHand,
+} from './grip.js';
 export { wieldOf, wieldsOf, checkWield, weaponSockets, type Wielded, type WieldCheck } from './wield.js';
 export { swapCandidates, swapBlocker, swapPiece, equipPart, removePiece, type OutfitEdit, type SwapBlocker } from './outfit-edit.js';
 export { defineGearAsset, type GearAssetOptions } from './gear-asset.js';

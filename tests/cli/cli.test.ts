@@ -523,6 +523,18 @@ export const stripes = defineAsset({
   assert.ok(loopy({ loop: false, groundSpeed: 0, clipKind: 'action', events: [], motion: { loopGap: 0, warnings: [] } }).stdout.includes('hint:'), 'an engine atlas of a forgotten cycle (clipKind action, no events) gets the hint');
   assert.ok(!loopy({ loop: false, groundSpeed: 0, clipKind: 'idle', motion: { loopGap: 0.4, warnings: [] } }).stdout.includes('hint:'), 'an open clip needs no loop hint');
   assert.ok(loopy({ loop: true, motion: { loopGap: null, warnings: [] } }).stdout.includes('motion: clean · loops\n'), 'a null loopGap prints the loop without a gap');
+  // A character holding items carries the grip checks: inspect prints each one's worst value and frame, then the problems.
+  const measure = (worst: number, frame: string, failing = 0) => ({ worst, frame, hand: 'right', failing, of: 64 });
+  const grips = {
+    gripGap: measure(0, 'S_0'), openHandHolding: { ...measure(1, 'S_0', 64), hand: 'left' }, wristLimit: measure(1.4, 'E_3', 8), reachStretch: null, gripDrift: measure(0.02, 'N_1'), handleTooShort: measure(1.32, 'S_0'),
+    errors: ['openHandHolding: the left hand holds "buckler" but is given no grip', 'wristLimit: the right wrist needs radial deviation 28° (limit 20°)'], warnings: [], notes: ['reachStretch: the left hand slid along its grip\'s range'],
+  };
+  const gripped = loopy({ loop: true, motion: { loopGap: 0, warnings: [] }, grips });
+  assert.ok(gripped.stdout.includes('grips: 2 error(s), 1 note(s)'), `inspect must count the grip problems: ${gripped.stdout}`);
+  assert.ok(gripped.stdout.includes('gap 0 (right, S_0) · open 1 (left, S_0) · wrist 1.4 (right, E_3) · reach - · drift 0.02 (right, N_1) · handle 1.32 (right, S_0)'), `inspect must print each grip check's worst value and frame: ${gripped.stdout}`);
+  assert.ok(gripped.stdout.includes('✖ grips: openHandHolding: the left hand holds "buckler"') && gripped.stdout.includes('· grips: reachStretch: the left hand slid'), 'inspect must print the grip errors and notes');
+  assert.deepEqual(JSON.parse(run(`npm run --silent inspect -- projects/${project}/review/temp/loopy.png --json`).stdout).grips, grips, 'inspect --json must carry the grip checks');
+  assert.ok(!loopy({ loop: true, motion: { loopGap: 0, warnings: [] } }).stdout.includes('grips:'), 'a sheet without grip checks prints none');
 
   // Contact: 4 facings (S, W, N, E) x 4 frames of 224x192 cells. 2x by default, subsets in the name.
   const sheet = (args: string) => JSON.parse(run(`npm run --silent contact -- ${pupPng} ${args} --json`).stdout);

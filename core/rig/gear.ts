@@ -7,6 +7,9 @@
  * - `slotFrame`: where a part sits (head, chest, pelvis, shoulders, forearms, hands, shins,
  *   back), as a right-handed frame plus the side (-1 left, 1 right) for mirrored parts;
  * - `held`: a weapon's grip and direction from the hand and the clip's `weaponYaw` / `weaponPitch`;
+ *   with a `hold` (see `./grip.ts`), its grip sits in the palm of the hand, not at the wrist;
+ * - grips (`Grip`): where each hand closes on what it holds, handed to the hand's parts
+ *   (`PartContext.grip`), and the other hand moved onto a two-handed item's second grip;
  * - materials by role (`metal`, `cloth`, `bone`, ...), so one helm can be iron on one character
  *   and bronze on another;
  * - `outfit`: a skin assembled from a list of parts, the data-driven way to make variants;
@@ -21,6 +24,7 @@ import type { Placed, VolumeStyle } from '../volume/volume.js';
 import { add3, cross3, dot3, len3, lerp3, norm3, scale3, sub3, vec3, type Vec3 } from '../volume/vec3.js';
 import type { CharacterClip, Skin, SkinKit } from './character.js';
 import type { Camera } from '../volume/camera.js';
+import { HAND, handSize, heldGrip, palmFrame, resolveHold, restAxis, secondHand, type Grip, type Hold, type Palm, type ResolvedHold, type SecondHand } from './grip.js';
 import { partFrame, type Pose } from './pose.js';
 import type { SkeletonSpec } from './skeleton.js';
 
@@ -172,7 +176,10 @@ export function slotFrame(pose: Pose, skeleton: SkeletonSpec, slot: Slot, side: 
 
 /** Options of `held`. */
 export interface HeldOptions {
-  /** Default direction in the creature's frame when the clip sets no weapon angle. Default [0.55, 0.3, -0.75] (low and forward). */
+  /**
+   * Default direction in the creature's frame when the clip sets no weapon angle. Default [0.55, 0.3, -0.75] (low and forward).
+   * With a `hold`, the item turns from it, as little as it must, until the wrist holds it comfortably (`restAxis`).
+   */
   rest?: [number, number, number];
   /**
    * The clip channels it reads: `extra.<channel>Yaw` and `<channel>Pitch`. Default 'weapon', the main
@@ -190,10 +197,20 @@ export interface HeldOptions {
    * floor instead of sinking. Default 0.
    */
   butt?: number;
+  /**
+   * How the hand holds it (`Hold`: its kind, its handle and where on the handle the hands close).
+   * With it the grip is in the palm of the hand (`palmFrame`), not at the wrist: the item is placed so
+   * the point of its handle at `hold.grip` is the middle of the fist, and the part draws its handle
+   * round `grip` (from `handle.from` to `handle.to`). Give the same call as the part's
+   * `PartInfo.wield.held`, so its hands close on it. Without it the grip is the wrist joint, as
+   * before holds existed.
+   */
+  hold?: Hold;
 }
 
 /** A held item's grip, direction and ends. */
 export interface Held {
+  /** Where the hand holds it: the middle of the fist with a `hold`, the wrist joint without. */
   grip: Vec3;
   dir: Vec3;
   tip: Vec3;
@@ -206,6 +223,19 @@ export interface Held {
    * (radians in the creature's frame, 0 = forward).
    */
   frame: Frame3;
+  /** With a `hold`: the hold as resolved for the skeleton (every default filled in, lengths in world units). */
+  hold?: ResolvedHold;
+  /** With a `hold`: the holding hand's palm frame, whose origin is `grip`. */
+  palm?: Palm;
+  /** With a `hold`: the ends of the handle on the item's axis, its butt end (fraction 0) and its head or guard end (1). */
+  handle?: { from: Vec3; to: Vec3 };
+  /** With a `hold` that has a second grip: where the other hand may close, from one end of its range to the other (one point for a fixed grip). */
+  second?: { from: Vec3; to: Vec3 };
+  /**
+   * With a `hold`, when the clip lets go (`extra.<channel>Release`): how far the hand has let go of the item, 0..1.
+   * The item leaves the palm and settles on the floor; the hand's fingers open (`heldGrip`). Absent while held.
+   */
+  released?: number;
 }
 
 /** The clip channel of an item held on `side`: 'weapon' for the main (right) hand, 'offWeapon' for the left. */
@@ -215,38 +245,79 @@ export const weaponChannel = (side: number): string => (side < 0 ? 'offWeapon' :
  * Grip and direction of an item held in a hand, read from the clip's `extra.weaponYaw` and
  * `extra.weaponPitch` (radians, in the creature's frame; `offWeaponYaw` / `offWeaponPitch` with
  * `channel: 'offWeapon'`) or the `rest` direction. When the body
- * lies down the item settles along the floor beside the arm, and the tip never goes below `floor`.
- * Use the same call in the skin and in the character's sockets, so the drawing and the socket agree.
+ * lies down an item without a `hold` settles along the floor beside the arm; one with a `hold` stays
+ * in the hand until the clip lets it go (`extra.weaponRelease`, 0 held → 1 let go, `offWeaponRelease`
+ * for the off hand), as the `death` preset does. The tip never goes below `floor`.
+ * With `hold` the grip is the palm centroid of the hand (see `HeldOptions.hold`), and the result
+ * carries the resolved hold, the palm frame, the handle's ends and the second grip's range.
+ * Use the same call in the skin, in the character's sockets and in the part's `PartInfo.wield.held`,
+ * so the drawing, the sockets and the hands agree.
  */
 export function held(pose: Pose, skeleton: SkeletonSpec, hand: string, o: HeldOptions): Held {
   const f = pose.frame;
-  const grip = pose.joints[`${hand}.hand`];
+  const wrist = pose.joints[`${hand}.hand`];
   const channel = o.channel ?? 'weapon';
   const yaw = pose.extra[`${channel}Yaw`];
   const r = o.rest ?? [0.55, 0.3, -0.75];
+  const hold = o.hold ? resolveHold(o.hold, skeleton) : undefined;
   let dir: Vec3;
-  if (yaw === undefined) dir = norm3(f.dir(r[0], r[1], r[2]));
-  else {
+  if (yaw === undefined) {
+    dir = norm3(f.dir(r[0], r[1], r[2]));
+    // With a hold, the engine chose this direction, not a clip: the hand turns the item to where it holds it comfortably.
+    if (hold) dir = restAxis(pose, skeleton, hand, dir, hold);
+  } else {
     const pitch = pose.extra[`${channel}Pitch`] ?? 0;
     dir = norm3(f.dir(Math.cos(yaw) * Math.cos(pitch), Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch)));
   }
   const body = bodyFrames(pose, skeleton);
-  if (body.lie > 0) {
-    const flat = vec3(body.up.x, body.up.y, 0);
-    const ahead = Math.hypot(flat.x, flat.y) > 1e-3 ? norm3(flat) : f.forward;
+  // Lying down, the item settles along the floor beside the arm, ahead of the body. A held item (a hold) does so only
+  // when the clip lets it go, below; until then it stays where the hand turns it, lying or not.
+  const ahead = Math.hypot(body.up.x, body.up.y) > 1e-3 ? norm3(vec3(body.up.x, body.up.y, 0)) : f.forward;
+  const beside = norm3(add3(ahead, scale3(f.right, 0.3)));
+  if (body.lie > 0 && !hold) {
     const k = body.lie * body.lie * (3 - 2 * body.lie);
-    dir = norm3(lerp3(dir, norm3(add3(ahead, scale3(f.right, 0.3))), k));
+    dir = norm3(lerp3(dir, beside, k));
   }
   const floor = o.floor ?? 1;
-  if (grip.z + dir.z * o.length < floor) {
-    const z = Math.max(-1, Math.min(1, (floor - grip.z) / o.length));
+  const liftOffFloor = (from: Vec3) => {
+    if (from.z + dir.z * o.length >= floor) return false;
+    const z = Math.max(-1, Math.min(1, (floor - from.z) / o.length));
     const h = Math.hypot(dir.x, dir.y) || 1;
     const s = Math.sqrt(1 - z * z) / h;
     dir = vec3(dir.x * s, dir.y * s, z);
+    return true;
+  };
+  let grip = wrist;
+  let palm: Palm | undefined;
+  let released = 0;
+  if (!hold) liftOffFloor(grip);
+  else {
+    // The palm turns with the handle, and the handle may tip up off the floor from where the palm is: twice settles it.
+    // A fist lying on the floor keeps the handle its radius and the fingers round it above the floor.
+    const arm = (skeleton.arms ?? []).find(a => a.name === hand);
+    const lowest = arm ? hold.handle.radius + HAND.wrap * handSize(skeleton, arm).length : undefined;
+    const palmFor = () => palmFrame(pose, skeleton, hand, { axis: hold.reverse ? scale3(dir, -1) : dir, angle: hold.angle, lowest });
+    palm = palmFor();
+    for (let k = 0; k < 2 && liftOffFloor(palm.at); k++) palm = palmFor();
+    grip = palm.at;
+    // The clip lets go (a death): the item leaves the palm and settles on the floor below it, beside the arm.
+    released = Math.max(0, Math.min(1, pose.extra[`${channel}Release`] ?? 0));
+    if (released > 0) {
+      dir = norm3(lerp3(dir, vec3(beside.x, beside.y, 0), released));
+      grip = lerp3(grip, vec3(grip.x, grip.y, hold.handle.radius), released);
+    }
   }
   const buttLength = o.butt ? (dir.z > 0.02 ? Math.min(o.butt, Math.max(0, (grip.z - floor) / dir.z)) : o.butt) : 0;
   const hint = Math.abs(dir.z) > 0.9 ? f.forward : f.up;
-  return { grip, dir, tip: add3(grip, scale3(dir, o.length)), butt: sub3(grip, scale3(dir, buttLength)), frame: partFrame(grip, dir, hint) };
+  const out: Held = { grip, dir, tip: add3(grip, scale3(dir, o.length)), butt: sub3(grip, scale3(dir, buttLength)), frame: partFrame(grip, dir, hint) };
+  if (!hold || !palm) return out;
+  const along = (fraction: number) => add3(grip, scale3(dir, (fraction - hold.grip) * hold.handle.length));
+  out.hold = hold;
+  out.palm = palm;
+  if (released > 0) out.released = released;
+  out.handle = { from: along(0), to: along(1) };
+  if (hold.second) out.second = { from: along(hold.second[0]), to: along(hold.second[1]) };
+  return out;
 }
 
 /**
@@ -268,6 +339,13 @@ export interface PartContext {
   materials: MaterialSet;
   /** The placed volume of the part this one rests on (`on`), if any. */
   host?: Placed;
+  /**
+   * For a part in a hand slot whose hand holds something: where the hand closes on it (the held
+   * part's `wield.held` or `wield.grip`; for the other hand of a two-handed item, its second grip),
+   * so a hand part draws a fist round the handle, curled by `grip.curl`. Undefined for an empty
+   * hand, which stays as it is.
+   */
+  grip?: Grip;
 }
 
 /**
@@ -293,29 +371,105 @@ export interface OutfitPiece {
   hidden?: boolean;
 }
 
+/**
+ * Something an outfit holds in a hand, so the hands close on it (`PartContext.grip`) and, for an item
+ * held in both, the other hand reaches its second grip. `outfitFromData` makes them from the catalog
+ * (`outfitHolds`); a code outfit lists them in `OutfitSpec.holds`.
+ */
+export interface OutfitHold {
+  /** The hand that holds it: -1 left, 1 right. */
+  side: -1 | 1;
+  /** Hands it takes: 2 puts the other hand on its second grip (`secondHand`). Default 1. */
+  hands?: 1 | 2;
+  /** Where it is in a pose: the part's own `held` call, with its `hold`. */
+  held?: (pose: Pose, skeleton: SkeletonSpec) => Held;
+  /**
+   * Where the hands close on it, when `held` cannot say (a shield strapped to the forearm, whose strap
+   * is wherever the hand is: `palmGrip`): the holding hand's grip, then the other hand's for an item
+   * held in both. It overrides what `held` gives the hands.
+   */
+  grip?: (pose: Pose, skeleton: SkeletonSpec) => (Grip | undefined)[];
+}
+
+/** What an outfit's holds make of one pose (`holdPose`). */
+export interface HoldPose {
+  /** The pose, with the other arm on the second grip of an item held in both hands (the pose given when nothing moved). */
+  pose: Pose;
+  /** Where each hand that holds something closes on it. */
+  grips: { side: -1 | 1; grip: Grip }[];
+  /** What the second hand of each two-handed item did: where it closes, how far it slid, whether it let go. */
+  second: SecondHand[];
+}
+
+/**
+ * The hands of a pose on what an outfit holds: each holding hand's grip (from the hold's `grip`, else
+ * its `held` with a `hold`) and, for an item held in both hands, the other arm moved onto its second
+ * grip (`secondHand`). The outfit skin draws with it; `defineCharacter` measures the sockets on the
+ * same pose, so a socket on the other hand follows it.
+ */
+export function holdPose(pose: Pose, skeleton: SkeletonSpec, holds: readonly OutfitHold[]): HoldPose {
+  let out = pose;
+  const grips = new Map<-1 | 1, Grip>();
+  const second: SecondHand[] = [];
+  for (const h of holds) {
+    const item = h.held?.(out, skeleton);
+    const given = h.grip?.(out, skeleton);
+    const main = given?.[0] ?? (item ? heldGrip(item) : undefined);
+    if (main) grips.set(h.side, main);
+    if ((h.hands ?? 1) !== 2) continue;
+    const moved = item ? secondHand(out, skeleton, item, h.side) : undefined;
+    if (moved) {
+      out = moved.pose;
+      second.push(moved);
+    }
+    const other = given?.[1] ?? moved?.grip;
+    if (other) grips.set(h.side === 1 ? -1 : 1, other);
+  }
+  return { pose: out, grips: [...grips].map(([side, grip]) => ({ side, grip })), second };
+}
+
+/** Holds that move an arm (an item in both hands placed by `held`): the pose then changes, and what reads it must read the moved one. */
+export const holdsMoveArms = (holds: readonly OutfitHold[]): boolean => holds.some(h => (h.hands ?? 1) === 2 && h.held !== undefined);
+
 /** A skin assembled from parts: an optional base skin (the body), then the pieces in order. */
 export interface OutfitSpec {
   /** The body under the gear. It receives the outfit's materials as a fourth argument (a plain `Skin` works too). */
   base?: (object: StageObject, pose: Pose, kit: SkinKit, materials: MaterialSet) => void;
   materials: MaterialSet;
   pieces: OutfitPiece[];
+  /**
+   * What the outfit holds, so the pieces in a holding hand's slot receive its grip (`PartContext.grip`)
+   * and an item held in both hands brings the other hand to its second grip. Without it no hand
+   * receives a grip and the pose is drawn as solved.
+   */
+  holds?: OutfitHold[];
 }
 
 /**
  * Assembles a skin from parts, the data-driven way to dress characters and make variants: swap a
  * piece, change a side, give a piece other materials. Pieces are drawn in order after the base;
- * `on` hands a piece the volume of an earlier one.
+ * `on` hands a piece the volume of an earlier one. With `holds`, the pieces in a hand slot receive
+ * where that hand closes on what it holds, and an item held in both hands moves the other arm onto
+ * its second grip before anything is drawn (the base, every piece and `kit.poseAt` see that pose).
  */
 export function outfit(spec: OutfitSpec): Skin {
-  return (object, pose, kit) => {
+  const holds = spec.holds?.length ? spec.holds : undefined;
+  const moves = holds ? holdsMoveArms(holds) : false;
+  return (object, solved, solvedKit) => {
+    const state = holds ? holdPose(solved, solvedKit.skeleton, holds) : undefined;
+    const pose = state?.pose ?? solved;
+    const kit: SkinKit = moves ? { ...solvedKit, poseAt: t => holdPose(solvedKit.poseAt(t), solvedKit.skeleton, holds!).pose } : solvedKit;
     spec.base?.(object, pose, kit, spec.materials);
     const body = bodyFrames(pose, kit.skeleton);
     const placed = new Map<string, Placed>();
     for (const piece of spec.pieces) {
       const host = piece.on ? placed.get(piece.on) : undefined;
       if (piece.on && !host) throw new Error(`outfit: piece "${piece.id ?? piece.slot}" rests on "${piece.on}", which was not placed before it`);
-      const at = slotFrame(pose, kit.skeleton, piece.slot, piece.side ?? 1, body);
-      const place = () => piece.part({ object, pose, kit, body, at, materials: { ...spec.materials, ...piece.materials }, host }, piece.options ?? {});
+      const side = piece.side ?? 1;
+      const at = slotFrame(pose, kit.skeleton, piece.slot, side, body);
+      const grip = piece.slot === 'hand' ? state?.grips.find(g => g.side === side)?.grip : undefined;
+      const ctx: PartContext = { object, pose, kit, body, at, materials: { ...spec.materials, ...piece.materials }, host, ...(grip ? { grip } : {}) };
+      const place = () => piece.part(ctx, piece.options ?? {});
       const result = piece.hidden ? object.hidden(place) : place();
       if (piece.id && result) placed.set(piece.id, result);
     }
@@ -380,10 +534,37 @@ export interface WieldInfo {
    * sockets (`off-<name>` in the off hand), so they follow the weapon it holds.
    */
   sockets?: Record<string, WieldSocket>;
+  /**
+   * How the hands hold it: its hold kind, its handle (length, radius) and where on the handle the
+   * hands close (`Hold`), for a tool that wants to know it without placing the item. The engine does
+   * not read it: the hands and the checks take the hold from the item `held` returns, so pass the same
+   * hold to the part's `held` call and give that call as `held` below.
+   */
+  hold?: Hold;
+  /**
+   * Where it is in a pose, from the pose, the piece's side and options: the same `held` call (with its
+   * `hold`) the part draws with. `outfitFromData` hands the holding hand's parts their grip from it
+   * (`PartContext.grip`) and, when the item takes both hands (`hands: 2`), moves the other hand onto
+   * its second grip. Without it (and without `grip`) the hands stay as they are.
+   */
+  held?: WieldHeld;
+  /**
+   * Where the hands close on it, when `held` cannot say: an item placed on the forearm, such as a
+   * strapped shield, whose strap is wherever the hand is (`palmGrip`, with the board's outward normal as
+   * `behind`). The holding hand's grip first, then, for an item held in both hands, the other hand's.
+   * It overrides what `held` gives the hands.
+   */
+  grip?: WieldGrip;
 }
 
 /** A point on a held item (see `WieldInfo.sockets`). */
 export type WieldSocket = (pose: Pose, skeleton: SkeletonSpec, piece: { side: -1 | 1; options: Record<string, unknown> }) => Vec3;
+
+/** Where a held item is in a pose (see `WieldInfo.held`): the part's own `held` call. */
+export type WieldHeld = (pose: Pose, skeleton: SkeletonSpec, piece: { side: -1 | 1; options: Record<string, unknown> }) => Held;
+
+/** Where the hands close on a held item (see `WieldInfo.grip`): the holding hand's grip, then the other hand's for an item held in both. */
+export type WieldGrip = (pose: Pose, skeleton: SkeletonSpec, piece: { side: -1 | 1; options: Record<string, unknown> }) => (Grip | undefined)[];
 
 /** Slots where a part is held in a hand (a sword in the hand, a shield on the forearm). */
 export const isHandSlot = (slot: Slot): boolean => slot === 'hand' || slot === 'forearm';
@@ -503,23 +684,54 @@ export function validateOutfit(data: OutfitData, catalog: GearCatalog): string[]
   return problems;
 }
 
+/** A piece's options with the catalog's defaults for the ones it leaves out. */
+const optionsOf = (info: PartInfo, options: Record<string, unknown> | undefined): Record<string, unknown> => ({ ...Object.fromEntries((info.options ?? []).map(o => [o.key, o.default])), ...options });
+
+/**
+ * What an outfit as data holds, as `outfitFromData` reads it: for each hand, the first held part in its
+ * hand or forearm slot (the one `wieldOf` counts) whose `wield` says where it is (`held`) or where the
+ * hands close on it (`grip`), called with the piece's side and options (the defaults filled in).
+ */
+export function outfitHolds(data: OutfitData, catalog: GearCatalog): OutfitHold[] {
+  const out: OutfitHold[] = [];
+  const sides = new Set<number>();
+  for (const p of data.pieces) {
+    const info = catalog.parts.find(x => x.id === p.part);
+    if (!info?.wield || !isHandSlot(p.slot)) continue;
+    const side = p.side ?? 1;
+    if (sides.has(side)) continue;
+    sides.add(side);
+    const { held: place, grip, hands = 1 } = info.wield;
+    if (!place && !grip) continue;
+    const piece = { side, options: optionsOf(info, p.options) };
+    const hold: OutfitHold = { side, hands };
+    if (place) hold.held = (pose, skeleton) => place(pose, skeleton, piece);
+    if (grip) hold.grip = (pose, skeleton) => grip(pose, skeleton, piece);
+    out.push(hold);
+  }
+  return out;
+}
+
 /**
  * Builds a skin from an outfit saved as data, with the catalog's parts, bases and materials.
- * Part options left out take the defaults the catalog declares. Throws with every problem
- * `validateOutfit` finds.
+ * Part options left out take the defaults the catalog declares. The pieces in a hand slot receive
+ * where that hand closes on what it holds (`PartContext.grip`, from the held part's `wield.held` or
+ * `wield.grip`), and a part held in both hands brings the other hand to its second grip (see
+ * `outfitHolds`). Throws with every problem `validateOutfit` finds.
  */
 export function outfitFromData(data: OutfitData, catalog: GearCatalog): Skin {
   const problems = validateOutfit(data, catalog);
   if (problems.length) throw new Error(`outfit:\n- ${problems.join('\n- ')}`);
   const base = data.base ? catalog.bases.find(b => b.id === data.base)!.skin : undefined;
+  const holds = outfitHolds(data, catalog);
   return outfit({
     base,
     materials: materialsOf(data.materials, catalog),
     pieces: data.pieces.map(p => {
       const info = catalog.parts.find(x => x.id === p.part)!;
-      const defaults = Object.fromEntries((info.options ?? []).map(o => [o.key, o.default]));
-      return { part: info.part, slot: p.slot, side: p.side, options: { ...defaults, ...p.options }, materials: materialsOf(p.materials, catalog), id: p.id, on: p.on, hidden: p.hidden };
+      return { part: info.part, slot: p.slot, side: p.side, options: optionsOf(info, p.options), materials: materialsOf(p.materials, catalog), id: p.id, on: p.on, hidden: p.hidden };
     }),
+    ...(holds.length ? { holds } : {}),
   });
 }
 

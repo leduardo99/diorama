@@ -44,6 +44,9 @@ Procedural characters and creatures for `@core/volume`: skeletons as data (human
   - [`easeInCubic`](#easeincubic)
   - [`easeOutQuad`](#easeoutquad)
   - [`checkClip`](#checkclip)
+  - [`checkGrips`](#checkgrips)
+  - [`gripSubject`](#gripsubject)
+  - [`GRIP_TOLERANCE`](#grip_tolerance)
   - [`defineCharacter`](#definecharacter)
   - [`defineCharacterAsset`](#definecharacterasset)
   - [`drawCharacterFrame`](#drawcharacterframe)
@@ -62,7 +65,23 @@ Procedural characters and creatures for `@core/volume`: skeletons as data (human
   - [`held`](#held)
   - [`outfit`](#outfit)
   - [`outfitFromData`](#outfitfromdata)
+  - [`outfitHolds`](#outfitholds)
+  - [`holdPose`](#holdpose)
+  - [`holdsMoveArms`](#holdsmovearms)
   - [`validateOutfit`](#validateoutfit)
+  - [`HAND`](#hand)
+  - [`WRIST`](#wrist)
+  - [`HOLD_KINDS`](#hold_kinds)
+  - [`HOLD_DEFAULT`](#hold_default)
+  - [`GRIP_SLACK`](#grip_slack)
+  - [`resolveHold`](#resolvehold)
+  - [`handSize`](#handsize)
+  - [`palmFrame`](#palmframe)
+  - [`palmGrip`](#palmgrip)
+  - [`heldGrip`](#heldgrip)
+  - [`curlFor`](#curlfor)
+  - [`secondHand`](#secondhand)
+  - [`restAxis`](#restaxis)
   - [`wieldOf`](#wieldof)
   - [`wieldsOf`](#wieldsof)
   - [`checkWield`](#checkwield)
@@ -99,6 +118,9 @@ Procedural characters and creatures for `@core/volume`: skeletons as data (human
   - [`Key`](#key)
   - [`Beat`](#beat)
   - [`ClipCheck`](#clipcheck)
+  - [`GripCheck`](#gripcheck)
+  - [`GripMeasure`](#gripmeasure)
+  - [`GripSubject`](#gripsubject)
   - [`Character`](#character)
   - [`CharacterOptions`](#characteroptions)
   - [`ClipKey`](#clipkey)
@@ -118,6 +140,8 @@ Procedural characters and creatures for `@core/volume`: skeletons as data (human
   - [`PartKind`](#partkind)
   - [`WieldInfo`](#wieldinfo)
   - [`WieldSocket`](#wieldsocket)
+  - [`WieldHeld`](#wieldheld)
+  - [`WieldGrip`](#wieldgrip)
   - [`PartOption`](#partoption)
   - [`BaseInfo`](#baseinfo)
   - [`OutfitData`](#outfitdata)
@@ -132,6 +156,16 @@ Procedural characters and creatures for `@core/volume`: skeletons as data (human
   - [`PartContext`](#partcontext)
   - [`OutfitPiece`](#outfitpiece)
   - [`OutfitSpec`](#outfitspec)
+  - [`OutfitHold`](#outfithold)
+  - [`HoldPose`](#holdpose)
+  - [`Hold`](#hold)
+  - [`HoldKind`](#holdkind)
+  - [`HoldDefaults`](#holddefaults)
+  - [`ResolvedHold`](#resolvedhold)
+  - [`WristAngles`](#wristangles)
+  - [`Palm`](#palm)
+  - [`Grip`](#grip)
+  - [`SecondHand`](#secondhand)
   - [`Wielded`](#wielded)
   - [`WieldCheck`](#wieldcheck)
   - [`OutfitEdit`](#outfitedit)
@@ -413,8 +447,10 @@ function hit(skeleton: SkeletonSpec, options?: number | HitOptions): Clip
 
 ### `death`
 
-Death for any skeleton, held on its last frame, with `land` when the body hits the floor and
-`extra.dead` (0 alive → 1 dead) for the skin to dim eyes or glows.
+Death for any skeleton, held on its last frame, with `land` when the body hits the floor,
+`extra.dead` (0 alive → 1 dead) for the skin to dim eyes or glows, and `extra.weaponRelease` and
+`extra.offWeaponRelease` (0 held → 1 let go): the hands let go of what they hold as the arms drop,
+and it settles on the floor (`held`). A death that keeps its weapon in hand sets them to 0.
 - Bipeds: the knees buckle, the arms fling up, the body topples forward and lands flat, face
   down; the legs fold under the hips and the arms settle along the trunk, so nothing stands up
   from the lying body.
@@ -575,6 +611,45 @@ Samples a clip `samples` times and measures bone drift, foot slide, floor contac
 
 ```ts
 function checkClip(skeleton: SkeletonSpec, clip: Clip, samples?: number): ClipCheck
+```
+
+---
+
+### `checkGrips`
+
+Measures how a character's hands hold what it holds in one clip, in every facing and frame of its
+sheet (`directions` × `frames`, default 8 × 8, sampled at t = frame / frames as the sheet is): the
+pose and the grips come from the holds (`holdPose`), and each item is placed by its own `held` on
+the pose that is drawn. Six checks, each the worst value with its frame (see `GripCheck` for their
+ratios and limits): `gripGap`, `openHandHolding`, `wristLimit`, `reachStretch`, `gripDrift` and
+`handleTooShort`, with errors, warnings and notes in words. `defineCharacter` runs it for a character
+whose outfit holds an item that says how it is held (`wield.held` or `wield.grip`) and writes it to
+every sheet's atlas JSON (`meta.data.grips`), which `npm run inspect` prints.
+
+```ts
+function checkGrips(skeleton: SkeletonSpec, clip: Clip, subject: GripSubject, o?: { directions?: number | undefined; frames?: number | undefined; }): GripCheck
+```
+
+---
+
+### `gripSubject`
+
+What an outfit as data holds, for `checkGrips`: its holds (`outfitHolds`), and every hand with a held part in its hand or forearm slot (`wieldOf`).
+
+```ts
+function gripSubject(data: OutfitData, catalog: GearCatalog): GripSubject
+```
+
+---
+
+### `GRIP_TOLERANCE`
+
+How far a grip check lets a hold go before it reports it, as ratios, so the limits hold for any body
+and style: `gap` and `drift` are fractions of the hand's length (wrist to fingertip, `handSize`),
+`stretch` a fraction of the arm's full length.
+
+```ts
+const GRIP_TOLERANCE: { readonly gap: 0.1; readonly drift: 0.1; readonly stretch: 0.005; }
 ```
 
 ---
@@ -760,8 +835,13 @@ function partRequires(info: PartInfo): string[]
 Grip and direction of an item held in a hand, read from the clip's `extra.weaponYaw` and
 `extra.weaponPitch` (radians, in the creature's frame; `offWeaponYaw` / `offWeaponPitch` with
 `channel: 'offWeapon'`) or the `rest` direction. When the body
-lies down the item settles along the floor beside the arm, and the tip never goes below `floor`.
-Use the same call in the skin and in the character's sockets, so the drawing and the socket agree.
+lies down an item without a `hold` settles along the floor beside the arm; one with a `hold` stays
+in the hand until the clip lets it go (`extra.weaponRelease`, 0 held → 1 let go, `offWeaponRelease`
+for the off hand), as the `death` preset does. The tip never goes below `floor`.
+With `hold` the grip is the palm centroid of the hand (see `HeldOptions.hold`), and the result
+carries the resolved hold, the palm frame, the handle's ends and the second grip's range.
+Use the same call in the skin, in the character's sockets and in the part's `PartInfo.wield.held`,
+so the drawing, the sockets and the hands agree.
 
 ```ts
 function held(pose: Pose, skeleton: SkeletonSpec, hand: string, o: HeldOptions): Held
@@ -773,7 +853,9 @@ function held(pose: Pose, skeleton: SkeletonSpec, hand: string, o: HeldOptions):
 
 Assembles a skin from parts, the data-driven way to dress characters and make variants: swap a
 piece, change a side, give a piece other materials. Pieces are drawn in order after the base;
-`on` hands a piece the volume of an earlier one.
+`on` hands a piece the volume of an earlier one. With `holds`, the pieces in a hand slot receive
+where that hand closes on what it holds, and an item held in both hands moves the other arm onto
+its second grip before anything is drawn (the base, every piece and `kit.poseAt` see that pose).
 
 ```ts
 function outfit(spec: OutfitSpec): Skin
@@ -784,11 +866,48 @@ function outfit(spec: OutfitSpec): Skin
 ### `outfitFromData`
 
 Builds a skin from an outfit saved as data, with the catalog's parts, bases and materials.
-Part options left out take the defaults the catalog declares. Throws with every problem
-`validateOutfit` finds.
+Part options left out take the defaults the catalog declares. The pieces in a hand slot receive
+where that hand closes on what it holds (`PartContext.grip`, from the held part's `wield.held` or
+`wield.grip`), and a part held in both hands brings the other hand to its second grip (see
+`outfitHolds`). Throws with every problem `validateOutfit` finds.
 
 ```ts
 function outfitFromData(data: OutfitData, catalog: GearCatalog): Skin
+```
+
+---
+
+### `outfitHolds`
+
+What an outfit as data holds, as `outfitFromData` reads it: for each hand, the first held part in its
+hand or forearm slot (the one `wieldOf` counts) whose `wield` says where it is (`held`) or where the
+hands close on it (`grip`), called with the piece's side and options (the defaults filled in).
+
+```ts
+function outfitHolds(data: OutfitData, catalog: GearCatalog): OutfitHold[]
+```
+
+---
+
+### `holdPose`
+
+The hands of a pose on what an outfit holds: each holding hand's grip (from the hold's `grip`, else
+its `held` with a `hold`) and, for an item held in both hands, the other arm moved onto its second
+grip (`secondHand`). The outfit skin draws with it; `defineCharacter` measures the sockets on the
+same pose, so a socket on the other hand follows it.
+
+```ts
+function holdPose(pose: Pose, skeleton: SkeletonSpec, holds: readonly OutfitHold[]): HoldPose
+```
+
+---
+
+### `holdsMoveArms`
+
+Holds that move an arm (an item in both hands placed by `held`): the pose then changes, and what reads it must read the moved one.
+
+```ts
+function holdsMoveArms(holds: readonly OutfitHold[]): boolean
 ```
 
 ---
@@ -802,6 +921,173 @@ Empty when it is valid.
 
 ```ts
 function validateOutfit(data: OutfitData, catalog: GearCatalog): string[]
+```
+
+---
+
+### `HAND`
+
+Proportions of the hand, from the Vitruvian canon (H is the body's height): the hand is H / 10 from
+the wrist to the fingertips, the palm (four fingers) H / 24 across.
+
+```ts
+const HAND: { readonly length: 0.1; readonly palm: number; readonly centroid: 0.3; readonly open: 0.42; readonly wrap: 0.1; }
+```
+
+---
+
+### `WRIST`
+
+The wrist's range, in degrees: the clinical hard limits (flexion 80, extension 70, radial deviation
+20, ulnar deviation 30), the comfortable range for motion (about 40 each way) and where a hand at rest
+sits (extended 15 to 30, ulnar deviation up to 15), the posture of the strongest power grip.
+
+```ts
+const WRIST: { readonly flexion: 80; readonly extension: 70; readonly radial: 20; readonly ulnar: 30; readonly comfort: 40; readonly rest: { readonly extension: readonly [15, 30]; readonly ulnar: readonly [0, 15]; }; }
+```
+
+---
+
+### `HOLD_KINDS`
+
+Where people put their hands on each kind of item (fractions from the butt), from the research in
+rig guide 06: a one-hand blade's hand fills its grip; a longsword's lead hand sits just under the guard
+(0.8 to 1) and the rear hand on or just above the pommel (0 to 0.35), adjacent with up to a palm
+between them; a staff's and a polearm's hands are about shoulder width apart (0.25 H); a spear's
+rear hand holds the butt and the front hand guides it; a scythe's grips are about 0.25 H apart; an
+axe's hand stays near the butt and the other slides; a javelin is held at its balance (0.61 to 0.65).
+Handle radii follow a power grip's 30 to 50 mm diameter, a wand's 12 mm.
+
+```ts
+const HOLD_KINDS: Readonly<Record<HoldKind, HoldDefaults>>
+```
+
+---
+
+### `HOLD_DEFAULT`
+
+The defaults of a hold without a kind, or of a kind the engine does not know: a power grip in the middle of a short handle.
+
+```ts
+const HOLD_DEFAULT: HoldDefaults
+```
+
+---
+
+### `GRIP_SLACK`
+
+How far, in degrees, a handle may cross the palm off the hold's angle: a handle slides in the palm
+(people settle a cylinder at 65 ± 7°, and take it squarer or more along the hand when the task asks),
+so a hand turns the handle in the palm before it bends the wrist.
+
+```ts
+const GRIP_SLACK: 25
+```
+
+---
+
+### `resolveHold`
+
+A hold with the defaults of its kind, scaled by the skeleton's height. Throws on a grip outside the handle or a handle that is not there.
+
+```ts
+function resolveHold(hold: Hold, skeleton: SkeletonSpec): ResolvedHold
+```
+
+---
+
+### `handSize`
+
+The hand of an arm, in world units: its length (wrist to fingertip, `ArmSpec.hand` or H / 10) and its palm's width.
+
+```ts
+function handSize(skeleton: SkeletonSpec, arm: ArmSpec): { length: number; palm: number; }
+```
+
+---
+
+### `palmFrame`
+
+The palm frame of an arm's hand in a pose. With `handle` (its axis out of the thumb's side, and the
+hold's angle, default 65°), the hand is the one that closes on that handle with the least strain:
+the handle crosses the palm near the hold's angle (`GRIP_SLACK`), the wrist near its rest posture,
+and within the wrist's hard limits (`WRIST`) whenever a hand can hold it so; when none can, the hand
+that goes past them least, stopped at them (`limited`). `bend` and `needs` say what it costs the
+wrist: `needs` is then the least the hold asks past the limits. With `lowest`, the hand never puts its palm centroid
+lower than that height: a hand lying on the floor (a body in a death) tips up to rest on it instead
+of going through it (`limited` then). Without a handle, an empty hand: straight on the forearm, its
+palm turned to the body's middle the way a hanging hand turns.
+
+```ts
+function palmFrame(pose: Pose, skeleton: SkeletonSpec, arm: string, handle?: { axis: Vec3; angle?: number | undefined; lowest?: number | undefined; } | undefined): Palm
+```
+
+---
+
+### `palmGrip`
+
+The grip of an arm's hand on a handle along `axis` (out of the thumb's side): the hand's palm frame
+for it and the point the fist closes round, the palm centroid. For what is not placed by `held`,
+whose handle is wherever the hand is (a shield's strap, with `behind`). `weight` (0..1, default 1)
+opens the fingers as the hand lets go.
+
+```ts
+function palmGrip(pose: Pose, skeleton: SkeletonSpec, arm: string, o: { axis: Vec3; radius: number; angle?: number | undefined; behind?: Vec3 | undefined; weight?: number | undefined; }): Grip
+```
+
+---
+
+### `heldGrip`
+
+The holding hand's grip on an item `held` placed with a `hold`; undefined for one placed without (at
+the wrist, the old way) and once the hand has let go of it (`Held.released`), its fingers opening on the way.
+
+```ts
+function heldGrip(item: Held): Grip | undefined
+```
+
+---
+
+### `curlFor`
+
+How far fingers close on a handle of `radius`, for a hand `length` long (see `HAND.open`).
+
+```ts
+function curlFor(radius: number, length: number): number
+```
+
+---
+
+### `secondHand`
+
+Puts the other hand on the second grip of an item held in both hands (its `hold.second`), a pass
+after the clip's pose: the main hand drives the item, the other follows it. The other arm (the one on
+the side opposite `side`, the holding hand's) is solved with two-bone IK so that its palm comes to the
+grip: the elbow bends the way the clip bends it (falling back to down and out, in the creature's
+frame, so it holds in every facing), and the arm reaches at most its full length, never stretched.
+A grip with a range starts where the clip's hand is nearest, and slides along the range to come within
+reach; out of reach even so, the hand lets go, fading out over a palm's width. The clip lets go on
+its own with `extra.secondGrip` (0..1, default 1), keyed like any channel. Undefined when the item has
+no second grip (it was placed without a `hold`, or its hold has none) or the skeleton no other arm.
+
+```ts
+function secondHand(pose: Pose, skeleton: SkeletonSpec, item: Held, side: 1 | -1): SecondHand | undefined
+```
+
+---
+
+### `restAxis`
+
+Where an item rests in a hand when no clip sets its angle: the direction closest to `want` (the item's
+rest) that the hand holds with the wrist within its comfortable range. People turn what they hold
+rather than strain the wrist ("bend the tool, not the wrist"): the farthest a hand turns it is to the
+direction it holds with the wrist at rest (extended, a little towards the little finger), where the
+strain is least. `want` itself comes back when the wrist holds it comfortably already, so an item
+whose rest suits the hand stays where it was. The search is a fixed bisection, so the same pose gives
+the same direction and a moving arm turns the item smoothly.
+
+```ts
+function restAxis(pose: Pose, skeleton: SkeletonSpec, arm: string, want: Vec3, hold: Pick<ResolvedHold, "angle" | "reverse">): Vec3
 ```
 
 ---
@@ -1038,6 +1324,8 @@ interface ArmSpec {
   side: 1 | -1;
   /** Leg whose phase drives this arm's swing while walking (usually the opposite leg). */
   swingWith?: string;
+  /** Length of the hand, from the wrist to the fingertips: a held item's grip sits in its palm, a fraction of it past the wrist (`HAND.centroid`). Default a tenth of the skeleton's height (`HAND.length`). */
+  hand?: number;
 }
 ```
 
@@ -1367,6 +1655,67 @@ interface ClipCheck {
 }
 ```
 
+### `GripCheck`
+
+What `checkGrips` finds in one clip: how the hands hold what the character holds, per facing and
+frame of its sheet, as ratios (of the hand's length, the arm's length, a palm's width, the wrist's
+limits), so the limits hold for any body and style. A measure is null when there was nothing to
+measure (no hand of that kind).
+
+```ts
+interface GripCheck {
+  /** The palm centroid of a hand that holds, against the point of the handle it holds, as a fraction of the hand's length: 0 for an item placed by `held` with its hold, 0.3 for one placed at the wrist. Past `GRIP_TOLERANCE.gap` is an error. A second hand letting go is not measured. */
+  gripGap: GripMeasure | null;
+  /** The share of frames (0..1) in which a hand that holds something is given no grip, so its hand part stays open. Above 0 is an error. */
+  openHandHolding: GripMeasure | null;
+  /** The wrist angle a hold needs against the wrist's hard limit that way (`WRIST`; 1 is at the limit). Past 1 (with half a degree of slack) is an error. In an idle or locomotion clip (rest and carry poses) a wrist within its limits but past the comfortable range (40° of flexion or extension, 20° of deviation) is a warning. */
+  wristLimit: GripMeasure | null;
+  /** The other hand on an item held in both hands: its arm's reach (shoulder to wrist, or what its grip asks of it) against the arm's full length, 1 when straight. Past 1 (and `GRIP_TOLERANCE.stretch`) is an error; a grip that slid along its range, or a hand that let go to stay within reach, is a note. */
+  reachStretch: GripMeasure | null;
+  /** The handle moving in the palm between consecutive frames, as a fraction of the hand's length. Past `GRIP_TOLERANCE.drift` is an error. */
+  gripDrift: GripMeasure | null;
+  /** The room on a handle for its hands, in palms: its length over a palm per hand that holds it, and two hands' spacing over a palm. Under 1 is an error. */
+  handleTooShort: GripMeasure | null;
+  /** One line per problem, with the usual cause. */
+  errors: string[];
+  warnings: string[];
+  /** What the engine did on purpose (a grip that slid along its range, a hand that let go out of reach). */
+  notes: string[];
+}
+```
+
+### `GripMeasure`
+
+The worst value of one grip check over a sheet's facings and frames, and where it is.
+
+```ts
+interface GripMeasure {
+  /** The worst value, in the check's own ratio (see `GripCheck`). */
+  worst: number;
+  /** The frame it is in: `<DIR>_<frame>` as in the socket table (`frame_<n>` for a single facing). */
+  frame: string;
+  /** The hand it was measured on. */
+  hand: "left" | "right";
+  /** How many measured frames are past the check's limit. */
+  failing: number;
+  /** How many were measured (one per frame and hand). */
+  of: number;
+}
+```
+
+### `GripSubject`
+
+What `checkGrips` measures: what a character holds, and which of its hands hold something.
+
+```ts
+interface GripSubject {
+  /** What it holds and how (`outfitHolds`, `OutfitSpec.holds`): the pose and the grips come from `holdPose`, as the outfit draws them. */
+  holds: readonly OutfitHold[];
+  /** Every hand that holds something, whether or not its item says how it is held, with the item's name for the reports: a hand among these that is given no grip stays open (`openHandHolding`). Default: the sides of `holds`, and the other hand of an item held in both. */
+  holding?: { side: 1 | -1; item?: string | undefined; hands?: 2 | 1 | undefined; }[];
+}
+```
+
 ### `Character`
 
 A defined character: its manifest and one exportable sheet per clip. `K` is the union of its clip
@@ -1420,6 +1769,8 @@ interface CharacterOptions<K extends string = string> {
   directions?: number;
   /** Named points exported per frame (see `defineCharacter`). `head` and `center` are always added from the skeleton. */
   sockets?: Record<string, SocketFn>;
+  /** What the character holds, for the grip checks (`checkGrips`): with holds, every sheet's atlas JSON carries `grips` (how the hands hold, per facing and frame), which `npm run inspect` prints. `defineCharacter` fills it from its outfit; a code outfit passes `{ holds: spec.holds }`. */
+  grips?: GripSubject;
 }
 ```
 
@@ -1612,6 +1963,8 @@ interface CharacterAssetOptions {
   character?: CharacterManifest;
   /** This clip's key in the character (the clip file's name). */
   key?: string;
+  /** What the character holds, for the grip checks (`checkGrips`): with holds, every sheet's atlas JSON carries `grips` (how the hands hold, per facing and frame), which `npm run inspect` prints. `defineCharacter` fills it from its outfit; a code outfit passes `{ holds: spec.holds }`. */
+  grips?: GripSubject;
 }
 ```
 
@@ -1690,6 +2043,12 @@ interface WieldInfo {
   offHand?: "hold" | "swing";
   /** Points on the item for events and effects (its tip, a muzzle), from the pose, the piece's side and options; the same `held` call the part draws with. A character wearing it gets them as sockets (`off-<name>` in the off hand), so they follow the weapon it holds. */
   sockets?: Record<string, WieldSocket>;
+  /** How the hands hold it: its hold kind, its handle (length, radius) and where on the handle the hands close (`Hold`), for a tool that wants to know it without placing the item. The engine does not read it: the hands and the checks take the hold from the item `held` returns, so pass the same hold to the part's `held` call and give that call as `held` below. */
+  hold?: Hold;
+  /** Where it is in a pose, from the pose, the piece's side and options: the same `held` call (with its `hold`) the part draws with. `outfitFromData` hands the holding hand's parts their grip from it (`PartContext.grip`) and, when the item takes both hands (`hands: 2`), moves the other hand onto its second grip. Without it (and without `grip`) the hands stay as they are. */
+  held?: WieldHeld;
+  /** Where the hands close on it, when `held` cannot say: an item placed on the forearm, such as a strapped shield, whose strap is wherever the hand is (`palmGrip`, with the board's outward normal as `behind`). The holding hand's grip first, then, for an item held in both hands, the other hand's. It overrides what `held` gives the hands. */
+  grip?: WieldGrip;
 }
 ```
 
@@ -1699,6 +2058,22 @@ A point on a held item (see `WieldInfo.sockets`).
 
 ```ts
 type WieldSocket = (pose: Pose, skeleton: SkeletonSpec, piece: { side: 1 | -1; options: Record<string, unknown>; }) => Vec3
+```
+
+### `WieldHeld`
+
+Where a held item is in a pose (see `WieldInfo.held`): the part's own `held` call.
+
+```ts
+type WieldHeld = (pose: Pose, skeleton: SkeletonSpec, piece: { side: 1 | -1; options: Record<string, unknown>; }) => Held
+```
+
+### `WieldGrip`
+
+Where the hands close on a held item (see `WieldInfo.grip`): the holding hand's grip, then the other hand's for an item held in both.
+
+```ts
+type WieldGrip = (pose: Pose, skeleton: SkeletonSpec, piece: { side: 1 | -1; options: Record<string, unknown>; }) => (Grip | undefined)[]
 ```
 
 ### `PartOption`
@@ -1809,7 +2184,7 @@ Options of `held`.
 
 ```ts
 interface HeldOptions {
-  /** Default direction in the creature's frame when the clip sets no weapon angle. Default [0.55, 0.3, -0.75] (low and forward). */
+  /** Default direction in the creature's frame when the clip sets no weapon angle. Default [0.55, 0.3, -0.75] (low and forward). With a `hold`, the item turns from it, as little as it must, until the wrist holds it comfortably (`restAxis`). */
   rest?: [number, number, number];
   /** The clip channels it reads: `extra.<channel>Yaw` and `<channel>Pitch`. Default 'weapon', the main (right) hand's. An item in the off hand reads 'offWeapon' (`weaponChannel(side)`), so it keeps its rest unless a clip made for two weapons swings it. */
   channel?: string;
@@ -1819,6 +2194,8 @@ interface HeldOptions {
   floor?: number;
   /** Length behind the grip, for items that extend on both sides of the hand (a staff, a scythe's snath, a spear's butt). It shortens when it would go below `floor`, so the end touches the floor instead of sinking. Default 0. */
   butt?: number;
+  /** How the hand holds it (`Hold`: its kind, its handle and where on the handle the hands close). With it the grip is in the palm of the hand (`palmFrame`), not at the wrist: the item is placed so the point of its handle at `hold.grip` is the middle of the fist, and the part draws its handle round `grip` (from `handle.from` to `handle.to`). Give the same call as the part's `PartInfo.wield.held`, so its hands close on it. Without it the grip is the wrist joint, as before holds existed. */
+  hold?: Hold;
 }
 ```
 
@@ -1828,6 +2205,7 @@ A held item's grip, direction and ends.
 
 ```ts
 interface Held {
+  /** Where the hand holds it: the middle of the fist with a `hold`, the wrist joint without. */
   grip: Vec3;
   dir: Vec3;
   tip: Vec3;
@@ -1835,6 +2213,16 @@ interface Held {
   butt: Vec3;
   /** Frame along the item (forward = dir). Its roll is stable: up leans towards the creature's up, or towards its forward when the item is nearly vertical. A blade that must face a given way (a scythe, an axe) reads its own heading from the clip, by convention `extra.bladeAim` (radians in the creature's frame, 0 = forward). */
   frame: Frame3;
+  /** With a `hold`: the hold as resolved for the skeleton (every default filled in, lengths in world units). */
+  hold?: ResolvedHold;
+  /** With a `hold`: the holding hand's palm frame, whose origin is `grip`. */
+  palm?: Palm;
+  /** With a `hold`: the ends of the handle on the item's axis, its butt end (fraction 0) and its head or guard end (1). */
+  handle?: { from: Vec3; to: Vec3; };
+  /** With a `hold` that has a second grip: where the other hand may close, from one end of its range to the other (one point for a fixed grip). */
+  second?: { from: Vec3; to: Vec3; };
+  /** With a `hold`, when the clip lets go (`extra.<channel>Release`): how far the hand has let go of the item, 0..1. The item leaves the palm and settles on the floor; the hand's fingers open (`heldGrip`). Absent while held. */
+  released?: number;
 }
 ```
 
@@ -1873,6 +2261,8 @@ interface PartContext {
   materials: MaterialSet;
   /** The placed volume of the part this one rests on (`on`), if any. */
   host?: Placed;
+  /** For a part in a hand slot whose hand holds something: where the hand closes on it (the held part's `wield.held` or `wield.grip`; for the other hand of a two-handed item, its second grip), so a hand part draws a fist round the handle, curled by `grip.curl`. Undefined for an empty hand, which stays as it is. */
+  grip?: Grip;
 }
 ```
 
@@ -1908,6 +2298,197 @@ interface OutfitSpec {
   base?: (object: StageObject, pose: Pose, kit: SkinKit, materials: MaterialSet) => void;
   materials: MaterialSet;
   pieces: OutfitPiece[];
+  /** What the outfit holds, so the pieces in a holding hand's slot receive its grip (`PartContext.grip`) and an item held in both hands brings the other hand to its second grip. Without it no hand receives a grip and the pose is drawn as solved. */
+  holds?: OutfitHold[];
+}
+```
+
+### `OutfitHold`
+
+Something an outfit holds in a hand, so the hands close on it (`PartContext.grip`) and, for an item
+held in both, the other hand reaches its second grip. `outfitFromData` makes them from the catalog
+(`outfitHolds`); a code outfit lists them in `OutfitSpec.holds`.
+
+```ts
+interface OutfitHold {
+  /** The hand that holds it: -1 left, 1 right. */
+  side: 1 | -1;
+  /** Hands it takes: 2 puts the other hand on its second grip (`secondHand`). Default 1. */
+  hands?: 2 | 1;
+  /** Where it is in a pose: the part's own `held` call, with its `hold`. */
+  held?: (pose: Pose, skeleton: SkeletonSpec) => Held;
+  /** Where the hands close on it, when `held` cannot say (a shield strapped to the forearm, whose strap is wherever the hand is: `palmGrip`): the holding hand's grip, then the other hand's for an item held in both. It overrides what `held` gives the hands. */
+  grip?: (pose: Pose, skeleton: SkeletonSpec) => (Grip | undefined)[];
+}
+```
+
+### `HoldPose`
+
+What an outfit's holds make of one pose (`holdPose`).
+
+```ts
+interface HoldPose {
+  /** The pose, with the other arm on the second grip of an item held in both hands (the pose given when nothing moved). */
+  pose: Pose;
+  /** Where each hand that holds something closes on it. */
+  grips: { side: 1 | -1; grip: Grip; }[];
+  /** What the second hand of each two-handed item did: where it closes, how far it slid, whether it let go. */
+  second: SecondHand[];
+}
+```
+
+### `Hold`
+
+How an item is held, as the item declares it (`WieldInfo.hold`, `HeldOptions.hold`). Everything left out takes its kind's default.
+
+```ts
+interface Hold {
+  /** The kind of hold (`HoldKind`, or the project's own): it sets the defaults below. */
+  kind?: HoldKind | (string & {});
+  /** The handle, in world units: its length from butt to head (or guard) end, and its radius where the hands close. Default: the kind's, scaled by the body's height. */
+  handle?: { length?: number | undefined; radius?: number | undefined; };
+  /** Where the holding hand closes, as a fraction of the handle from its butt (0) to its head or guard end (1). Default: the kind's. */
+  grip?: number;
+  /** Where the other hand closes on an item held in both hands (`WieldInfo.hands: 2`): a fraction of the handle, or a range `[from, to]` it may slide in (a spear's guiding front hand). Default: the kind's. */
+  second?: number | [number, number];
+  /** Angle between the handle and the hand's own axis, degrees: 65 for a power grip (the handle crosses the palm obliquely), less for a wand held along the fingers. Default: the kind's. */
+  angle?: number;
+  /** The head end comes out of the little finger's side of the fist instead of the thumb's (a dagger held point down). Default false. */
+  reverse?: boolean;
+}
+```
+
+### `HoldKind`
+
+How a hand holds a kind of item. Each sets where the hands go on the handle by default
+(`HOLD_KINDS`); any other string works and takes `HOLD_DEFAULT`.
+
+```ts
+type HoldKind = "one-hand-blade" | "dagger" | "two-hand-blade" | "axe" | "mace" | "spear" | "staff" | "polearm" | "scythe" | "bow" | "crossbow" | "strapped-shield" | "center-grip-shield" | "precision" | "two-hand-tool" | "thrown" | "carried-light"
+```
+
+### `HoldDefaults`
+
+The defaults of a hold kind. Lengths are fractions of the body's height, so they hold for any
+skeleton; a part that knows its handle declares it (`Hold.handle`).
+
+```ts
+interface HoldDefaults {
+  grip: number;
+  /** The other hand's grip on an item held in both: a fraction or a range of fractions, or a distance along the handle from the holding hand's grip, as a fraction of the body's height (`apart`, positive towards the head end), with an optional half-range it slides in (`slide`): hands set by the body rather than by the item, such as shoulder width on a staff. */
+  second?: number | [number, number] | { apart: number; slide?: number | undefined; };
+  handle: { length: number; radius: number; };
+  angle: number;
+}
+```
+
+### `ResolvedHold`
+
+A hold with every default filled in, for one skeleton (`resolveHold`). Lengths are world units.
+
+```ts
+interface ResolvedHold {
+  kind?: string;
+  handle: { length: number; radius: number; };
+  grip: number;
+  /** The other hand's range on an item held in both hands (a fixed grip is `[f, f]`); absent when the hold has none. */
+  second?: [number, number];
+  angle: number;
+  reverse: boolean;
+}
+```
+
+### `WristAngles`
+
+Angles of the wrist, in degrees, the hand against the forearm.
+
+```ts
+interface WristAngles {
+  /** Flexion (positive, the hand bent towards the palm) or extension (negative, towards the back of the hand). */
+  flexion: number;
+  /** Radial deviation (positive, the hand bent towards the thumb) or ulnar deviation (negative, towards the little finger). */
+  deviation: number;
+}
+```
+
+### `Palm`
+
+The frame of a hand, the OpenXR grip convention. Its origin `at` is the palm centroid, the middle of
+the closed fist; `normal` points out of the palm, into what the hand closes on; `tube` is the axis of
+the tube the closed fingers make, from the little finger's side out of the thumb's, which a held
+handle runs along; `along` is the hand's own axis, from the wrist to the knuckles, and `thumb` the
+thumb's side across it. The same hand holds an item in every facing (a left hand stays a left hand).
+
+```ts
+interface Palm {
+  at: Vec3;
+  /** The wrist joint (the end of the arm). */
+  wrist: Vec3;
+  along: Vec3;
+  thumb: Vec3;
+  normal: Vec3;
+  tube: Vec3;
+  /** The hand's length, wrist to fingertip. */
+  length: number;
+  /** The angle the finger tube makes with the hand's axis, degrees: the hold's, moved by up to `GRIP_SLACK` where that spares the wrist. */
+  angle: number;
+  /** The wrist's angles the hand is drawn with: what the hold needs, kept within the hard limits (`WRIST`). */
+  bend: WristAngles;
+  /** The wrist's angles the hold needs, for checks: past the hard limits when `limited` (by the least any hand holding it would be). */
+  needs: WristAngles;
+  /** The hand could not take the posture the hold needs: it stops at the wrist's hard limits, or tips up off the floor (`lowest` of `palmFrame`), and the handle no longer runs along the finger tube. */
+  limited: boolean;
+}
+```
+
+### `Grip`
+
+Where a hand closes on what it holds, as a hand part receives it (`PartContext.grip`): draw the fist
+round the handle there. The fingers in front of the handle wrap it (their volumes sort in front of
+it); the little and ring fingers close tightest, the index finger and the thumb are the loose,
+expressive ones (the kit's style).
+
+```ts
+interface Grip {
+  /** The point on the handle's axis the hand closes round: the middle of the fist. */
+  at: Vec3;
+  /** Unit vector along the handle through the fist, out of the thumb's side (towards a blade's tip, a polearm's head; towards the pommel for a reversed hold). */
+  axis: Vec3;
+  /** Radius of the handle there, so the fingers wrap round it. */
+  radius: number;
+  /** How far the fingers close, from 0 (open) to 1 (fully closed): capped by the handle's thickness, and lower while a hand lets go. */
+  curl: number;
+  /** The hand's palm frame on the grip: where the hand points, the palm's normal, the finger tube, the wrist angles. */
+  palm: Palm;
+  /** For a handle on the back of a surface (a shield's strap behind its board): the surface's outward normal. The hand closes on the inner side, so while that face is towards the camera the item covers the fist. */
+  behind?: Vec3;
+}
+```
+
+### `SecondHand`
+
+What `secondHand` did in one pose: the other hand on a two-handed item's second grip.
+
+```ts
+interface SecondHand {
+  /** The pose with the other arm on the grip (the pose given, unchanged, when the hand let go entirely). */
+  pose: Pose;
+  /** The arm that moved. */
+  arm: string;
+  /** Where on the handle the hand goes, as a fraction from the butt (0) to the head end (1). */
+  fraction: number;
+  /** That point, on the handle's axis. */
+  target: Vec3;
+  /** What the hand closes on; absent when it let go entirely. */
+  grip?: Grip;
+  /** Distance from the palm, at full weight, to the grip: about 0 when the hand reaches it. */
+  gap: number;
+  /** How firmly the hand holds, 0..1: the clip's `extra.secondGrip` (default 1), lowered as the grip goes out of reach. */
+  weight: number;
+  /** The grip slid within its range (`Hold.second`) to come within reach of the arm. */
+  slid: boolean;
+  /** The grip was out of reach even so: the hand lets go (all the way once it is a palm's width short). */
+  released: boolean;
 }
 ```
 

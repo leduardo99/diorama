@@ -20,8 +20,8 @@ import { len3, lerp3, norm3, sub3, vec3, type Vec3 } from '../volume/vec3.js';
 import { categoryOf, restFeet, type ActionKind, type Clip } from './clips.js';
 import { partFrame, solvePose, type Pose } from './pose.js';
 import type { SkeletonSpec } from './skeleton.js';
-import { checkClip } from './verify.js';
-import { outfitFromData, type GearCatalog, type OutfitData } from './gear.js';
+import { checkClip, checkGrips, gripSubject, type GripSubject } from './verify.js';
+import { holdPose, holdsMoveArms, outfitFromData, outfitHolds, type GearCatalog, type OutfitData } from './gear.js';
 import { checkWield, weaponSockets } from './wield.js';
 
 /** What a skin receives besides the pose. */
@@ -72,6 +72,12 @@ export interface CharacterAssetOptions {
   character?: CharacterManifest;
   /** This clip's key in the character (the clip file's name). */
   key?: string;
+  /**
+   * What the character holds, for the grip checks (`checkGrips`): with holds, every sheet's atlas JSON
+   * carries `grips` (how the hands hold, per facing and frame), which `npm run inspect` prints.
+   * `defineCharacter` fills it from its outfit; a code outfit passes `{ holds: spec.holds }`.
+   */
+  grips?: GripSubject;
 }
 
 /** A named point a game attaches things to (a hand, a blade tip, a mouth), computed from the pose. */
@@ -299,6 +305,8 @@ export function defineCharacterAsset(o: CharacterAssetOptions): AssetDefinition 
       ...(o.clip.travel ? { travel: travelOf(o.clip, o.frames), travelUnits: 'forward world units from the start, per frame then at the end; move the sprite along the facing' } : {}),
       // Measured on every export; `npm run inspect` prints the warnings.
       motion: checkClip(o.skeleton, o.clip),
+      // How the hands hold what the character holds, on the sheet's own facings and frames.
+      ...(o.grips?.holds.length ? { grips: checkGrips(o.skeleton, o.clip, o.grips, { directions, frames: o.frames }) } : {}),
       sockets: socketTable(o, directions),
       ...(o.character ? { character: o.character } : {}),
     },
@@ -391,7 +399,12 @@ export function defineCharacter<K extends string = string>(o: CharacterOptions<K
   const skin = o.skin ?? (o.outfit ? outfitFromData(o.outfit.data, o.outfit.catalog) : undefined);
   if (!skin) throw new Error(`character "${o.name}": give it a skin or an outfit`);
   const wield = o.outfit ? checkWield(clipsIn, o.outfit.data, o.outfit.catalog) : undefined;
-  const socketFns = { ...o.sockets, ...(o.outfit ? weaponSockets(o.outfit.data, o.outfit.catalog, o.skeleton) : {}) };
+  const sockets0: Record<string, SocketFn> = { ...o.sockets, ...(o.outfit ? weaponSockets(o.outfit.data, o.outfit.catalog, o.skeleton) : {}) };
+  // An item held in both hands moves the other arm onto it when the outfit draws: the sockets are measured on that pose too.
+  const holds = o.outfit && !o.skin ? outfitHolds(o.outfit.data, o.outfit.catalog) : [];
+  const socketFns = holdsMoveArms(holds) ? Object.fromEntries(Object.entries(sockets0).map(([name, fn]) => [name, (pose: Pose) => fn(holdPose(pose, o.skeleton, holds).pose)])) : sockets0;
+  // The grip checks, for an outfit whose items say how they are held (one whose items say nothing exports as before).
+  const grips = o.grips ?? (o.outfit && !o.skin && holds.length ? gripSubject(o.outfit.data, o.outfit.catalog) : undefined);
   const entries = keys.map(key => {
     const c = clipsIn[key];
     const clip = 'drive' in c ? c : c.clip;
@@ -469,7 +482,7 @@ export function defineCharacter<K extends string = string>(o: CharacterOptions<K
     sheet(key: K): AssetDefinition {
       const e = entries.find(x => x.key === key);
       if (!e) throw new Error(`character "${o.name}" has no clip "${key}" (clips: ${keys.join(', ')})`);
-      return defineCharacterAsset({ ...shared, skin, sockets: socketFns, clip: e.clip, frames: e.frames, character: manifest, key });
+      return defineCharacterAsset({ ...shared, skin, sockets: socketFns, clip: e.clip, frames: e.frames, character: manifest, key, ...(grips ? { grips } : {}) });
     },
   };
 }

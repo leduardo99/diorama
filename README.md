@@ -159,7 +159,7 @@ The `.agents/skills/` folder holds the instructions for coding agents:
 | [`diorama-review`](.agents/skills/diorama-review/SKILL.md) | Checking an export: `inspect`, contact sheets, motion, the viewer; the quality bar, readability and motion references. |
 | [`diorama-game`](.agents/skills/diorama-game/SKILL.md) | Using the exports in a game: `game/`, `@diorama/runtime`, `@diorama/phaser`, other engines. |
 
-The guides explain when to use each module, and are indexed in [`docs/guides/`](docs/guides/README.md): [`docs/guides/volume/`](docs/guides/volume/) (space and camera, volumes and the stage, props and equipment, scenery kits, living scenery, effects, items and the HUD), [`docs/guides/rig/`](docs/guides/rig/) (skeletons, gaits and clips, skins, the atlas contract, gear and outfits) and [`core/draw/README.md`](core/draw/README.md). The API reference is generated in [`docs/api/`](docs/api/), and the folder architecture is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+The guides explain when to use each module, and are indexed in [`docs/guides/`](docs/guides/README.md): [`docs/guides/volume/`](docs/guides/volume/) (space and camera, volumes and the stage, props and equipment, scenery kits, living scenery, effects, items and the HUD), [`docs/guides/rig/`](docs/guides/rig/) (skeletons, gaits and clips, skins, the atlas contract, gear and outfits, holding items) and [`core/draw/README.md`](core/draw/README.md). The API reference is generated in [`docs/api/`](docs/api/), and the folder architecture is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Contributing
 
