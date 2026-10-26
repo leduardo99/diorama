@@ -759,6 +759,15 @@ const centroid = (f: Face) => f.points.reduce((s, p) => vec3(s.x + p.x / f.point
   assert.deepEqual(validateScene(doorTest, living), []);
   assert.deepEqual(doorTest.props.map(p => [p.edge, p.state]), [['N', undefined], ['W', 'open']], 'a door in its default and next states');
   assert.equal(seamTestScene(living, 'urn').props.length, 2, 'a prop in each of its states');
+  // A wall's seam test joins it to a fence, not to the door that names it or that it names.
+  for (const [wallJoins, doorJoins] of [[['door'], undefined], [undefined, ['wall']]]) {
+    // The door comes first, where a search through the pieces meets it before the gate.
+    const pieces = living.pieces.map(p => (p.id === 'wall' ? { ...p, joins: wallJoins } : p.id === 'door' ? { ...p, joins: doorJoins } : p));
+    const doorway: SceneryCatalog = { ...living, pieces: [...pieces.filter(p => p.id === 'door'), ...pieces.filter(p => p.id !== 'door')] };
+    const run = seamTestScene(doorway, 'wall');
+    assert.deepEqual(validateScene(run, doorway), [], `wall joins ${wallJoins}, door joins ${doorJoins}`);
+    assert.deepEqual([...new Set(run.walls.flat().filter(Boolean).map(c => (typeof c === 'string' ? c : c!.piece)))].sort(), ['gate', 'wall']);
+  }
   // Frames tip and roll for hinged and tumbling parts.
   const tipped = Frame3.facing(vec3(0, 0, 0), 0).pitched(90);
   near(tipped.forward.z, 1, 1e-9);

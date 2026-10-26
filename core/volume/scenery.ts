@@ -1264,7 +1264,9 @@ export function seamTestScene(catalog: SceneryCatalog, piece: string, o: { on?: 
     return { ...emptyScene(catalog, 11, 9), floor, figures: [{ col: 9, row: 4 }] };
   }
   if (info.group === 'wall' || info.group === 'fence') {
-    const joined = info.joins?.[0] ?? catalog.pieces.find(p => p.joins?.includes(info.id))?.id ?? info.id;
+    // The run's joint is another wall or fence it joins, never a door or a prop that names it.
+    const joint = (p: ScenePieceInfo | undefined) => p !== undefined && p.id !== info.id && (p.group === 'wall' || p.group === 'fence');
+    const joined = info.joins?.map(id => find(catalog, id)).find(joint)?.id ?? catalog.pieces.find(p => joint(p) && p.joins?.includes(info.id))?.id ?? info.id;
     const runs = ['...........', '.WWWWW..W..', '.W...W.WWW.', '.W...W..W..', '.WWWWW.....', '...W.......', '.W...WWWWW.', '...........', '..WWJWW....'];
     // On borders the walls grid has one more row and column (vertices); the runs keep their shape.
     const size = wallGridSize(catalog, 11, 9);
