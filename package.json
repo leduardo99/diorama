@@ -1,6 +1,6 @@
 {
   "name": "diorama",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "2.5D game assets as code, for coding agents: props, scenery, effects, rigged characters with their gear, item icons and HUD pieces written in TypeScript and exported as sprite sheets with atlas JSON.",
   "private": true,
   "license": "MIT",

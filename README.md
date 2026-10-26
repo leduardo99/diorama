@@ -10,6 +10,22 @@ Diorama is for any kind of 2.5D game, in any look the theme can express: cute or
 
 Everything is deterministic: the same source exports the same pixels. Sheets are rasterized to PNG (or JPEG) through headless Chromium.
 
+## Contents
+
+- [What is in it](#what-is-in-it)
+- [Install](#install)
+- [How a repository and a project are laid out](#how-a-repository-and-a-project-are-laid-out)
+- [Start with a coding agent](#start-with-a-coding-agent)
+- [Start by hand](#start-by-hand)
+- [Commands](#commands)
+- [The viewer](#the-viewer)
+- [Projects](#projects)
+- [Skills and documentation for agents](#skills-and-documentation-for-agents)
+- [Contributing](#contributing)
+- [Questions and contact](#questions-and-contact)
+- [License](#license)
+- [Acknowledgements](#acknowledgements)
+
 ## What is in it
 
 - **Props and scenery** (`@core/volume`). Objects built from solids, round volumes, tubes and decals, projected through one 3/4 camera and rendered in 1, 4 or 8 facings. Scenery kits on the game's own grid: floors with transitions, walls and fences that connect, props, decals, and scenes saved as data. Scenery is alive: pieces rest in states and play clips between them (doors, chests, levers, breakables, flames), and the sheets carry the navigation a game needs.
@@ -164,6 +180,10 @@ The guides explain when to use each module, and are indexed in [`docs/guides/`](
 ## Contributing
 
 Ideas, bugs and pull requests are welcome. The [roadmap board](https://github.com/users/leduardo99/projects/1) shows what is next, [Discussions](https://github.com/leduardo99/diorama/discussions) is the place for ideas and questions, and [CONTRIBUTING.md](CONTRIBUTING.md) explains how to set up and what every change has to keep. If a coding agent does the work, point it at [AGENTS.md](AGENTS.md): the workflow from issue to pull request, with the checks for each kind of change.
+
+## Questions and contact
+
+Ask in [Discussions](https://github.com/leduardo99/diorama/discussions), or reach the maintainer on X at [@dioramadev](https://x.com/dioramadev) or on Discord as `luisao_`.
 
 ## License
 

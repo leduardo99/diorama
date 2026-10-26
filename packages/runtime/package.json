@@ -1,6 +1,6 @@
 {
   "name": "@diorama/runtime",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "The Diorama atlas contract in pure TypeScript: reads exported sheets and plays their characters, effects, navigation and interface geometry. No DOM, no dependencies.",
   "private": true,
   "license": "MIT",
