@@ -46,6 +46,8 @@ export function ingridDeath(skeleton: SkeletonSpec, seconds = 0.9): Clip {
       return {
         ...d,
         extra: {
+          // The hands let go as the base death says (`weaponRelease`, `offWeaponRelease`).
+          ...d.extra,
           weaponYaw: track(t, [[0, SPEAR_REST_YAW], [0.08, SPEAR_REST_YAW], [0.3, 1.6], [0.5, 1.1], [1, 1.1]]),
           weaponPitch: track(t, [[0, SPEAR_REST_PITCH], [0.08, SPEAR_REST_PITCH], [0.3, 0.8], [0.5, -0.2], [1, -0.2]]),
           dead: smooth(clamp01((t - 0.15) / 0.55)),

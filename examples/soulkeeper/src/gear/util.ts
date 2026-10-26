@@ -5,8 +5,8 @@
  */
 
 import { alpha, Polygon } from '@core/draw';
-import type { MaterialSet, PartContext } from '@core/rig';
-import { Frame3, Solid, cross3, dot3, len3, norm3, scale3, sub3, vec3, type ShadeRamp, type Vec3, type VolumeStyle } from '@core/volume';
+import type { Grip, MaterialSet, PartContext } from '@core/rig';
+import { Frame3, Round, Solid, cross3, dot3, len3, norm3, scale3, sub3, vec3, type Placed, type ShadeRamp, type Vec3, type VolumeStyle } from '@core/volume';
 
 /** A part with no options. */
 export type NoOptions = Record<string, never>;
@@ -89,4 +89,20 @@ export function axisFrame(origin: Vec3, axis: Vec3, hint: Vec3 = vec3(1, 0, 0)):
   if (len3(f) < 1e-4) f = cross3(u, vec3(0, 1, 0));
   f = norm3(f);
   return new Frame3(origin, f, cross3(u, f), u);
+}
+
+/**
+ * A plain closed hand round what it holds (`ctx.grip`), for the kit's hand parts while their hand
+ * holds something: one fist mass round the handle where the palm closes, the knuckles on along the
+ * hand, wide enough for the handle, drawn over the handle and over the end of the arm it rests `on`.
+ * Kept simple on purpose; an empty hand keeps its own drawing. `k` is the hand's size (the skeleton's
+ * scale times the part's own). Returns the fist.
+ */
+export function closedHand(ctx: PartContext, grip: Grip, style: VolumeStyle, k: number): Placed {
+  const f = axisFrame(grip.at, grip.axis, grip.palm.along);
+  const fist = Round.ellipsoid(f.moved(0.4 * k, 0, 0), 2.1 * k, Math.max(1.8 * k, grip.radius + 0.6 * k), 2 * k);
+  // A grip behind a board (a shield's strap) is hidden by it while the board faces the camera.
+  const hidden = grip.behind !== undefined && ctx.kit.camera.faces(grip.behind);
+  ctx.object.add(fist, style, { bias: (hidden ? -5 : 5) * k, ...(ctx.host ? { on: ctx.host } : {}) });
+  return fist;
 }

@@ -20,7 +20,7 @@ import { easeOutCubic, slotFrame, type Part, type Pose, type SkeletonSpec } from
 import { add3, scale3, sub3, vec3, type Vec3 } from '@core/volume';
 import { paintEmber, paintFlame } from './fire';
 import { clamp01, halo, role, tones } from './util';
-import { SWORD_BLADE, scytheHeld, swordHeld } from './weapons';
+import { SWORD_BLADE, SWORD_HILT, scytheHeld, swordHeld } from './weapons';
 
 /** Options shared by the weapon effects. */
 export interface WeaponEffectOptions {
@@ -41,7 +41,7 @@ export const weaponSmear: Part<WeaponEffectOptions> = ({ object: o, pose, kit, a
   const side = at.side === 0 ? 1 : at.side;
   const span = Math.min(kit.t - (strike.t - start), 1 / 15 / kit.clip.seconds);
   const samples = Array.from({ length: 10 }, (_, i) => swordHeld(kit.poseAt(kit.t - span * (1 - i / 9)), kit.skeleton, side, length));
-  const reach = length + 2;
+  const reach = SWORD_HILT + length + 2;
   const tail = tones(materials, 'glow').lit;
   const edge = tones(materials, 'blade', 'metalAccent', 'metal').lit;
   o.custom(swordHeld(pose, kit.skeleton, side, length).grip, (ctx, c) => {
@@ -67,8 +67,8 @@ export const chargedEdge: Part<WeaponEffectOptions> = ({ object: o, pose, kit, a
   const { grip, dir } = swordHeld(pose, kit.skeleton, at.side === 0 ? 1 : at.side, length);
   const glow = role(materials, 'glow');
   const lamp = halo(glow, 10);
-  const from = add3(grip, scale3(dir, 3));
-  const to = add3(grip, scale3(dir, length + 1.5));
+  const from = add3(grip, scale3(dir, SWORD_HILT + 3));
+  const to = add3(grip, scale3(dir, SWORD_HILT + length + 1.5));
   o.custom(grip, (ctx, c) => {
     const a = c.project(from);
     const b = c.project(to);

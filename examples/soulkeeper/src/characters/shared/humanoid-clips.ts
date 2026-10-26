@@ -156,8 +156,8 @@ export function humanoidDeath(skeleton: SkeletonSpec, options: HumanoidDeathOpti
         const base = lerpL(h.rest, h.down, settle);
         arms[arm.name] = { target: lerpL(base, h.flung, throwUp), elbow: lerpL(h.elbowRest, h.elbowDown, settle) };
       }
-      // The sword goes with the flung arm (the skin's `weaponYaw` / `weaponPitch`), then falls
-      // towards the floor; once the body lies, the skin lays it down beside the arm.
+      // The sword goes with the flung arm (the skin's `weaponYaw` / `weaponPitch`), then the hands let
+      // go as the arms drop (`weaponRelease`) and what they held settles on the floor beside the arm.
       const weaponYaw = track(t, [[0, 0.5], [0.08, 0.5], [0.3, 1.05], [0.5, 0.6], [1, 0.6]]);
       const weaponPitch = track(t, [[0, -0.875], [0.08, -0.875], [0.3, 0.55], [0.5, -0.5], [1, -0.5]]);
       return {
@@ -165,7 +165,7 @@ export function humanoidDeath(skeleton: SkeletonSpec, options: HumanoidDeathOpti
         pitch,
         feet,
         arms,
-        extra: { weaponYaw, weaponPitch },
+        extra: { weaponYaw, weaponPitch, weaponRelease: settle, offWeaponRelease: settle },
       };
     },
   });

@@ -23,6 +23,8 @@ export function malvekDeath(skeleton: SkeletonSpec, seconds = 0.9): Clip {
       return {
         ...d,
         extra: {
+          // The hands let go as the base death says (`weaponRelease`, `offWeaponRelease`).
+          ...d.extra,
           weaponYaw: track(t, [[0, SCYTHE_REST_YAW], [0.08, SCYTHE_REST_YAW], [0.3, 1.9], [0.5, 1.4], [1, 1.4]]),
           weaponPitch: track(t, [[0, SCYTHE_REST_PITCH], [0.08, SCYTHE_REST_PITCH], [0.3, 0.7], [0.5, -0.2], [1, -0.2]]),
           bladeAim: track(t, [[0, SCYTHE_REST_AIM], [0.3, 0.8], [0.6, 1.9], [1, 1.9]]),

@@ -36,7 +36,7 @@ import { bump, outfit, partFrame, type OutfitPiece, type OutfitSpec, type Part }
 import { Blob, Decal, Round, Tube, add3, dot3, norm3, scale3, sub3, vec3, type Vec3 } from '@core/volume';
 import { headFrame } from './heads';
 import { trunkScale } from './torso';
-import { armOf, clamp01, legOf, role, scaleOf, tones, type NoOptions } from './util';
+import { armOf, clamp01, closedHand, legOf, role, scaleOf, tones, type NoOptions } from './util';
 
 const clamp = (x: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, x));
 
@@ -514,13 +514,15 @@ export const fleshArm: Part<NoOptions> = ctx => {
  * A relaxed flesh hand: a palm with the fingers kept as one soft, slightly tapered mass — at 1×
  * four separate fingers only read as claws — plus a thumb nub on the inner side. It sits at the
  * wrist and points along the forearm. Pair it with a `glove` (the glove's cuff covers the wrist)
- * or a held item.
+ * or a held item: while the hand holds something (`ctx.grip`) it is a plain fist round the handle
+ * instead (`closedHand`).
  * Slot: `hand` (side -1 left, 1 right). Roles: `skin`.
  */
 export const fleshHand: Part<NoOptions> = ctx => {
   const { object: o, at, materials } = ctx;
   const k = scaleOf(ctx);
   const skin = role(materials, 'skin');
+  if (ctx.grip) return closedHand(ctx, ctx.grip, skin, 0.9 * k);
   const f = at.frame;
   const palm = Round.ellipsoid(f.moved(1.9 * k, 0, 0.05 * k), 2.2 * k, 2 * k, 0.95 * k);
   o.add(palm, skin);

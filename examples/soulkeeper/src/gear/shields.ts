@@ -3,7 +3,7 @@
  */
 
 import { Polygon } from '@core/draw';
-import { bodyFrames, type Part, type Pose, type SkeletonSpec } from '@core/rig';
+import { bodyFrames, palmGrip, resolveHold, type Grip, type Hold, type Part, type Pose, type SkeletonSpec } from '@core/rig';
 import { Decal, Frame3, Round, Tube, UP, add3, cross3, dot3, lerp3, norm3, scale3, sub3, type Vec3 } from '@core/volume';
 import { PALETTES } from '../theme';
 import { role, tones } from './util';
@@ -30,6 +30,22 @@ export function shieldDisc(pose: Pose, skeleton: SkeletonSpec, side: -1 | 1 = -1
   const n = norm3(sub3(out0, scale3(d, dot3(out0, d))));
   const center = add3(lerp3(el, ha, 0.55), scale3(n, 1.3));
   return { frame: new Frame3(center, d, norm3(cross3(n, d)), n), n, center };
+}
+
+/** How the round shield is held: a strapped shield, the forearm through its straps and the hand on the grip behind the board. */
+export const SHIELD_HOLD: Hold = { kind: 'strapped-shield' };
+
+/**
+ * Where the hand of `side` closes on the round shield (the shield's `wield.grip`): the grip behind the
+ * board, wherever the hand is, running across the forearm in the board's plane. `behind` is the board's
+ * outward normal, so the fist is hidden by the board while its face is towards the camera.
+ */
+export function shieldGrip(pose: Pose, skeleton: SkeletonSpec, side: -1 | 1 = -1): Grip {
+  const arm = (skeleton.arms ?? []).find(a => a.side === side);
+  if (!arm) throw new Error(`gear: skeleton "${skeleton.name}" has no ${side < 0 ? 'left' : 'right'} arm for a shield`);
+  const { frame, n } = shieldDisc(pose, skeleton, side);
+  const hold = resolveHold(SHIELD_HOLD, skeleton);
+  return palmGrip(pose, skeleton, arm.name, { axis: scale3(frame.right, side), radius: hold.handle.radius, angle: hold.angle, behind: n });
 }
 
 /** Options of `roundShield`. */

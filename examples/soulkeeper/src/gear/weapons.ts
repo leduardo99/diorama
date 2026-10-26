@@ -7,10 +7,14 @@
  * and keeps the tip above the floor. `swordHeld` is that call with the sword's numbers, shared by the drawing,
  * the effects (`weaponSmear`, `chargedEdge`, `groundShockwave` in `effects.ts`) and the
  * character's sockets, so they all agree on where the blade is.
+ *
+ * Each weapon says how it is held (`SWORD_HOLD`, `SCYTHE_HOLD`, `spearHold`: a `Hold` of `@core/rig`)
+ * and passes it to its `held` call, so its grip sits in the palm of the hand, and the catalog gives the
+ * same call as the part's `wield.held`, so the hand parts on that side close on it (`ctx.grip`).
  */
 
 import { Polygon } from '@core/draw';
-import { held, partFrame, weaponChannel, type Held, type Part, type Pose, type SkeletonSpec } from '@core/rig';
+import { held, partFrame, weaponChannel, type Held, type Hold, type Part, type Pose, type SkeletonSpec } from '@core/rig';
 import { Decal, Frame3, Solid, Round, Tube, UP, add3, cross3, dot3, len3, norm3, scale3, sub3, vec3, visibleArc, type Vec3 } from '@core/volume';
 import { paintFlame } from './fire';
 import { axisFrame, halo, role, tones, type NoOptions } from './util';
@@ -18,21 +22,35 @@ import { axisFrame, halo, role, tones, type NoOptions } from './util';
 /** Default length of the sword's blade, from the guard to the tip. */
 export const SWORD_BLADE = 24;
 
-/** The grip sits 2 units behind the start of the blade, so the tip is `blade + 2` from the grip. */
-const reach = (blade: number) => blade + 2;
+/**
+ * How the sword is held: a one-hand blade's grip, the hand filling the leather grip (4.4 long, 0.75
+ * round) with the palm at its middle.
+ */
+export const SWORD_HOLD: Hold = { kind: 'one-hand-blade', handle: { length: 4.4, radius: 0.75 } };
+
+/**
+ * Where the hilt is drawn from, this far along the blade past the grip (the palm, the middle of the
+ * leather grip): from there the leather grip runs 3.6 back and 0.8 on, the guard sits 1.4 on and the
+ * blade starts 2 on.
+ */
+export const SWORD_HILT = 1.4;
+
+/** The tip is the blade's length past the start of the blade, 2 past the hilt. */
+const reach = (blade: number) => SWORD_HILT + blade + 2;
 
 /**
  * Grip, direction and tip of the sword in the hand of `side` (-1 left, 1 right, default the right
  * hand). With no weapon angle from the clip it points low and forward, a little across the body
  * (mirrored for the left hand). The blade rests on the floor instead of sinking into it: when the
  * hand is low (a body lying down) the blade turns towards the horizontal until its tip touches the floor.
- * The catalog's `wield.sockets.tip` calls it with the piece's side and length, so a character's
- * `tip` follows the sword it holds.
+ * Its grip is in the palm, the middle of the leather grip (`SWORD_HOLD`). The catalog's
+ * `wield.sockets.tip` and `wield.held` call it with the piece's side and length, so a character's
+ * `tip` follows the sword it holds and the hand on that side closes on it.
  */
 export function swordHeld(pose: Pose, skeleton: SkeletonSpec, side: -1 | 1 = 1, blade = SWORD_BLADE): Held {
   const hand = (skeleton.arms ?? []).find(a => a.side === side);
   if (!hand) throw new Error(`gear: skeleton "${skeleton.name}" has no ${side < 0 ? 'left' : 'right'} arm to hold a sword`);
-  return held(pose, skeleton, hand.name, { length: reach(blade), floor: 1.1, rest: [0.55, 0.3 * side, -0.75], channel: weaponChannel(side) });
+  return held(pose, skeleton, hand.name, { length: reach(blade), floor: 1.1, rest: [0.55, 0.3 * side, -0.75], channel: weaponChannel(side), hold: SWORD_HOLD });
 }
 
 /** Options of `notchedSword`. */
@@ -65,7 +83,8 @@ export const notchedSword: Part<NotchedSwordOptions> = (ctx, options) => {
   const { object: o, pose, kit, at, materials } = ctx;
   const { length = SWORD_BLADE, notch = true, fuller = true, runes = true, guard = true, grip = true, pommel = true } = options;
   const cam = kit.camera;
-  const { dir, frame: bladeFrame } = swordHeld(pose, kit.skeleton, at.side === 0 ? 1 : at.side, length);
+  const { dir, frame: inHand } = swordHeld(pose, kit.skeleton, at.side === 0 ? 1 : at.side, length);
+  const bladeFrame = inHand.moved(SWORD_HILT, 0, 0);
   const charge = pose.extra.charge ?? 0;
   const metal = role(materials, 'metal');
   const shoulder = length - 2.5;
@@ -158,16 +177,31 @@ const BLADE_BASE = 4.5;
 const LANTERN_REACH = 9.2;
 
 /**
+ * How the scythe is held: in one hand round the snath, `SCYTHE.butt` up from its foot (the snath is
+ * `SCYTHE.butt + SCYTHE.head` long, about 1 round where the hand closes).
+ */
+export const SCYTHE_HOLD: Hold = { kind: 'scythe', handle: { length: SCYTHE.butt + SCYTHE.head, radius: 1.05 }, grip: SCYTHE.butt / (SCYTHE.butt + SCYTHE.head) };
+
+/**
+ * The scythe's `held` call: the snath through the palm of the hand of `side` (`SCYTHE_HOLD`), its head
+ * `SCYTHE.head` up from the grip, upright by default. `scytheHeld` builds on it, and the catalog's
+ * `wield.held` is it, so the hand on that side closes where the snath is.
+ */
+export function snathHeld(pose: Pose, skeleton: SkeletonSpec, side: -1 | 1 = 1): Held {
+  const arm = (skeleton.arms ?? []).find(a => a.side === side);
+  if (!arm) throw new Error(`gear: skeleton "${skeleton.name}" has no ${side < 0 ? 'left' : 'right'} arm to hold a scythe`);
+  return held(pose, skeleton, arm.name, { length: SCYTHE.head, floor: 3.2, rest: SCYTHE_REST, channel: weaponChannel(side), hold: SCYTHE_HOLD });
+}
+
+/**
  * Where the scythe is: the snath through the hand (angle from `extra.weaponYaw` / `weaponPitch`
- * through `held`, upright by default), the blade square to the snath towards `extra.bladeAim`, and
+ * through `snathHeld`, upright by default), the blade square to the snath towards `extra.bladeAim`, and
  * the lantern hanging by gravity from the hook (swinging by `extra.lanternSway`, radians, and
  * resting on the floor when the hook is low). When the body lies the snath settles on the floor.
  * Use it for the character's sockets (`tip`, `lantern`): the parts below draw from the same call.
  */
 export function scytheHeld(pose: Pose, skeleton: SkeletonSpec, side: -1 | 1 = 1): ScytheHeld {
-  const arm = (skeleton.arms ?? []).find(a => a.side === side);
-  if (!arm) throw new Error(`gear: skeleton "${skeleton.name}" has no ${side < 0 ? 'left' : 'right'} arm to hold a scythe`);
-  const h = held(pose, skeleton, arm.name, { length: SCYTHE.head, floor: 3.2, rest: SCYTHE_REST, channel: weaponChannel(side) });
+  const h = snathHeld(pose, skeleton, side);
   const { grip, dir } = h;
   const f = pose.frame;
   const buttLength = dir.z > 0.02 ? Math.min(SCYTHE.butt, Math.max(1, (grip.z - 0.7) / dir.z)) : SCYTHE.butt;
@@ -248,13 +282,14 @@ export const reaperScythe: Part<ReaperScytheOptions> = (ctx, { etched = true, ba
 
 /**
  * The bony hand closed on the snath: a fist round the grip with three finger bands wrapped
- * across it, drawn over the scythe whatever the facing. The sleeve's cuff ends at its back.
+ * across it, drawn over the scythe whatever the facing. The sleeve's cuff ends at its back. It closes
+ * where the outfit says the hand holds the snath (`ctx.grip`), else where `snathHeld` puts the grip.
  * Rests on the snath (give it as the host).
  * Slot: `hand` (side 1 right). Roles: `boneLimb` (falls back to `bone`).
  */
 export const scytheFist: Part<NoOptions> = ctx => {
   const { object: o, pose, kit, at, materials, host } = ctx;
-  const g = scytheHeld(pose, kit.skeleton, at.side === 0 ? 1 : at.side);
+  const g = ctx.grip ? { grip: ctx.grip.at, dir: ctx.grip.axis } : snathHeld(pose, kit.skeleton, at.side === 0 ? 1 : at.side);
   const bone = role(materials, 'boneLimb', 'bone');
   const f = axisFrame(g.grip, g.dir, pose.frame.forward);
   const fist = Round.ellipsoid(f, 2.2, 2.3, 2.7);
@@ -340,36 +375,31 @@ export const SPEAR_REST_YAW = Math.atan2(SPEAR_REST[1], SPEAR_REST[0]);
 export const SPEAR_REST_PITCH = Math.asin(SPEAR_REST[2] / Math.hypot(...SPEAR_REST));
 
 /**
- * How far past the wrist the spear's grip sits, along the forearm, on the 80-unit scale (it follows
- * the skeleton's scale): in the palm of a closed hand, so the shaft runs through the fist
- * (`spearFist`) and not through the wrist joint the arm ends at.
+ * How a spear is held: in one hand, `butt` up from its foot, round a shaft `reach + butt` long and
+ * about 0.9 round.
  */
-export const SPEAR_PALM = 1.8;
+export const spearHold = (reach = SPEAR.reach, butt = SPEAR.butt): Hold => ({ kind: 'spear', handle: { length: reach + butt, radius: 0.9 }, grip: butt / (reach + butt) });
 
 /**
  * Grip, direction, tip and butt of a spear in the hand of `side` (-1 left, 1 right, default the
- * right): the grip in the palm (`SPEAR_PALM` past the wrist), upright at rest, laid along the clip's
+ * right): the grip in the palm (`spearHold`), upright at rest, laid along the clip's
  * `weaponYaw` / `weaponPitch` (the off hand's channels in the left hand), resting on the floor in a
- * death, its butt shortened where it would go below the floor. The catalog's `wield.sockets.tip`
- * calls it with the piece's options, so a character's `tip` follows the spear it holds, and the
- * fist on the shaft calls it too, so the hand closes where the shaft is.
+ * death, its butt shortened where it would go below the floor. The catalog's `wield.sockets.tip` and
+ * `wield.held` call it with the piece's options, so a character's `tip` follows the spear it holds,
+ * and the hand on that side closes where the shaft is.
  */
 export function spearHeld(pose: Pose, skeleton: SkeletonSpec, side: -1 | 1 = 1, reach = SPEAR.reach, butt = SPEAR.butt): Held {
   const arm = (skeleton.arms ?? []).find(a => a.side === side);
   if (!arm) throw new Error(`gear: skeleton "${skeleton.name}" has no ${side < 0 ? 'left' : 'right'} arm to hold a spear`);
-  // `held` grips at the arm's end, the wrist; the shaft goes through the palm, a little further on.
-  const key = `${arm.name}.hand`;
-  const [, elbow, wrist] = pose.chains[arm.name];
-  const palm = add3(wrist, scale3(norm3(sub3(wrist, elbow)), SPEAR_PALM * (skeleton.height / 80)));
-  const inPalm: Pose = { ...pose, joints: { ...pose.joints, [key]: palm } };
-  return held(inPalm, skeleton, arm.name, { length: reach, butt, floor: 1.2, rest: SPEAR_REST, channel: weaponChannel(side) });
+  return held(pose, skeleton, arm.name, { length: reach, butt, floor: 1.2, rest: SPEAR_REST, channel: weaponChannel(side), hold: spearHold(reach, butt) });
 }
 
 /**
  * A hand closed on the spear's shaft: a fist round the grip, three finger bands wrapped across the
  * shaft and a thumb over them, with a cuff at the wrist, drawn over the spear whatever the facing,
  * so the shaft reads as running through the hand. It stands in for the hand (or glove) on that side
- * and closes where `spearHeld` puts the grip, in the palm. Gloved when the outfit has `leather`,
+ * and closes where the outfit says the hand holds the shaft (`ctx.grip`), else where `spearHeld` puts
+ * the grip, in the palm. Gloved when the outfit has `leather`,
  * bare `skin` otherwise. Follows the skeleton's scale. Rests on the spear (give it as the host).
  * Slot: `hand` (side 1 right, -1 left). Roles: `leather` (falls back to `skin`).
  */
@@ -378,7 +408,7 @@ export const spearFist: Part<NoOptions> = ctx => {
   const side = at.side === 0 ? 1 : at.side;
   const arm = (kit.skeleton.arms ?? []).find(a => a.side === side);
   if (!arm) throw new Error(`gear: skeleton "${kit.skeleton.name}" has no ${side < 0 ? 'left' : 'right'} arm for a fist`);
-  const g = spearHeld(pose, kit.skeleton, side);
+  const g = ctx.grip ? { grip: ctx.grip.at, dir: ctx.grip.axis } : spearHeld(pose, kit.skeleton, side);
   const k = kit.skeleton.height / 80;
   const hand = role(materials, 'leather', 'skin');
   // The bias lifts the hand over the end of the sleeve or vambrace it comes out of, which sorts by

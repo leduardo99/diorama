@@ -12,7 +12,8 @@
  *   pauldron, weapon, shield, greave, bracer, belt, coat), so swapping and equipping replace it.
  *   `wield` says how the sword (blade), the scythe and the spear (polearm) and the shield are held, and
  *   gives the sword, the scythe and the spear their sockets (`tip`, `lantern`), so a character's tip
- *   follows its weapon.
+ *   follows its weapon, their hold (`hold`: the handle and where the hand closes on it) and their
+ *   `held` call (`held`), so the hand parts on that side close on them (`ctx.grip`).
  * - `CATALOG.bases`: the base bodies an outfit is drawn over (the bone legs, the flesh legs).
  * - `CATALOG.materials`: the theme's `VOLUMES`, by name.
  * - `CHARACTERS`: the guard, Malvek, the captain, the warden, the villager and Ingrid: each one's rig (label,
@@ -47,12 +48,12 @@ import { OUTFIT as VILLAGER_OUTFIT } from '../characters/villager/outfit';
 import { WARDEN_RIG } from '../characters/warden/spec';
 import { OUTFIT as WARDEN_OUTFIT } from '../characters/warden/outfit';
 import {
-  SHIELD_RADIUS, SPEAR, SWORD_BLADE,
+  SCYTHE_HOLD, SHIELD_RADIUS, SPEAR, SWORD_BLADE, SWORD_HOLD,
   apron, baldric, belt, boneArm, boneHand, boneLeg, boneLegs, boneSkull, boneSpine, boot, bracer, chargedEdge, cloak, coatSleeve, coatTorso, fireCrown,
   fleshArm, fleshHand, fleshHead, fleshLeg, fleshLegs, fleshTorso, cuirass, glove, greave, grimoire, groundShockwave, hairCrop, hairTail, hairWaves, helmCrest, highCollar,
-  hood, hornedHelm, lamedPauldron, legWraps, longCoat, notchedSword, palmFlame, pouch, reaperScythe, ribBreastplate, ribCage, roundShield, sashTail,
-  scytheFist, scytheHeld, scytheSmear, shawl, skullBuckle, skullPauldron, skullSutures, soulLantern, swordHeld, tabard, tunic, weaponSmear, wingedHelm,
-  fittedSleeve, leggings, platePauldron, plateGreave, plateVambrace, spear, spearFist, spearHeld, spiritWings, tassets,
+  hood, hornedHelm, lamedPauldron, legWraps, longCoat, notchedSword, palmFlame, pouch, reaperScythe, ribBreastplate, ribCage, roundShield, SHIELD_HOLD, shieldGrip, sashTail,
+  scytheFist, scytheHeld, scytheSmear, shawl, skullBuckle, skullPauldron, skullSutures, snathHeld, soulLantern, swordHeld, tabard, tunic, weaponSmear, wingedHelm,
+  fittedSleeve, leggings, platePauldron, plateGreave, plateVambrace, spear, spearFist, spearHeld, spearHold, spiritWings, tassets,
 } from '.';
 
 // ----------------------------------------------------------------------------------------------
@@ -79,6 +80,9 @@ const variation = (def: string): PartOption => ({
 });
 const size = (def = 1, min = 0.7, max = 1.4, step = 0.05) => num('size', 'Size', def, min, max, step);
 const bladeLength = () => num('length', 'Blade length (same as the sword)', SWORD_BLADE, 14, 40, 1);
+/** A sword piece's blade length, and a spear piece's reach and butt, from its options (the part's defaults when left out). */
+const swordLength = (o: Record<string, unknown>) => (o.length as number | undefined) ?? SWORD_BLADE;
+const spearMeasures = (o: Record<string, unknown>): [number, number] => [(o.length as number | undefined) ?? SPEAR.reach, (o.butt as number | undefined) ?? SPEAR.butt];
 
 // ----------------------------------------------------------------------------------------------
 // Parts
@@ -213,7 +217,8 @@ const PARTS: PartInfo[] = [
 
   // Weapons.
   {
-    id: 'notched-sword', label: 'Notched sword', group: 'weapons', equip: 'weapon', wield: { class: 'blade', sockets: { tip: (pose, skeleton, p) => swordHeld(pose, skeleton, p.side, (p.options.length as number | undefined) ?? SWORD_BLADE).tip } }, part: notchedSword, slots: ['hand'], roles: ['blade', 'metalAccent', 'metal', 'leather', 'glow'],
+    id: 'notched-sword', label: 'Notched sword', group: 'weapons', equip: 'weapon', part: notchedSword, slots: ['hand'], roles: ['blade', 'metalAccent', 'metal', 'leather', 'glow'],
+    wield: { class: 'blade', hold: SWORD_HOLD, held: (pose, skeleton, p) => swordHeld(pose, skeleton, p.side, swordLength(p.options)), sockets: { tip: (pose, skeleton, p) => swordHeld(pose, skeleton, p.side, swordLength(p.options)).tip } },
     options: [
       num('length', 'Blade length', SWORD_BLADE, 14, 40, 1),
       flag('notch', 'Notch'),
@@ -225,12 +230,14 @@ const PARTS: PartInfo[] = [
     ],
   },
   {
-    id: 'reaper-scythe', label: "Reaper's scythe", group: 'weapons', equip: 'weapon', wield: { class: 'polearm', sockets: { tip: (pose, skeleton, p) => scytheHeld(pose, skeleton, p.side).tip, lantern: (pose, skeleton, p) => scytheHeld(pose, skeleton, p.side).lantern } }, part: reaperScythe, slots: ['hand'], roles: ['wood', 'metal', 'blade', 'metalAccent'],
+    id: 'reaper-scythe', label: "Reaper's scythe", group: 'weapons', equip: 'weapon', part: reaperScythe, slots: ['hand'], roles: ['wood', 'metal', 'blade', 'metalAccent'],
+    wield: { class: 'polearm', hold: SCYTHE_HOLD, held: (pose, skeleton, p) => snathHeld(pose, skeleton, p.side), sockets: { tip: (pose, skeleton, p) => scytheHeld(pose, skeleton, p.side).tip, lantern: (pose, skeleton, p) => scytheHeld(pose, skeleton, p.side).lantern } },
     options: [flag('etched', 'Etchings'), flag('bands', 'Iron bands')],
   },
   { id: 'scythe-fist', label: 'Fist on the scythe', group: 'weapons', kind: 'body', part: scytheFist, slots: ['hand'], roles: ['boneLimb', 'bone'], requires: 'reaper-scythe' },
   {
-    id: 'spear', label: 'Spear', group: 'weapons', equip: 'weapon', wield: { class: 'polearm', sockets: { tip: (pose, skeleton, p) => spearHeld(pose, skeleton, p.side, (p.options.length as number | undefined) ?? SPEAR.reach, (p.options.butt as number | undefined) ?? SPEAR.butt).tip } }, part: spear, slots: ['hand'], roles: ['wood', 'metal', 'blade', 'metalAccent', 'trim'],
+    id: 'spear', label: 'Spear', group: 'weapons', equip: 'weapon', part: spear, slots: ['hand'], roles: ['wood', 'metal', 'blade', 'metalAccent', 'trim'],
+    wield: { class: 'polearm', hold: spearHold(), held: (pose, skeleton, p) => spearHeld(pose, skeleton, p.side, ...spearMeasures(p.options)), sockets: { tip: (pose, skeleton, p) => spearHeld(pose, skeleton, p.side, ...spearMeasures(p.options)).tip } },
     options: [num('length', 'Reach (grip to tip)', SPEAR.reach, 40, 80, 1), num('butt', 'Shaft behind the grip', SPEAR.butt, 10, 60, 1), flag('lugs', 'Lugs'), flag('bands', 'Gilded bands')],
   },
   { id: 'spear-fist', label: 'Fist on the spear', group: 'weapons', kind: 'body', part: spearFist, slots: ['hand'], roles: ['leather', 'skin'], requires: 'spear' },
@@ -238,7 +245,7 @@ const PARTS: PartInfo[] = [
 
   // Shields.
   {
-    id: 'round-shield', label: 'Round shield', group: 'shields', equip: 'shield', wield: { class: 'shield', offHand: 'hold' }, part: roundShield, slots: ['forearm'], roles: ['wood', 'woodSeam', 'metal', 'clothAccent'],
+    id: 'round-shield', label: 'Round shield', group: 'shields', equip: 'shield', wield: { class: 'shield', offHand: 'hold', hold: SHIELD_HOLD, grip: (pose, skeleton, p) => [shieldGrip(pose, skeleton, p.side)] }, part: roundShield, slots: ['forearm'], roles: ['wood', 'woodSeam', 'metal', 'clothAccent'],
     options: [num('radius', 'Radius', SHIELD_RADIUS, 4.5, 9, 0.1), flag('boss', 'Boss'), flag('rim', 'Rim'), flag('band', 'Painted band'), flag('planks', 'Planks')],
   },
 

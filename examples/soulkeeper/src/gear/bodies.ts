@@ -15,7 +15,7 @@
 
 import { outfit, partFrame, type MaterialSet, type OutfitPiece, type OutfitSpec, type Part } from '@core/rig';
 import { Blob, Round, Tube, add3, dot3, lerp3, norm3, scale3, sub3, visibleArc } from '@core/volume';
-import { armOf, knobbly, legOf, role, type NoOptions } from './util';
+import { armOf, closedHand, knobbly, legOf, role, type NoOptions } from './util';
 
 const boneLimb = (m: MaterialSet) => role(m, 'boneLimb', 'bone');
 
@@ -121,12 +121,14 @@ export const boneLegs: NonNullable<OutfitSpec['base']> = (object, pose, kit, mat
  * An open bone hand, palm up: a flat palm, four fingers fanned a little and curling up at the tips,
  * and a thumb on the inner side. It sits at the wrist (the end of the forearm bone) and points along
  * the forearm; the palm faces the way the body's up does, so a raised forearm shows it open to the
- * sky. Pair it with a `coatSleeve` (the cuff covers the wrist) and a `palmFlame` above it.
+ * sky. Pair it with a `coatSleeve` (the cuff covers the wrist) and a `palmFlame` above it. While
+ * the hand holds something (`ctx.grip`) it is a plain bony fist round the handle instead (`closedHand`).
  * Slot: `hand` (side -1 left, 1 right). Roles: `boneLimb` (falls back to `bone`).
  */
 export const boneHand: Part<NoOptions> = ctx => {
   const { object: o, at, materials } = ctx;
   const bone = boneLimb(materials);
+  if (ctx.grip) return closedHand(ctx, ctx.grip, bone, 0.95);
   const f = at.frame;
   const palm = Round.ellipsoid(f.moved(2.2, 0, 0.1), 2.7, 2.4, 1);
   o.add(palm, bone);

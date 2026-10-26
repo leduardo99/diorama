@@ -9,7 +9,8 @@
  *
  * Parts by family, with the slot each is made for:
  * - `bodies.ts`: `boneLeg` (thigh), `boneSpine` and `ribCage` (chest), `boneArm` (shoulder), `boneHand`
- *   (hand, open palm), and `boneLegs`, the base body of both legs (it receives the outfit's materials);
+ *   (hand: an open palm, a fist round what it holds), and `boneLegs`, the base body of both legs (it
+ *   receives the outfit's materials);
  * - `flesh.ts`: `fleshHead` (head, with a face that reads `extra.brow`, `extra.mouth` and
  *   `extra.eyes`, and a resting face set by its options), `fleshTorso` (chest), `fleshArm`
  *   (shoulder), `fleshHand` (hand), `fleshLeg` (thigh), `hairCrop`, `hairTail` and `hairWaves`
@@ -26,10 +27,13 @@
  * - `plate.ts`: `wingedHelm` (head, resting on the hair or the head), `cuirass` (chest), `platePauldron`
  *   (shoulder), `tassets` (pelvis), `plateVambrace` (forearm) and `plateGreave` (shin), plate with
  *   gilded edges for the flesh body;
- * - `shields.ts`: `roundShield` (forearm), `shieldDisc`;
- * - `weapons.ts`: `notchedSword` (hand), `swordHeld`; `reaperScythe`, `scytheFist` and `soulLantern`
- *   (hand), `scytheHeld` and the `SCYTHE_REST_*` constants; `spear` and `spearFist` (hand),
- *   `spearHeld`, `SPEAR`, `SPEAR_PALM` and the `SPEAR_REST_*` constants;
+ * - `shields.ts`: `roundShield` (forearm), `shieldDisc`, and the hand on its grip (`shieldGrip`, `SHIELD_HOLD`);
+ * - `weapons.ts`: `notchedSword` (hand), `swordHeld`, `SWORD_HOLD` and `SWORD_HILT`; `reaperScythe`,
+ *   `scytheFist` and `soulLantern` (hand), `snathHeld`, `scytheHeld`, `SCYTHE_HOLD` and the
+ *   `SCYTHE_REST_*` constants; `spear` and `spearFist` (hand), `spearHeld`, `spearHold`, `SPEAR` and the
+ *   `SPEAR_REST_*` constants. Each weapon's hold puts its grip in the palm; the hand parts (`boneHand`,
+ *   `fleshHand`, `glove`) close into a plain fist round it (`closedHand` in `util.ts`) when the outfit
+ *   tells them their hand holds it (`ctx.grip`);
  * - `effects.ts`: `weaponSmear`, `chargedEdge`, `groundShockwave` (hand, resting on the blade),
  *   `scytheSmear` (hand, resting on the snath) and `palmFlame` (hand), `palmPoint`;
  * - `wings.ts`: `spiritWings` (back), spectral wings of soul fire, spread by `extra.wings`;

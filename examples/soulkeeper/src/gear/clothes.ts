@@ -13,7 +13,7 @@ import { partFrame, solvePose, type Part } from '@core/rig';
 import { Blob, Round, Tube, UP, add3, dot3, len3, lerp3, norm3, scale3, sub3, vec3, visibleArc, type Vec3 } from '@core/volume';
 import { headFrame } from './heads';
 import { trunkScale } from './torso';
-import { armOf, legOf, plate, role, scaleOf, tornPanel, type NoOptions } from './util';
+import { armOf, closedHand, legOf, plate, role, scaleOf, tornPanel, type NoOptions } from './util';
 
 /** Options of `hood`. */
 export interface HoodOptions {
@@ -270,13 +270,15 @@ export interface GloveOptions {
 
 /**
  * A leather glove over one hand: a thicker palm than the bare flesh hand, fingers curled the same
- * way, and a cuff round the wrist. The cuff covers the wrist the `flesh-arm` ends at.
+ * way, and a cuff round the wrist. The cuff covers the wrist the `flesh-arm` ends at. While the hand
+ * holds something (`ctx.grip`) it is a plain gloved fist round the handle instead (`closedHand`).
  * Slot: `hand` (side -1 left, 1 right). Roles: `leather`.
  */
 export const glove: Part<GloveOptions> = (ctx, { cuff = 1, size = 1 }) => {
   const { object: o, at, materials } = ctx;
   const leather = role(materials, 'leather');
   const k = scaleOf(ctx) * size;
+  if (ctx.grip) return closedHand(ctx, ctx.grip, leather, k);
   const f = at.frame;
   const band = new Tube([f.at(0.2 * k, -2.9 * k, 0.6 * k), f.at(0.4 * k, 0, 1.9 * k), f.at(0.2 * k, 2.9 * k, 0.6 * k), f.at(-0.2 * k, 2.6 * k, -1.3 * k), f.at(-0.2 * k, -2.6 * k, -1.3 * k), f.at(0.2 * k, -2.9 * k, 0.6 * k)], 1.15 * cuff * k);
   // The bias lifts the glove over the arm it covers: the arm's mass averages deeper than the hand.
