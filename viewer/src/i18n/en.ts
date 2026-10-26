@@ -71,7 +71,7 @@ export const en = {
       create: 'New project',
       sample: 'Try the sample',
       sampleRunning: 'Bringing in the sample…',
-      sampleHint: 'Copies <code>examples/soulkeeper</code> to <code>projects/soulkeeper</code> and exports it there: about a minute the first time. The copy is yours to change.',
+      sampleHint: 'Copies <code>examples/soulkeeper</code> to <code>projects/soulkeeper</code> and exports it there: a minute or two the first time. The copy is yours to change.',
       copying: 'Copying the sample…',
       exporting: 'Exporting the sheets: {done} of {total} done',
       terminal: 'In a terminal',

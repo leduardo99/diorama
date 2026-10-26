@@ -321,18 +321,26 @@ export default character.sheet('${rig.key}');
 }
 
 /** A volume asset in src/: the drawing, exported by name. Animation lines only appear when the asset has more than one frame. */
-function volumeSource(name: string, width: number, height: number, frames: number, fps: number, directions: number, themePath: string, sheetRel: string): string {
+function volumeSource(name: string, width: number, height: number, frames: number, fps: number, directions: number, themePath: string, sheetRel: string, material: string | undefined): string {
   const animated = frames > 1;
   const animLines = animated ? `  frames: ${frames},\n  fps: ${fps},\n` : '';
   const px = Math.round(width / 2);
   const py = Math.round(height * 0.78);
   const dirLine = directions > 1 ? `  directions: ${directions},\n` : '';
   const args = ['ctx', ...(animated ? ['frameIndex'] : []), 'facing = Math.PI / 2'].join(', ');
+  // A block-out box in the theme's first material, so the new sheet exports something to look at and to replace.
+  const side = Math.max(8, Math.round(Math.min(width, height) * 0.22));
+  const blockOut = material
+    ? `    // A block-out to replace: one box in the theme's ${material} material, about a fifth of the cell across.
+    stage.object().add(Solid.box(frame, ${side}, ${side}, ${Math.round(side * 0.8)}), VOLUMES.${material});
+`
+    : `    // TODO: theme.ts has no \`export const VOLUMES\` material to read: add one there and block out the volumes with it.
+`;
   return `/** The drawing of ${sheetRel} (that sheet re-exports it): block out the volumes, then the details. */
 
 import { defineAsset } from '@core';
-import { Frame3, Stage, vec3 } from '@core/volume';
-import { CAMERA } from '${themePath}';
+import { Frame3, ${material ? 'Solid, ' : ''}Stage, vec3 } from '@core/volume';
+import { CAMERA${material ? ', VOLUMES' : ''} } from '${themePath}';
 
 export const ${name} = defineAsset({
   width: ${width},
@@ -346,7 +354,7 @@ ${animLines}${dirLine}  pivot: { x: ${px}, y: ${py} },
     const stage = new Stage(cam);
     const frame = Frame3.facing(vec3(0, 0, 0), facing);
     // Block out the big volumes in \`frame\` first, then attach details with { on: part }.
-    stage.draw(ctx);
+${blockOut}    stage.draw(ctx);
   },
 });
 `;
@@ -422,12 +430,14 @@ function newAsset(positionals: string[], flags: Record<string, string | true>): 
       const existing = /const\s+skeleton\s*=\s*(\w+)\(/.exec(readFileSync(codeFile, 'utf8'))?.[1];
       if (existing && existing in RIG_SKELETONS) rig.skeleton = existing as RigSkeleton;
       const c = rigClipCall(rig);
-      addToCharacter = `Add the clip to \`clips\` in ${repoPath(codeFile)}: '${key}': ${c.call} (import ${c.import} from '@core/rig'). Until it is there, the sheet's character.sheet('${key}') is a type error: npm run check reports it and the export stops on it. --skeleton, --size, --frames and --directions are ignored: the character already sets them.`;
+      // The options that only shape a new character: say they were ignored only when some were given.
+      const ignored = ['skeleton', 'size', 'frames', 'directions'].filter(flag => flags[flag] !== undefined).map(flag => `--${flag}`);
+      addToCharacter = `Add the clip to \`clips\` in ${repoPath(codeFile)}: '${key}': ${c.call}, with ${c.import} in its import from '@core/rig' (import { ${c.import} } from '@core/rig'). Until it is there, the sheet's character.sheet('${key}') is a type error: npm run check reports it and the export stops on it.${ignored.length ? ` ${ignored.join(', ')} ${ignored.length === 1 ? 'was' : 'were'} ignored: the character already sets ${ignored.length === 1 ? 'it' : 'them'}.` : ''}`;
     }
     writeFileSync(sheetFile, rigSheetSource(rig, importPath(sheetFile, codeFile), `src/${dirname(subpath)}/character.ts`), 'utf8');
   } else {
     const name = identifierFor(key);
-    writeFileSync(codeFile, volumeSource(name, width, height, frames, fps, directions, themePath, `sheets/${subpath}.ts`), 'utf8');
+    writeFileSync(codeFile, volumeSource(name, width, height, frames, fps, directions, themePath, `sheets/${subpath}.ts`, firstVolumeKey(themeFile)), 'utf8');
     console.log(pc.green(`Created ${repoPath(codeFile)}`));
     writeFileSync(sheetFile, `export { ${name} as default } from '${importPath(sheetFile, codeFile)}';\n`, 'utf8');
   }
@@ -956,6 +966,8 @@ function inspect(positionals: string[], flags: Record<string, string | true>): v
   console.log(pc.bold(report.file));
   console.log(`  size: ${width}x${height}`);
   console.log(`  content bounds: ${report.opaqueBounds ? `${minX},${minY} ${report.opaqueBounds.width}x${report.opaqueBounds.height}` : 'empty'}`);
+  // A sheet with nothing drawn passes every other check; an empty cell can be on purpose (an effect fading out), a whole empty image is not.
+  if (!report.opaqueBounds) console.log(pc.yellow('  ⚠ nothing is drawn: every pixel is transparent. Check that the drawing adds its volumes to the stage (or its shapes to ctx) before the sheet is exported.'));
   // Reaching an edge is fine for full-bleed backgrounds and a problem for sprites with a margin.
   console.log(`  reaches edges: ${Object.entries(touches).filter(([, v]) => v).map(([k]) => k).join(', ') || 'none'}`);
   console.log(`  transparent: ${(report.transparentShare * 100).toFixed(1)}%`);
@@ -2057,6 +2069,34 @@ if (flags['help'] || command === '--help' || command === 'help') {
   console.log(command && USAGE[command] ? USAGE[command] : overview());
   process.exit(0);
 }
+
+/** Letters to change, add or remove to turn `a` into `b`. */
+function editDistance(a: string, b: string): number {
+  let row = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const next = [i];
+    for (let j = 1; j <= b.length; j++) next[j] = Math.min(row[j] + 1, next[j - 1] + 1, row[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    row = next;
+  }
+  return row[b.length];
+}
+
+/**
+ * Refuses an option the command does not take, instead of ignoring it (`--stirct` would run a check that is not
+ * strict). A command's options are the ones its usage line names (`USAGE`), so the list and the check cannot drift;
+ * example checks its own, with a hint about exporting the copy.
+ */
+function refuseUnknownOptions(name: string, given: Record<string, string | true>): void {
+  const usage = USAGE[name];
+  if (!usage || name === 'example') return;
+  const known = [...usage.split('\n')[0].matchAll(/--([a-z][a-z-]*)/g)].map(m => m[1]);
+  const unknown = Object.keys(given).filter(flag => flag !== 'help' && !known.includes(flag));
+  if (!unknown.length) return;
+  const near = unknown.length === 1 ? known.find(k => editDistance(unknown[0], k) <= 2) : undefined;
+  fail(`${unknown.map(flag => `--${flag}`).join(', ')} ${unknown.length === 1 ? 'is not an option' : 'are not options'} of npm run ${name}.`,
+    `${near ? `Did you mean --${near}? ` : ''}${known.length ? `Its options: ${known.map(k => `--${k}`).join(', ')}` : 'It takes no options'} (npm run ${name} -- --help).`);
+}
+if (command) refuseUnknownOptions(command, flags);
 
 const run = (task: Promise<void>) => task.catch(err => fail(String(err?.message ?? err)));
 

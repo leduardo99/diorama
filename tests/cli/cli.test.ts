@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { createServer } from 'node:http';
 import { join, resolve } from 'node:path';
 import { promisify } from 'node:util';
-import { inflateSync } from 'node:zlib';
+import { crc32, deflateSync, inflateSync } from 'node:zlib';
 import { restoreProject } from '../../tools/trash';
 import { exportTypeErrors } from '../../viewer/src/lib/export-errors';
 
@@ -50,6 +50,24 @@ function writeAsset(name: string, source: string): void {
   const id = name.replace(/-([a-z0-9])/g, (_, c: string) => c.toUpperCase());
   writeFileSync(resolve(projectDir, 'src', `${name}.ts`), source.replace('export default ', `export const ${id} = `), 'utf8');
   writeFileSync(resolve(projectDir, 'sheets', `${name}.ts`), `export { ${id} as default } from '../src/${name}';\n`, 'utf8');
+}
+
+/** A fully transparent RGBA PNG of `width` x `height`. */
+function transparentPng(width: number, height: number): Buffer {
+  const chunk = (type: string, data: Buffer) => {
+    const body = Buffer.concat([Buffer.from(type, 'ascii'), data]);
+    const length = Buffer.alloc(4);
+    length.writeUInt32BE(data.length);
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(crc32(body));
+    return Buffer.concat([length, body, crc]);
+  };
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header.set([8, 6, 0, 0, 0], 8);
+  const rows = Buffer.alloc(height * (1 + width * 4));
+  return Buffer.concat([Buffer.from('89504e470d0a1a0a', 'hex'), chunk('IHDR', header), chunk('IDAT', deflateSync(rows)), chunk('IEND', Buffer.alloc(0))]);
 }
 
 const badgeSource = `import { defineAsset } from '@core';
@@ -162,6 +180,11 @@ try {
   const pupBite = run(`npm run --silent new-asset -- ${project} characters/pup/bite --engine rig --clip attack`);
   assert.equal(pupBite.code, 0, pupBite.stderr);
   assert.ok(pupBite.stdout.includes("'bite': bite(skeleton)") && readFileSync(resolve(charDir('pup'), 'character.ts'), 'utf8') === pupChar, 'a second clip is added by hand to clips');
+  assert.ok(pupBite.stdout.includes("import { bite } from '@core/rig'") && !pupBite.stdout.includes('ignored'), `the line names the import as a named one, and nothing was ignored: ${pupBite.stdout}`);
+  // An option that only shapes a new character is said to be ignored when it was given, and only then.
+  const pupHit = run(`npm run --silent new-asset -- ${project} characters/pup/hit --engine rig --frames 6`);
+  assert.ok(pupHit.code === 0 && pupHit.stdout.includes('--frames was ignored: the character already sets it.') && !pupHit.stdout.includes('--size'), `only --frames is named: ${pupHit.stdout}`);
+  rmSync(clipSheet('pup', 'hit'));
   assert.ok(readFileSync(clipSheet('pup', 'bite'), 'utf8').includes("character.sheet('bite')"), 'and gets its sheet');
   writeFileSync(resolve(charDir('pup'), 'character.ts'), pupChar.replace(/import \{ ([^}]*) \} from '@core\/rig';/, "import { bite, $1 } from '@core/rig';").replace('  clips: {\n', '  clips: {\n    bite: bite(skeleton),\n'), 'utf8');
   assert.equal(run(`npm run --silent new-asset -- ${project} characters/imp/idle --engine rig --size 80x100`).code, 0);
@@ -443,6 +466,9 @@ export const VOLUMES: Record<string, VolumeStyle> = {};
   const crate = JSON.parse(readFileSync(resolve(projectDir, 'assets', 'props', 'crate.json'), 'utf8'));
   assert.deepEqual(crate.meta.directions, ['S', 'SW', 'W', 'NW', 'N', 'NE', 'E', 'SE']);
   assert.deepEqual([crate.meta.width, crate.meta.height, crate.meta.pivot.x, crate.meta.pivot.y, crate.meta.data.role], [128, 1024, 64, 100, 'prop']);
+  // The scaffold draws a block-out in the theme's first material, so a new sheet exports something to look at in every facing.
+  const crateLook = JSON.parse(run(`npm run --silent inspect -- projects/${project}/assets/props/crate.png --json`).stdout);
+  assert.ok(crateLook.opaqueBounds && crateLook.cells.empty.length === 0, `the scaffold is not an empty sheet: ${JSON.stringify(crateLook.cells)}`);
 
   // 4. Mockup isolation (the review render scenery-test uses): an official export is not changed by a mockup export.
   writeAsset('badge', badgeSource);
@@ -490,6 +516,18 @@ export const stripes = defineAsset({
   rmSync(resolve(projectDir, 'sheets', 'scale'), { recursive: true });
   rmSync(resolve(projectDir, 'src', 'scale'), { recursive: true });
   rmSync(resolve(projectDir, 'assets', 'scale'), { recursive: true });
+
+  // 5c. An option a command does not take is refused, not ignored: --stirct would otherwise run a check that is not strict.
+  const typo = run(`npm run --silent check -- ${project} --stirct`);
+  assert.ok(typo.code !== 0 && typo.stderr.includes('--stirct is not an option of npm run check.') && typo.stderr.includes('Did you mean --strict?'), `check refuses a misspelt option: ${typo.stderr}`);
+  assert.notEqual(run(`npm run --silent inspect -- projects/${project}/assets/badge.png --bogus`).code, 0, 'inspect refuses an unknown option');
+
+  // 5d. inspect warns about an image with nothing drawn, and only then.
+  const emptyPng = join(tmpdir(), `diorama-empty-${process.pid}.png`);
+  writeFileSync(emptyPng, transparentPng(8, 8));
+  assert.ok(run(`npm run --silent inspect -- ${emptyPng}`).stdout.includes('⚠ nothing is drawn'), 'an empty image is flagged');
+  assert.ok(!run(`npm run --silent inspect -- projects/${project}/assets/badge.png`).stdout.includes('nothing is drawn'), 'a drawn one is not');
+  rmSync(emptyPng);
 
   // 6. inspect returns numbers for an official output.
   const inspected = JSON.parse(run(`npm run --silent inspect -- projects/${project}/assets/badge.png --json`).stdout);

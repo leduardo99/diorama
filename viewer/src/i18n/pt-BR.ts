@@ -69,7 +69,7 @@ export const ptBR: Shape<typeof en> = {
       create: 'Novo projeto',
       sample: 'Experimentar o exemplo',
       sampleRunning: 'Trazendo o exemplo…',
-      sampleHint: 'Copia <code>examples/soulkeeper</code> para <code>projects/soulkeeper</code> e o exporta lá: cerca de um minuto na primeira vez. A cópia é sua para mudar.',
+      sampleHint: 'Copia <code>examples/soulkeeper</code> para <code>projects/soulkeeper</code> e o exporta lá: um ou dois minutos na primeira vez. A cópia é sua para mudar.',
       copying: 'Copiando o exemplo…',
       exporting: 'Exportando os sheets: {done} de {total} prontos',
       terminal: 'Num terminal',
