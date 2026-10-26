@@ -150,11 +150,14 @@ The `.agents/skills/` folder holds the instructions for coding agents:
 
 | Skill | Use it for |
 | :--- | :--- |
-| [`diorama`](.agents/skills/diorama/SKILL.md) | The production rules, the project layout, the commands and the review loop; routes to the others. |
-| [`diorama-volume`](.agents/skills/diorama-volume/SKILL.md) | Props, scenery kits, armor, effects, icons and HUD: planning, building and the quality bar. |
-| [`diorama-rig`](.agents/skills/diorama-rig/SKILL.md) | Animated characters and creatures: skeletons, clips, skins, gear and outfits. |
-| [`diorama-setup`](.agents/skills/diorama-setup/SKILL.md) | Installing, the doctor, the tests, the first prop and the first character. |
-| [`diorama-review`](.agents/skills/diorama-review/SKILL.md) | Checking an export: `inspect`, contact sheets, motion checks and the viewer. |
+| [`diorama-setup`](.agents/skills/diorama-setup/SKILL.md) | The environment only: the doctor, installing, the tests, opening the viewer. |
+| [`diorama`](.agents/skills/diorama/SKILL.md) | The hub: the workflow, the rules, the project layout; routes to the others. Its `references/commands.md` lists the commands. |
+| [`diorama-style`](.agents/skills/diorama-style/SKILL.md) | Choosing the look: theme, palette, light, outline, materials, `STYLE.md`, and probing it with one prop and one character. |
+| [`diorama-volume`](.agents/skills/diorama-volume/SKILL.md) | Props, scenery pieces, equipment, effects, icons and HUD pieces. |
+| [`diorama-rig`](.agents/skills/diorama-rig/SKILL.md) | Animated characters and creatures: skeletons, clips, skins, sockets. |
+| [`diorama-kits`](.agents/skills/diorama-kits/SKILL.md) | Scenery, gear, effects and items as catalog-driven sets: `new-kit`, the generators, the checks. |
+| [`diorama-review`](.agents/skills/diorama-review/SKILL.md) | Checking an export: `inspect`, contact sheets, motion, the viewer; the quality bar, readability and motion references. |
+| [`diorama-game`](.agents/skills/diorama-game/SKILL.md) | Using the exports in a game: `game/`, `@diorama/runtime`, `@diorama/phaser`, other engines. |
 
 The guides explain when to use each module, and are indexed in [`docs/guides/`](docs/guides/README.md): [`docs/guides/volume/`](docs/guides/volume/) (space and camera, volumes and the stage, props and equipment, scenery kits, living scenery, effects, items and the HUD), [`docs/guides/rig/`](docs/guides/rig/) (skeletons, gaits and clips, skins, the atlas contract, gear and outfits) and [`core/draw/README.md`](core/draw/README.md). The API reference is generated in [`docs/api/`](docs/api/), and the folder architecture is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
