@@ -45,10 +45,9 @@ export function useEntrySelection({ keys, view, columns, paused, onOpen, onDelet
     }
     if (keys.length === 0) return;
 
-    const focusedKey =
-      e.target instanceof Element
-        ? (keys.find((key) => document.getElementById(assetDomId(key))?.contains(e.target as Node)) ?? null)
-        : null;
+    // The card or row that holds the focus (its own element or a control inside it, such as its ⋯ button).
+    const owner = e.target instanceof Element ? e.target.closest('[id^="entry-"]') : null;
+    const focusedKey = owner ? (keys.find((key) => assetDomId(key) === owner.id) ?? null) : null;
     const current = focusedKey ?? activeKey;
     const perRow = view === 'grid' ? columns : 1;
     const at = current ? keys.indexOf(current) : -1;
