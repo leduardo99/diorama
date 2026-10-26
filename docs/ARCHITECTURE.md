@@ -28,7 +28,7 @@ diorama/
 ├── tests/
 │   ├── run.ts            runs the suites below (npm test)
 │   ├── engine/           core (draw, interface assets), volume, rig and the dependency boundaries
-│   ├── docs/             snippets, links and paths of the markdown
+│   ├── docs/             snippets, links, paths, script names and the sample's names in the markdown
 │   ├── runtime/          the runtime package: its rules, standalone compile, contract types, conformance traces
 │   ├── viewer/           viewer logic
 │   ├── phaser/           the Phaser package: its loader in node, a smoke test in Chromium, standalone compile
@@ -230,7 +230,7 @@ They are errors. `src/theme.ts` holds the palette, so its color literals are the
 | The dependency direction, the public entrypoints, nothing imports `tests/` | `tests/engine/boundary.test.ts` (scans every import of `core/`, `packages/`, `tools/`, `scripts/`, `viewer/`, `templates/`, `examples/` and `projects/`, and those of `tests/` for paths into `packages/`) |
 | The runtime compiles alone (lib ES2022, no DOM, no dependencies) and core's producer types fit its contract types | `tests/runtime/standalone.test.ts`; `tests/runtime/contract.test.ts` (it compiles itself, and is part of `npx tsc --noEmit -p .`) |
 | The Phaser package compiles alone (the DOM, Phaser's types and the runtime), loads by the contract and draws frames pixel for pixel | `tests/phaser/standalone.test.ts`; `tests/phaser/loader.test.ts` (node); `tests/phaser/smoke.test.ts` (Chromium, canvas renderer, generated sheets) |
-| Snippets in the guides and skills compile; every markdown link, heading link and backticked repository path exists | `tests/docs/docs.test.ts` |
+| Snippets in the guides and skills compile; every markdown link, heading link and backticked repository path exists; the skills, guides, READMEs and templates do not teach through the sample (its names are on a denylist); every `npm run` script they mention is in `package.json` | `tests/docs/docs.test.ts` |
 | The engine, the runtime, the Phaser package, the commands and the viewer's logic | `tests/engine/`, `tests/runtime/` (with conformance traces recorded from exported characters, `tests/runtime/conformance/`), `tests/phaser/`, `tests/cli/`, `tests/viewer/` |
 
 `npm test` runs all six suites through `tests/run.ts` (every `*.test.ts` under `tests/engine/`, `tests/docs/`, `tests/runtime/`, `tests/viewer/`, `tests/phaser/` and `tests/cli/`, in that order, then a summary of which passed); `npm run test:engine`, `test:docs`, `test:runtime`, `test:viewer`, `test:phaser` and `test:cli` run one. A test file outside those folders fails the run, so a new test cannot be left out.

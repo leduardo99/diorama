@@ -11,6 +11,19 @@ const ALLOW_MARKER = '<!-- docs:allow-long -->';
 const ROOT = resolve('.');
 const SNIPPET_DIR = resolve('tests/docs/.snippets');
 
+const MARKDOWN_SKIP = new Set(['node_modules', '.git', '.claude', '.tanstack', 'dist', '.diorama-trash', '.snippets']);
+
+function markdownFiles(dir: string): string[] {
+  const out: string[] = [];
+  for (const entry of readdirSync(dir)) {
+    if (MARKDOWN_SKIP.has(entry)) continue;
+    const full = join(dir, entry);
+    if (statSync(full).isDirectory()) out.push(...markdownFiles(full));
+    else if (entry.endsWith('.md')) out.push(full);
+  }
+  return out.sort();
+}
+
 const guideDir = (dir: string) =>
   readdirSync(resolve(dir))
     .filter(name => name.endsWith('.md'))
@@ -27,12 +40,8 @@ const docFiles = [
   resolve('packages/phaser/README.md'),
   resolve('projects/README.md'),
   resolve('templates/optional/STYLE.md'),
-  resolve('.agents/skills/diorama/SKILL.md'),
-  resolve('.agents/skills/diorama-setup/SKILL.md'),
-  resolve('.agents/skills/diorama-review/SKILL.md'),
-  resolve('.agents/skills/diorama-volume/SKILL.md'),
-  ...guideDir('.agents/skills/diorama-review/references'),
-  resolve('.agents/skills/diorama-rig/SKILL.md'),
+  // Every skill and reference under .agents/skills, found rather than listed, so a new skill cannot be left out.
+  ...markdownFiles(resolve('.agents/skills')),
 ];
 
 interface Snippet {
@@ -133,19 +142,6 @@ try {
 // starts at the repository root (`docs/api/volume.md`, `core/draw/`) must exist too.
 // ---------------------------------------------------------------------------------------------
 
-const MARKDOWN_SKIP = new Set(['node_modules', '.git', '.claude', '.tanstack', 'dist', '.diorama-trash', '.snippets']);
-
-function markdownFiles(dir: string): string[] {
-  const out: string[] = [];
-  for (const entry of readdirSync(dir)) {
-    if (MARKDOWN_SKIP.has(entry)) continue;
-    const full = join(dir, entry);
-    if (statSync(full).isDirectory()) out.push(...markdownFiles(full));
-    else if (entry.endsWith('.md')) out.push(full);
-  }
-  return out.sort();
-}
-
 /** Text outside fenced code blocks, with the line numbers kept; fences hold trees and commands, not claims. */
 function proseLines(file: string): { line: number; text: string }[] {
   const lines = readFileSync(file, 'utf8').split(/\r?\n/);
@@ -232,7 +228,76 @@ for (const file of markdown) {
   }
 }
 
+// ---------------------------------------------------------------------------------------------
+// What teaches an agent (skills, guides, READMEs, the templates a new project copies) states rules and shows short
+// neutral snippets. It never teaches through the sample project or names a command that does not exist.
+// ---------------------------------------------------------------------------------------------
+
+/** Files whose words reach an agent. Other markdown (the generated API reference, issue templates) is not checked here. */
+const teaching = [
+  ...['README.md', 'AGENTS.md', 'CONTRIBUTING.md', 'docs/ARCHITECTURE.md', 'viewer/AGENTS.md', 'projects/README.md', 'core/draw/README.md', '.github/pull_request_template.md'].map(name => resolve(name)),
+  ...markdownFiles(resolve('docs/guides')),
+  ...markdownFiles(resolve('.agents/skills')),
+  ...markdownFiles(resolve('packages')).filter(file => file.endsWith('README.md')),
+  ...['templates/optional/STYLE.md', 'templates/project/src/theme.ts'].map(name => resolve(name)),
+];
+
+/**
+ * The old sample's own names, as whole words (case-insensitive). Its characters (guard, wolf, spider...) are ordinary words
+ * that body-plan advice may use, so they are matched only where they are the sample's ids: a path under `characters/`.
+ */
+const SAMPLE_NAMES = [
+  /\bsoulkeeper\b/i,
+  /\bossuary\b/i,
+  /\bmalvek\b/i,
+  /\bingrid\b/i,
+  /\bcrypt-[a-z]+|\b[a-z]+-crypt\b/i,
+  /\bsoul[- ]fire\b/i,
+  /\bsoul-[a-z]+/i,
+  /\b(?:bone-spider|ghoul-wolf|chapel-ruins|graveyard-corner)\b/i,
+  /\bcharacters\/(?:guard|captain|warden|villager|wolf|spider)\b/i,
+];
+
+/**
+ * Names that may stay where they are, one entry per file and the reason. An entry that no longer matches anything fails,
+ * so an exception cannot outlive the thing it excuses.
+ */
+const SAMPLE_NAMES_ALLOWED: { file: string; names: RegExp[]; why: string }[] = [
+  {
+    file: 'docs/guides/rig/05-gear-and-outfits.md',
+    names: [/\bsoulkeeper\b/i, /\bmalvek\b/i, /\bsoul[- ]fire\b/i],
+    why: 'The holding and grip guide is being rewritten on another branch (feat/weapon-grip); this file is left to it. Remove the entry when that lands.',
+  },
+];
+
+const usedExceptions = new Set<(typeof SAMPLE_NAMES_ALLOWED)[number]>();
+const scripts = new Set(Object.keys((JSON.parse(readFileSync(resolve('package.json'), 'utf8')) as { scripts: Record<string, string> }).scripts));
+let scanned = 0;
+for (const file of teaching) {
+  const shown = relative(ROOT, file).split(sep).join('/');
+  scanned++;
+  readFileSync(file, 'utf8').split(/\r?\n/).forEach((text, index) => {
+    const line = index + 1;
+    for (const pattern of SAMPLE_NAMES) {
+      const hit = pattern.exec(text);
+      if (!hit) continue;
+      const allowed = SAMPLE_NAMES_ALLOWED.find(entry => entry.file === shown && entry.names.some(name => name.test(hit[0])));
+      if (allowed) usedExceptions.add(allowed);
+      else problems.push(`${shown}:${line} names "${hit[0]}", which belongs to the old sample. Skills and guides state rules and show short neutral snippets (hero, crate, sword, door, spark); they do not teach through the sample.`);
+    }
+    // Commands count wherever they are written, in a fence or in prose: every `npm run <script>` is a script of package.json.
+    for (const match of text.matchAll(/\bnpm run (?:--silent |-s )?([a-z][\w:.-]*)/g)) {
+      const script = match[1].replace(/[.:-]+$/, '');
+      if (!scripts.has(script)) problems.push(`${shown}:${line} runs "npm run ${script}", which is not a script of package.json.`);
+    }
+  });
+}
+for (const entry of SAMPLE_NAMES_ALLOWED) {
+  if (!usedExceptions.has(entry)) problems.push(`The exception for ${entry.file} no longer matches anything: remove it from SAMPLE_NAMES_ALLOWED in tests/docs/docs.test.ts.`);
+}
+
 assert.equal(problems.length, 0, `Documentation problems:\n${problems.join('\n')}`);
 
 console.log(`✔ ${snippets.length} snippets checked across ${docFiles.length} files.`);
-console.log(`✔ ${links} links and ${paths} paths checked across ${markdown.length} markdown files.\n`);
+console.log(`✔ ${links} links and ${paths} paths checked across ${markdown.length} markdown files.`);
+console.log(`✔ ${scanned} teaching files free of the old sample's names, and every npm script they run exists.\n`);

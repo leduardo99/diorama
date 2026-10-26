@@ -39,7 +39,7 @@ Diorama makes 2.5D game assets as code: AI coding agents write TypeScript, and t
    | The viewer's interface | Look at it in `npm run view`, in English and Portuguese, and put screenshots in the pull request |
    | `packages/phaser` | `npm run test:phaser`, and the test bench at `/packages/phaser/demo/` |
    | A public API or its doc comments | `npm run docs:api`, and commit the regenerated `docs/api/` |
-   | Docs | `npm run test:docs` (links, paths, snippets) |
+   | Docs | `npm run test:docs` (links, paths, snippets, script names, and that skills and guides do not name the sample) |
 
    **The export proof.** A change must not alter generated images unless that is its point:
    1. On `main`, before your change, run `npm run export:sample`, then `npm run compare-exports -- --save`.
