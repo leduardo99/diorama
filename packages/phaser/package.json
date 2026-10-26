@@ -1,6 +1,6 @@
 {
   "name": "@diorama/phaser",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Plays Diorama's exported sheets in Phaser 4: a loader that follows the atlas contract, characters driven by @diorama/runtime, their effects, keyboard controls, depth and nine-slices.",
   "private": true,
   "license": "MIT",
@@ -12,7 +12,7 @@
   "files": ["src"],
   "sideEffects": false,
   "dependencies": {
-    "@diorama/runtime": "0.1.0"
+    "@diorama/runtime": "0.2.0"
   },
   "peerDependencies": {
     "phaser": "4.2.1"
