@@ -1100,7 +1100,8 @@ function cellPiece(cell: SceneCell | null | undefined): string | null
 
 ### `cellOf`
 
-Default exported cell of a piece: a floor or decal is exactly its tiles; walls, fences and props get room above.
+Default exported cell of a piece: a floor or decal is exactly its tiles; walls, fences and props get room above,
+in a cell of even width so the pivot in its middle is a whole pixel at any scale (a game anchors the sprite there).
 
 ```ts
 function cellOf(info: ScenePieceInfo, catalog: SceneryCatalog): { width: number; height: number; pivot: { x: number; y: number; }; }
@@ -2150,7 +2151,7 @@ Options of `defineSceneAsset`.
 interface SceneAssetOptions {
   catalog: SceneryCatalog;
   scene: SceneData;
-  /** Extra logical pixels around the scene (room for walls and props above the top row). Default 2 cells. */
+  /** Extra logical pixels around the scene (room for walls and props above the top row), rounded to a whole pixel. Default 2 cells. */
   margin?: number;
   scale?: number;
   /** Draw the scene's scale figures (default false: a reference image shows the scene as a game would). */

@@ -25,6 +25,7 @@ import {
   footprintOf,
   validateScene,
   defineTileSet,
+  cellOf,
   defineSceneAsset,
   seamTestScene,
   validateCatalog,
@@ -579,6 +580,16 @@ const centroid = (f: Face) => f.points.reduce((s, p) => vec3(s.x + p.x / f.point
   const customised = defineSceneAsset({ catalog, scene: { ...scene, options: { wall: { height: 30 } } } }).data as any;
   assert.deepEqual(customised.layout.find((it: any) => it.piece === 'wall').options, { height: 30 }, 'an item drawn with other options says so');
   assert.equal(customised.layout.find((it: any) => it.piece === 'dirt').options, undefined, 'default frames carry no options');
+  // Whole pixels where a game anchors and where floors meet, for a grid whose 1.5 cells are odd (42 px) and any margin.
+  const oddGrid: SceneryCatalog = { ...catalog, grid: Grid.fromScreen(cam, 42, 30) };
+  for (const p of oddGrid.pieces) {
+    const { pivot } = cellOf(p, oddGrid);
+    assert.ok(Number.isInteger(pivot.x) && Number.isInteger(pivot.y), `${p.id}: the default pivot (${pivot.x}, ${pivot.y}) is a whole pixel`);
+  }
+  for (const margin of [10, 13.3]) {
+    const { origin } = defineSceneAsset({ catalog: oddGrid, scene, margin }).data as { origin: { x: number; y: number } };
+    assert.ok(Number.isInteger(origin.x - 21) && Number.isInteger(origin.y - 15), `margin ${margin}: the floor's corner (${origin.x - 21}, ${origin.y - 15}) is a whole pixel`);
+  }
   // groundShadow turns by radians: a quarter turn swaps the ellipse's extents on the floor.
   const flat = groundShadow(cam, vec3(0, 0, 0), 20, 8).bounds;
   const turnedShadow = groundShadow(cam, vec3(0, 0, 0), 20, 8, Math.PI / 2).bounds;

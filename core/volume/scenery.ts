@@ -675,13 +675,16 @@ export function layoutScene(scene: SceneData, catalog: SceneryCatalog): SceneIte
   return [...floorItems, ...sorted('decal'), ...sorted('object')];
 }
 
-/** Default exported cell of a piece: a floor or decal is exactly its tiles; walls, fences and props get room above. */
+/**
+ * Default exported cell of a piece: a floor or decal is exactly its tiles; walls, fences and props get room above,
+ * in a cell of even width so the pivot in its middle is a whole pixel at any scale (a game anchors the sprite there).
+ */
 export function cellOf(info: ScenePieceInfo, catalog: SceneryCatalog): { width: number; height: number; pivot: { x: number; y: number } } {
   if (info.cell) return info.cell;
   const { w, h } = catalog.grid.screen;
   const [fw, fd] = info.footprint ?? [1, 1];
   if (info.group === 'floor' || info.group === 'decal') return { width: w * fw, height: h * fd, pivot: { x: (w * fw) / 2, y: (h * fd) / 2 } };
-  const width = Math.ceil(w * fw * 1.5);
+  const width = 2 * Math.ceil(w * fw * 0.75);
   const height = Math.ceil(h * fd + w * 2.4);
   return { width, height, pivot: { x: width / 2, y: height - Math.ceil(h * fd * 0.75) } };
 }
@@ -1163,7 +1166,7 @@ function clipSheet(o: TileSetOptions, info: ScenePieceInfo, clip: PieceClip): As
 export interface SceneAssetOptions {
   catalog: SceneryCatalog;
   scene: SceneData;
-  /** Extra logical pixels around the scene (room for walls and props above the top row). Default 2 cells. */
+  /** Extra logical pixels around the scene (room for walls and props above the top row), rounded to a whole pixel. Default 2 cells. */
   margin?: number;
   scale?: number;
   /** Draw the scene's scale figures (default false: a reference image shows the scene as a game would). */
@@ -1179,10 +1182,11 @@ export interface SceneAssetOptions {
  */
 export function defineSceneAsset(o: SceneAssetOptions): AssetDefinition {
   const { w, h } = o.catalog.grid.screen;
-  const margin = o.margin ?? w * 2;
+  const margin = Math.round(o.margin ?? w * 2);
   const width = Math.ceil(o.scene.cols * w + margin * 2);
   const height = Math.ceil(o.scene.rows * h + margin * 2.5);
-  const origin = { x: margin + w / 2, y: margin * 1.75 + h / 2 };
+  // The floor's corner on whole pixels, so its edges and the seams between its tiles are not drawn half-covered.
+  const origin = { x: margin + w / 2, y: Math.round(margin * 1.75) + h / 2 };
   const base = o.catalog.camera.at(origin);
   const layout = layoutScene(o.scene, o.catalog).map(it => {
     const p = base.project(it.at);
