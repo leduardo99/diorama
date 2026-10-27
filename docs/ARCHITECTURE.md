@@ -235,7 +235,7 @@ The commands that write run as jobs. `POST /__api/jobs` queues one and answers `
 - a request equal to a job still queued answers that job;
 - a failed job does not stop the queue.
 
-A job's export runs with `--progress`, which prints one JSON line on stderr per finished sheet; the server reads those lines into the job's progress and leaves them out of its output. `/__api/cli` queues a job too, and answers once it has finished.
+A job's export runs with `--progress`, which prints one JSON line on stderr per finished sheet; the server reads those lines into the job's progress and leaves them out of its output. The viewer runs every command this way and follows its job through the events (`viewer/src/lib/server-events.ts`).
 
 `GET /__api/events` streams what happens as Server-Sent Events:
 - `job.queued`, `job.started`, `job.progress` and `job.finished`;

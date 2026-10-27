@@ -68,16 +68,6 @@ function dioramaApiPlugin(): Plugin {
         api(req, res).catch(next);
       });
 
-      // Tell the open viewer to refetch whenever an export, a sheet, a source file or a delete changes the catalog. A folder of
-      // projects/ with a dot name is no project (npm run example copies into one, then renames it into place).
-      let pending: ReturnType<typeof setTimeout> | undefined;
-      const notify = (file: string) => {
-        const normalized = file.replace(/\\/g, '/');
-        if (!/\/projects\/[^/.][^/]*\/(assets|sheets|src)\//.test(normalized)) return;
-        clearTimeout(pending);
-        pending = setTimeout(() => server.ws.send({ type: 'custom', event: 'diorama:update', data: { file: normalized } }), 150);
-      };
-      server.watcher.on('add', notify).on('change', notify).on('unlink', notify);
     },
 
     // Vite reloads every open page when a module outside any HMR boundary is changed, created or deleted. Projects (src/,

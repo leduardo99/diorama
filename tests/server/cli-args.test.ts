@@ -42,6 +42,8 @@ for (const bad of ['examples/soulkeeper', 'projects/soulkeeper', '../soulkeeper'
   }
 }
 assert.throws(() => cliArgs({ ...requests['new-asset'], subpath: '--force' }), /cannot start with "-"/, 'a value cannot be a flag');
+assert.deepEqual(cliArgs({ command: 'export', project, subpaths: ['props/crate', 'gear/'] }), ['tools/export.ts', `projects/${project}`, 'props/crate', 'gear/'], 'an export of several sheets is one run');
+assert.throws(() => cliArgs({ command: 'export', project, subpaths: ['props/crate', '--force'] }), /cannot start with "-"/, 'no subpath of the list can be a flag');
 assert.throws(() => cliArgs({ ...requests['new-scene'] }), /scene is required/, 'a scene needs the file the handler saved');
 assert.throws(() => cliArgs({ command: 'rm' }), /command must be/, 'an unknown command is refused');
 

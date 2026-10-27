@@ -10,7 +10,6 @@
  *
  * The commands that write run as jobs (jobs.ts): `POST /__api/jobs` queues one, `GET /__api/jobs` lists them, and
  * `GET /__api/events` streams what happens to them and to the catalog as Server-Sent Events (contract.ts, events.ts).
- * `/__api/cli` queues a job too and answers when it has finished, as it always answered.
  */
 
 import { spawn } from 'node:child_process';
@@ -43,7 +42,6 @@ export const API_ROUTES = [
   '/__api/delete-project',
   '/__api/restore-project',
   '/__api/example-run',
-  '/__api/cli',
 ] as const;
 
 /** The routes of the jobs and their events: `/__api/jobs`, `/__api/jobs/<id>` and `/__api/events` (GET). */
@@ -124,10 +122,10 @@ async function readJsonBody(c: Context): Promise<any> {
 }
 
 /**
- * A request body of `/__api/cli` or `POST /__api/jobs` as the job it asks for. Throws with the message to answer on a
- * bad request. `progress` adds `--progress` to an export or an example, for the job's progress.
+ * A request body of `POST /__api/jobs` as the job it asks for. Throws with the message to answer on a bad request. An
+ * export or an example runs with `--progress`, for the job's progress.
  */
-async function jobRequestOf(body: any, progress: boolean): Promise<JobRequest> {
+async function jobRequestOf(body: any): Promise<JobRequest> {
   // An outfit or a scene travels as a file: the script reads it from a temp folder that is removed when the job ends.
   let outfitDir: string | undefined;
   const cleanup = () => (outfitDir ? rm(outfitDir, { recursive: true, force: true }) : undefined);
@@ -144,7 +142,7 @@ async function jobRequestOf(body: any, progress: boolean): Promise<JobRequest> {
     }
     const args = cliArgs(body, outfitFile);
     const target = jobTarget(body);
-    if (progress && (body.command === 'export' || body.command === 'example')) args.push('--progress');
+    if (body.command === 'export' || body.command === 'example') args.push('--progress');
     return { command: body.command, ...target, args, cleanup };
   } catch (err) {
     await cleanup();
@@ -246,24 +244,6 @@ export function createApp({ root, run = runCommand, changes, heartbeatMs = HEART
     }),
 
     '/__api/example-run': (c) => json(c, 200, exampleRun()),
-
-    // Runs new-project, new-asset, new-outfit-character, new-scene, gear-items, export and example from the viewer:
-    // queued as a job like any other, and answered once it has finished.
-    '/__api/cli': postOnly(async (c) => {
-      let request: JobRequest;
-      try {
-        request = await jobRequestOf(await readJsonBody(c), false);
-      } catch (err: any) {
-        return json(c, 400, { ok: false, output: `Error: ${err.message}` });
-      }
-      // A second "Try the sample" (another tab, a double request) while one runs: answered as running, never started.
-      if (request.command === 'example' && exampleRun().running) {
-        await request.cleanup?.();
-        return json(c, 409, { ok: false, running: true, output: 'npm run example is already running: it brings the sample in.' });
-      }
-      const job = await queue.submit(request).done;
-      return json(c, 200, { ok: job.state === 'succeeded', output: job.output ?? '' });
-    }),
   };
 
   for (const route of API_ROUTES) {
@@ -280,7 +260,7 @@ export function createApp({ root, run = runCommand, changes, heartbeatMs = HEART
     if (c.req.method !== 'POST') return json(c, 405, { ok: false, error: 'Use GET or POST.' });
     let request: JobRequest;
     try {
-      request = await jobRequestOf(await readJsonBody(c), true);
+      request = await jobRequestOf(await readJsonBody(c));
     } catch (err) {
       return json(c, 400, { ok: false, error: err instanceof Error ? err.message : String(err) });
     }
