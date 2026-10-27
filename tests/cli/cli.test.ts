@@ -8,6 +8,7 @@ import { promisify } from 'node:util';
 import { crc32, deflateSync, inflateSync } from 'node:zlib';
 import { restoreProject } from '../../tools/trash';
 import { exportTypeErrors } from '../../viewer/src/lib/export-errors';
+import { roleOf } from '../../viewer/src/lib/asset-role';
 import { cliArgs } from '../../server/src/cli-args';
 import { SPACE_PRESETS } from '../../core/volume/space';
 
@@ -90,6 +91,7 @@ try {
   const created = run(`npm run --silent new-project -- ${project}`);
   assert.equal(created.code, 0, `new-project failed: ${created.stderr}`);
   assert.ok(created.stdout.includes('--engine volume|rig'), `new-project must point at the two engines: ${created.stdout}`);
+  assert.ok(created.stdout.includes('src/theme.ts, an empty sheets/') && !created.stdout.includes('STYLE.md,'), `without --style the summary names no STYLE.md: ${created.stdout}`);
   const theme = readFileSync(resolve(projectDir, 'src', 'theme.ts'), 'utf8');
   for (const token of ['export const PALETTES', 'export const RAMPS', 'export const CAMERA', 'export const VOLUMES']) {
     assert.ok(theme.includes(token), `the template theme must declare ${token.split(' ').pop()}`);
@@ -104,6 +106,7 @@ try {
   const optionalDir = resolve('projects', `${project}-opt`);
   try {
     assert.ok(readFileSync(resolve(optionalDir, 'STYLE.md'), 'utf8').includes(`${project}-opt`), 'STYLE.md must carry the name');
+    assert.ok(withOptional.stdout.includes('src/theme.ts, STYLE.md, an empty sheets/'), `the summary names the STYLE.md it wrote: ${withOptional.stdout}`);
   } finally {
     rmSync(optionalDir, { recursive: true, force: true });
   }
@@ -161,6 +164,10 @@ try {
   assert.equal(vol.code, 0, `new-asset --engine volume failed: ${vol.stderr}`);
   const volFile = readFileSync(resolve(projectDir, 'src', 'props', 'crate.ts'), 'utf8');
   assert.ok(volFile.includes('directions: 8') && volFile.includes("from '../theme'") && volFile.includes('CAMERA.at(') && volFile.includes('scale: 2'), 'volume template uses 8 facings, the theme camera and scale 2');
+  // The roles the template offers are the ones the viewer sorts by: none of them lands in "other".
+  const offered = [...(/What this is to players and the viewer: ([^.]+)\./.exec(volFile)?.[1] ?? '').matchAll(/'([a-z]+)'/g)].map(m => m[1]);
+  assert.ok(offered.includes('prop') && offered.length >= 5, `the template lists the roles a volume sheet can say: ${offered}`);
+  for (const role of offered) assert.notEqual(roleOf({ atlasInfo: { role } } as never), 'other', `the viewer knows the role '${role}' the template offers`);
   assert.equal(run(`npm run --silent new-asset -- ${project} marks/rune --directions 1 --frames 4 --fps 8`).code, 0);
   const rune = readFileSync(resolve(projectDir, 'src', 'marks', 'rune.ts'), 'utf8');
   assert.ok(!rune.includes('directions:') && rune.includes('frames: 4') && rune.includes('fps: 8') && rune.includes('frameIndex'), 'one facing writes no directions; frames and fps make a strip');

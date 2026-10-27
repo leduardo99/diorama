@@ -173,7 +173,7 @@ async function newProject(positionals: string[], flags: Record<string, string | 
 
   if (genre) writeSpace(target, genre, character);
 
-  console.log(pc.green(`Created projects/${name}/: src/theme.ts, an empty sheets/ and a .gitignore for review/.`));
+  console.log(pc.green(`Created projects/${name}/: src/theme.ts, ${flags['style'] ? 'STYLE.md, ' : ''}an empty sheets/ and a .gitignore for review/.`));
   if (example) console.log(pc.yellow(`  It hides the example of the same name (examples/${name}): commands now find projects/${name} first.`));
   if (genre) console.log(`  src/space.ts: the ${genre} space profile (grid, scale, wall placement) for scenery and characters.`);
   console.log('Next steps:');
@@ -320,6 +320,13 @@ export default character.sheet('${rig.key}');
 `;
 }
 
+/**
+ * The roles a volume sheet can say (`data.role`), as the viewer sorts them (viewer/src/lib/asset-role.ts): a prop,
+ * the scenery kit's pieces, an effect, an item icon or a HUD piece. Characters and gear take theirs from the rig, and
+ * scenes from new-scene. tests/cli/cli.test.ts checks that the viewer knows each one.
+ */
+const VOLUME_ROLES = ['prop', 'tile', 'wall', 'fence', 'decal', 'vfx', 'icon', 'ui'];
+
 /** A volume asset in src/: the drawing, exported by name. Animation lines only appear when the asset has more than one frame. */
 function volumeSource(name: string, width: number, height: number, frames: number, fps: number, directions: number, themePath: string, sheetRel: string, material: string | undefined): string {
   const animated = frames > 1;
@@ -347,7 +354,8 @@ export const ${name} = defineAsset({
   height: ${height},
   scale: ${ASSET_SCALE},
 ${animLines}${dirLine}  pivot: { x: ${px}, y: ${py} },
-  // What this is to players and the viewer's playground: 'prop', 'scenery', 'tile', 'vfx' or 'ui'.
+  // What this is to players and the viewer: ${VOLUME_ROLES.map((role) => `'${role}'`).join(', ')}. Characters and gear say
+  // their own role, from the rig.
   data: { role: 'prop' },
   render({ ${args} }) {
     const cam = CAMERA.at({ x: ${px}, y: ${py} });
