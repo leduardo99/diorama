@@ -6,6 +6,7 @@ import { getRequestListener } from '@hono/node-server';
 import { existsSync } from 'node:fs';
 import { resolve, extname, join, relative, sep } from 'node:path';
 import { createApp, isApiPath } from './server/src/app';
+import type { ChangeSource } from './server/src/events';
 import { LAYOUT, PROJECT_ROOTS, listProjects } from './tools/project';
 
 // "@/..." resolves to the viewer sources. Added by a plugin so the shared resolve.alias block stays as it is.
@@ -54,7 +55,13 @@ function dioramaApiPlugin(): Plugin {
       // The API is a Hono app of its own (server/src/app.ts), mounted here so `npm run view` stays one command and one
       // process; `npm run server` runs it alone. A request reaches it when its path borders a route on "/", "." or the
       // end, the rule the connect mounts above applied: everything else falls through to Vite as before.
-      const api = getRequestListener(createApp({ root: repo }).fetch, { overrideGlobalObjects: false });
+      // The server's events follow the files through Vite's own watcher (catalog.changed, example.changed).
+      const changes: ChangeSource = (listener) => {
+        const events = ['add', 'change', 'unlink', 'addDir', 'unlinkDir'] as const;
+        for (const event of events) server.watcher.on(event, listener);
+        return () => { for (const event of events) server.watcher.off(event, listener); };
+      };
+      const api = getRequestListener(createApp({ root: repo, changes }).fetch, { overrideGlobalObjects: false });
       server.middlewares.use((req, res, next) => {
         const path = (req.url ?? '').split('?')[0];
         if (!isApiPath(path)) return next();

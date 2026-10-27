@@ -313,6 +313,8 @@ export const VOLUMES: Record<string, VolumeStyle> = {};
     // with what the command takes, never read as a sample name.
     const passed = example('sample', '--no-export', '--changed', '--jobs', '2');
     assert.ok(passed.code === 0 && passed.stdout.includes('npm run export -- projects/sample --changed --jobs=2'), `--jobs goes to the export (and --changed, which an existing copy gets anyway; a fresh one is checked below): ${passed.stdout} ${passed.stderr}`);
+    const tracked = example('sample', '--no-export', '--progress');
+    assert.ok(tracked.code === 0 && tracked.stdout.includes('npm run export -- projects/sample --changed --progress'), `--progress goes to the export: ${tracked.stdout} ${tracked.stderr}`);
     const refusals: Array<[string[], string]> = [
       [['--grid', '--no-export'], '--grid is not an option of npm run example'],
       [['--jobs', 'many', '--no-export'], '--jobs needs a whole number'],
@@ -960,6 +962,16 @@ export default defineAsset({
   const piped = spawnSync(process.execPath, [resolve('node_modules', 'tsx', 'dist', 'cli.mjs'), resolve('tools', 'export.ts'), kitsProject, 'icons/', 'scenery/'], { encoding: 'utf8', env: { ...process.env, NO_COLOR: '1', FORCE_COLOR: undefined } });
   assert.ok(piped.status === 0 && piped.stdout.includes('Summary: 2 outputs'), `a piped export of two sheets works: ${piped.stdout} ${piped.stderr}`);
   assert.ok(!`${piped.stdout}${piped.stderr}`.includes('Tip:'), `through a pipe the export prints no tip about --grid: ${piped.stdout}`);
+  // --progress: one JSON line on stderr per finished sheet, for the viewer's server; without it, no such line.
+  assert.ok(!`${piped.stdout}${piped.stderr}`.includes('"diorama":"progress"'), 'without --progress the output has no progress line');
+  const tracked = spawnSync(process.execPath, [resolve('node_modules', 'tsx', 'dist', 'cli.mjs'), resolve('tools', 'export.ts'), kitsProject, 'icons/', 'scenery/', '--progress'], { encoding: 'utf8', env: { ...process.env, NO_COLOR: '1', FORCE_COLOR: undefined } });
+  assert.equal(tracked.status, 0, `export --progress failed: ${tracked.stderr}`);
+  assert.ok(!tracked.stdout.includes('"diorama":"progress"'), 'the progress lines go to stderr, never stdout');
+  const progressLines = tracked.stderr.split('\n').filter(line => line.startsWith('{"diorama":"progress"')).map(line => JSON.parse(line));
+  const exportedSheets = [...tracked.stdout.matchAll(/✔ (\S+)\.png/g)].map(m => m[1]).sort();
+  assert.equal(exportedSheets.length, 2, `two sheets exported: ${tracked.stdout}`);
+  assert.deepEqual(progressLines.map(p => [p.done, p.total]), [[1, 2], [2, 2]], `one line per sheet, counting up to the sheets it exports: ${tracked.stderr}`);
+  assert.deepEqual(progressLines.map(p => p.sheet).sort(), exportedSheets, 'each line names the sheet that finished');
   // Without a space profile the scenery catalog takes the theme's camera and a grid of its own.
   assert.equal(run(`npm run --silent new-project -- ${bareKitsProject}`).code, 0);
   for (const kit of ['scenery', 'vfx']) assert.equal(run(`npm run --silent new-kit -- ${bareKitsProject} ${kit}`).code, 0);
