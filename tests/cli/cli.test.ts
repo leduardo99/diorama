@@ -8,6 +8,8 @@ import { promisify } from 'node:util';
 import { crc32, deflateSync, inflateSync } from 'node:zlib';
 import { restoreProject } from '../../tools/trash';
 import { exportTypeErrors } from '../../viewer/src/lib/export-errors';
+import { cliArgs } from '../../server/src/cli-args';
+import { SPACE_PRESETS } from '../../core/volume/space';
 
 console.log('🧪 Checking agent commands (new-project, new-asset, new-kit, check, layout, game, list, example, export incl. --changed and --jobs, inspect, contact)...\n');
 
@@ -119,6 +121,23 @@ try {
     assert.ok(space.includes("preset: 'tactics'") && space.includes('= 64;') && space.includes("from './theme'"), 'space.ts carries the preset and the character height, and reads the theme next to it');
   } finally {
     rmSync(genreDir, { recursive: true, force: true });
+  }
+  // The New dialog's kind of game, for every preset: the request becomes these arguments (server/src/cli-args.ts), the
+  // project gets that preset's space.ts and checks clean.
+  for (const genre of Object.keys(SPACE_PRESETS)) {
+    const name = `${project}-${genre}`;
+    const dir = resolve('projects', name);
+    try {
+      const args = cliArgs({ command: 'new-project', name, genre, character: '72' });
+      const made = spawnSync(process.execPath, [resolve('node_modules', 'tsx', 'dist', 'cli.mjs'), ...args], { encoding: 'utf8', env: { ...process.env, NO_COLOR: '1' } });
+      assert.equal(made.status, 0, `new-project from the dialog with ${genre} failed: ${made.stderr}`);
+      const space = readFileSync(resolve(dir, 'src', 'space.ts'), 'utf8');
+      assert.ok(space.includes(`preset: '${genre}'`) && space.includes('= 72;'), `${genre}: space.ts carries the preset and the height`);
+      const checked = run(`npm run --silent check -- ${name}`);
+      assert.equal(checked.code, 0, `${genre}: a new project checks clean: ${checked.stdout} ${checked.stderr}`);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   }
 
   // 2. new-asset: volume is the default engine; the drawing in src/<subpath>.ts (a named export), the sheet in

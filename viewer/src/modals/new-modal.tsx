@@ -23,6 +23,7 @@ import { projectsQuery } from '@/lib/queries';
 import { useCli } from '@/lib/mutations';
 import { useModalDialog } from '@/lib/use-modal-dialog';
 import type { Engine, NewTab } from '@/lib/types';
+import { DEFAULT_CHARACTER, GENRES, GENRE_LATER, genreSizes } from '@/lib/genres';
 
 /** The engines, for the engine select (what each makes is in the dictionary). */
 const ENGINES: Engine[] = ['volume', 'rig'];
@@ -42,6 +43,9 @@ const KEBAB_PATH = '[a-z0-9]+(-[a-z0-9]+)*(/[a-z0-9]+(-[a-z0-9]+)*)*';
 interface FormState {
   name: string;
   style: boolean;
+  /** The kind of game: a space preset, or GENRE_LATER for none yet. */
+  genre: string;
+  character: string;
   project: string;
   subpath: string;
   engine: Engine;
@@ -77,7 +81,7 @@ function cliLine(tab: NewTab, v: FormState, t: TFn): string {
   const placeholderProject = t('modals.new.cliProject');
   switch (tab) {
     case 'new-project':
-      return `npm run new-project -- ${v.name || placeholderProject}${v.style ? ' --style' : ''}`;
+      return `npm run new-project -- ${v.name || placeholderProject}${v.style ? ' --style' : ''}${v.genre === GENRE_LATER ? '' : ` --genre ${v.genre}${v.character && v.character !== DEFAULT_CHARACTER ? ` --character ${v.character}` : ''}`}`;
     case 'new-asset': {
       const frames = Number(v.frames) > 1 ? ` --frames ${v.frames}` : '';
       const dirs = v.directions ? ` --directions ${v.directions}` : '';
@@ -103,13 +107,13 @@ function CheckField({ id, checked, onChange, children }: { id: string; checked: 
 
 export const NewModal = NiceModal.create(({ tab: initialTab = 'new-asset', project: initialProject, subpath }: Props) => {
   const { modal, rootProps, contentProps } = useModalDialog();
-  const { t } = useT();
+  const { t, number } = useT();
   const { data: projects } = useSuspenseQuery(projectsQuery);
   const navigate = useNavigate();
   const cli = useCli();
   const [tab, setTab] = useState<NewTab>(projects.length ? initialTab : 'new-project');
   const [values, setValues] = useState<FormState>({
-    name: '', style: false,
+    name: '', style: false, genre: GENRE_LATER, character: DEFAULT_CHARACTER,
     project: projects.find((p) => p.name === initialProject)?.name ?? projects[0]?.name ?? '',
     subpath: subpath ?? '',
     engine: 'volume', size: '128x128', frames: DEFAULT_FRAMES.volume, fps: '6', directions: '8', skeleton: 'humanoid', clip: AUTO_CLIP, exportNow: true,
@@ -125,13 +129,19 @@ export const NewModal = NiceModal.create(({ tab: initialTab = 'new-asset', proje
     setValues((v) => ({ ...v, engine, frames: v.frames === DEFAULT_FRAMES[v.engine] ? DEFAULT_FRAMES[engine] : v.frames }));
     if (cli.data || cli.isError) cli.reset();
   };
-  const text = (key: 'name' | 'subpath' | 'size' | 'frames' | 'fps' | 'directions' | 'gap' | 'cols') => ({
+  const text = (key: 'name' | 'character' | 'subpath' | 'size' | 'frames' | 'fps' | 'directions' | 'gap' | 'cols') => ({
     value: values[key],
     onChange: (e: { target: { value: string } }) => set(key, e.target.value),
   });
 
   const submit = async () => {
-    const payload = { command: tab, ...values, sheet: values.sheet === 'none' ? '' : values.sheet, clip: values.clip === AUTO_CLIP ? '' : values.clip };
+    const payload = {
+      command: tab,
+      ...values,
+      sheet: values.sheet === 'none' ? '' : values.sheet,
+      clip: values.clip === AUTO_CLIP ? '' : values.clip,
+      genre: values.genre === GENRE_LATER ? '' : values.genre,
+    };
     const created = await cli.mutateAsync(payload);
     if (!created.ok) return;
     if (tab === 'new-project') {
@@ -219,8 +229,36 @@ export const NewModal = NiceModal.create(({ tab: initialTab = 'new-asset', proje
                 <Field>
                   <FieldLabel htmlFor="new-name">{t('modals.new.projectName')}</FieldLabel>
                   <Input id="new-name" placeholder={t('modals.new.projectNamePlaceholder')} pattern="[a-z0-9][a-z0-9_\-]*" autoFocus {...text('name')} />
-                  <FieldDescription>{t('modals.new.projectNameHint')}</FieldDescription>
+                  <FieldDescription>{t('modals.new.projectNameHint', { name: values.name || t('modals.new.projectNamePlaceholder') })}</FieldDescription>
                 </Field>
+                <Field>
+                  <FieldLabel htmlFor="new-genre">{t('modals.new.genre')}</FieldLabel>
+                  <Select value={values.genre} onValueChange={(value) => set('genre', value)}>
+                    <SelectTrigger id="new-genre" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {GENRES.map((genre) => <SelectItem key={genre} value={genre}>{t(`genres.${genre}.label`)}</SelectItem>)}
+                        <SelectItem value={GENRE_LATER}>{t('modals.new.genreLater')}</SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  {values.genre === GENRE_LATER ? (
+                    <FieldDescription>{t('modals.new.genreLaterHint')}</FieldDescription>
+                  ) : (
+                    <FieldDescription>
+                      {t(`genres.${values.genre as (typeof GENRES)[number]}.description`)} {genreSizes(values.genre as (typeof GENRES)[number], { t, number })}
+                    </FieldDescription>
+                  )}
+                </Field>
+                {values.genre !== GENRE_LATER && (
+                  <Field>
+                    <FieldLabel htmlFor="new-character">{t('modals.new.character')}</FieldLabel>
+                    <Input id="new-character" type="number" min={1} step={1} {...text('character')} />
+                    <FieldDescription>{t('modals.new.characterHint')}</FieldDescription>
+                  </Field>
+                )}
                 <CheckField id="new-style" checked={values.style} onChange={(v) => set('style', v)}>{t('modals.new.addStyle')}</CheckField>
               </>
             )}

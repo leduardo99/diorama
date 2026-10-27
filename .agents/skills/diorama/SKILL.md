@@ -122,7 +122,7 @@ Do not stop at the first export. For every asset:
 
 ## Production workflow
 
-1. **Project.** If the project does not exist, or the user describes a new look, use `diorama-style`: it chooses the space profile, builds the theme and `STYLE.md`, and proves the look with a first prop and a first character. Otherwise read the project's `src/theme.ts` and `STYLE.md`.
+1. **Project.** If the project does not exist, first ask the user which kind of game they are making: the presets `npm run new-project -- --help` lists (each says what it sets), or none yet, which writes no space profile. It can change later in `src/space.ts`. Then, or when the user describes a new look, use `diorama-style`: it creates the project with that preset, builds the theme and `STYLE.md`, and proves the look with a first prop and a first character. Otherwise read the project's `src/theme.ts` and `STYLE.md`.
 2. **Asset.** Create the files with `new-asset`, which refuses to overwrite: the drawing goes in `src/`, the sheet in `sheets/`. Build the form with the module guides as reference, then compose the layers and apply styles. Sets of related pieces (scenery, gear, effects, item icons) are kits: `diorama-kits`.
 3. **Check.** Run `npm run check -- <project>`: types, then the layout, then determinism. Fix every error in the project before exporting. Errors in other projects are not yours to fix.
 4. **Export.** Run the export with `--json` and read the output paths from the summary (they are in `assets/`, mirroring `sheets/`). It type checks the project first and exports nothing while there is a type error; fix them rather than passing `--force`, which is for experiments. After a full export, `check -- <project> --strict` confirms every sheet is exported and no asset is orphaned.
