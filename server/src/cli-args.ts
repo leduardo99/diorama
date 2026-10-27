@@ -21,7 +21,10 @@ function exportSubpaths(body: any): string[] {
 }
 
 /** The commands the jobs run (`POST /__api/jobs`). */
-export const CLI_COMMANDS = ['new-project', 'new-asset', 'new-outfit-character', 'new-scene', 'gear-items', 'export', 'example'] as const;
+export const CLI_COMMANDS = ['new-project', 'new-asset', 'new-kit', 'new-outfit-character', 'new-scene', 'gear-items', 'export', 'example'] as const;
+
+/** The kits `new-kit` starts (tools/kits.ts): the viewer's empty project offers the scenery and gear ones. */
+export const KITS = ['scenery', 'gear', 'vfx', 'items'] as const;
 
 /**
  * The script and arguments for a request's body (`node --import tsx <args>`). `outfitFile` is where the handler saved the
@@ -45,7 +48,19 @@ export function cliArgs(body: any, outfitFile?: string): string[] {
     case 'new-project': {
       const args = ['tools/cli.ts', 'new-project', str(body.name, 'name')];
       if (body.style) args.push('--style');
+      // The kind of game: a space preset (core/volume/space.ts), which the script checks, and the character's height.
+      const genre = optional(body.genre, 'genre');
+      if (genre) {
+        args.push('--genre', genre);
+        const character = optional(body.character, 'character');
+        if (character) args.push('--character', character);
+      }
       return args;
+    }
+    case 'new-kit': {
+      const kit = str(body.kit, 'kit');
+      if (!(KITS as readonly string[]).includes(kit)) throw new Error(`kit must be ${KITS.join(', ')}.`);
+      return ['tools/cli.ts', 'new-kit', project(body.project), kit];
     }
     case 'new-asset': {
       // The subpath is sheets/<subpath>.ts (kebab-case names joined by "/"); the drawing goes in src/.
@@ -111,7 +126,7 @@ export function cliArgs(body: any, outfitFile?: string): string[] {
       // copy is the user's, and the command only exports what changed in it.
       return ['tools/cli.ts', 'example'];
     default:
-      throw new Error('command must be new-project, new-asset, new-outfit-character, new-scene, gear-items, export or example.');
+      throw new Error(`command must be ${CLI_COMMANDS.slice(0, -1).join(', ')} or ${CLI_COMMANDS[CLI_COMMANDS.length - 1]}.`);
   }
 }
 

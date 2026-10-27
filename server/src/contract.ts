@@ -8,7 +8,7 @@ export type { AssetFileMeta, AtlasInfo, Engine, ProjectMeta } from './catalog';
 export type { DeletePlan, DeleteResult, FileKind, PlannedFile } from './assets-fs';
 
 /** The commands the server runs as jobs (`POST /__api/jobs`, cli-args.ts), all of which write into a project. */
-export type JobCommand = 'new-project' | 'new-asset' | 'new-outfit-character' | 'new-scene' | 'gear-items' | 'export' | 'example';
+export type JobCommand = 'new-project' | 'new-asset' | 'new-kit' | 'new-outfit-character' | 'new-scene' | 'gear-items' | 'export' | 'example';
 export type JobState = 'queued' | 'running' | 'succeeded' | 'failed';
 
 /** How far an export (or the export inside `example`) is: sheets finished, exported or failed, of those it exports. */
