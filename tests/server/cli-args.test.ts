@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { CLI_COMMANDS, cliArgs } from '../../viewer/server/cli-args';
+import { CLI_COMMANDS, cliArgs } from '../../server/src/cli-args';
 
 console.log('🧪 Checking the commands the viewer runs (/__api/cli): every one names its project as projects/<name>...\n');
 

@@ -30,10 +30,15 @@ diorama/
 │   ├── engine/           core (draw, interface assets), volume, rig and the dependency boundaries
 │   ├── docs/             snippets, links, paths, script names and the sample's names in the markdown
 │   ├── runtime/          the runtime package: its rules, standalone compile, contract types, conformance traces
+│   ├── server/           the API's routes (what /__api/* answers) and its filesystem side
 │   ├── viewer/           viewer logic
 │   ├── phaser/           the Phaser package: its loader in node, a smoke test in Chromium, standalone compile
 │   └── cli/              commands, including the layout check
-├── viewer/               the app (src/) and its dev server (server/)
+├── server/               the viewer's API on Hono (src/app.ts, mounted by the diorama-api plugin in
+│                         vite.config.ts and run alone by npm run server), its filesystem side
+│                         (src/catalog.ts, src/assets-fs.ts) and its commands (src/cli-args.ts);
+│                         src/contract.ts is all the viewer may import of it
+├── viewer/               the app (src/)
 ├── examples/             the versioned samples (examples/<name>); the viewer does not
 │                         browse them (npm run example copies one into projects/); their assets/ and review/ are not versioned
 ├── projects/             your projects, one folder each, and what the viewer shows: not versioned by Diorama
@@ -67,9 +72,10 @@ draw  <-  volume  <-  rig                 core/: the engine, the producer of the
 - `@diorama/phaser` (`packages/phaser`) imports only its own files, `@diorama/runtime` and `phaser` (a peer dependency, pinned exactly; the repository installs it as a devDependency): no `core/`, no other package, no `node:` module. Its `@diorama/phaser/sheets` entry (`src/sheets.ts`, what needs no Phaser) imports only the runtime, so it runs in node. It is reached through the `@diorama/phaser` aliases like the runtime.
 - `draw` imports no other engine module (only the low-level `random`, `noise` and `color` of `core/`); `volume` imports `draw` and never `rig`; `rig` imports `volume` and `draw`.
 - The top-level files of `core/` (`asset.ts`, `ui.ts`, `random.ts`...) import neither `volume` nor `rig`; the HUD helpers of `ui.ts` build on `asset.ts`, and the HUD pieces a project writes with them draw with `draw`.
-- `core` never imports `tools/`, `viewer/`, `packages/`, `projects/`, `examples/` or `tests/`: nothing outside `core/`.
+- `core` never imports `tools/`, `server/`, `viewer/`, `packages/`, `projects/`, `examples/` or `tests/`: nothing outside `core/`.
 - Projects, examples and templates import the engine only through `@core`, `@core/draw`, `@core/volume` and `@core/rig`, never a path inside `core/`; the tools, the engine's own tooling, may also import its files by path. A project's `game/` never imports the engine at all ([rule 8](#rules)). Nothing imports an `internal/` folder.
 - The viewer reaches the engine only through the same `@core` aliases.
+- `server/` imports `tools/` and its own files (and its two packages, `hono` and `@hono/node-server`). Nothing imports `server/` but `vite.config.ts`, which mounts it for `npm run view`, the tests, and the viewer, which reads its contract types alone and only with `import type`.
 - Nothing imports `tests/`.
 
 `tests/engine/boundary.test.ts` checks every line above.
@@ -225,15 +231,15 @@ They are errors. `src/theme.ts` holds the palette, so its color literals are the
 | Determinism (no `Math.random`, no clock, no raw colors outside `src/theme.ts`) | `npm run check -- <project>` (`tools/lint.ts`); `tests/cli/cli.test.ts` writes each pattern and checks the message, and checks that the sample passes |
 | No export from code with type errors | `npm run export` (`tools/typecheck.ts`, shared with `check`); `tests/cli/cli.test.ts` checks the refusal and `--force` |
 | The export is the same with any `--jobs`, and `--changed` exports what is out of date and nothing else | `tests/cli/cli.test.ts` compares the files of `--jobs 3` with `--jobs 1` byte for byte, and touches a file two imports below one sheet |
-| The viewer shows `projects/` only, and `npm run example` brings the sample in | `tests/viewer/catalog.test.ts` (a sample of `examples/` is in neither catalog, its copy in `projects/` is), `tests/viewer/delete.test.ts` (no delete or restore reaches a sample), `tests/cli/cli.test.ts` (`example` copies everything but `review/` with its times, keeps an existing copy, and `--force` moves that one to the trash, where the viewer's restore finds it) |
+| The viewer shows `projects/` only, and `npm run example` brings the sample in | `tests/server/catalog.test.ts` (a sample of `examples/` is in neither catalog, its copy in `projects/` is), `tests/server/delete.test.ts` (no delete or restore reaches a sample), `tests/server/routes.test.ts` (every `/__api/*` route's status and body), `tests/cli/cli.test.ts` (`example` copies everything but `review/` with its times, keeps an existing copy, and `--force` moves that one to the trash, where the viewer's restore finds it) |
 | A new kit works with its commands | `tests/cli/cli.test.ts` runs `new-kit` for each kit, its generator, `new-scene`, the export and `check --strict` |
-| The dependency direction, the public entrypoints, nothing imports `tests/` | `tests/engine/boundary.test.ts` (scans every import of `core/`, `packages/`, `tools/`, `scripts/`, `viewer/`, `templates/`, `examples/` and `projects/`, and those of `tests/` for paths into `packages/`) |
+| The dependency direction, the public entrypoints, the server's import rules, nothing imports `tests/` | `tests/engine/boundary.test.ts` (scans every import of `core/`, `packages/`, `tools/`, `scripts/`, `server/`, `viewer/`, `templates/`, `examples/` and `projects/`, and those of `tests/` for paths into `packages/`) |
 | The runtime compiles alone (lib ES2022, no DOM, no dependencies) and core's producer types fit its contract types | `tests/runtime/standalone.test.ts`; `tests/runtime/contract.test.ts` (it compiles itself, and is part of `npx tsc --noEmit -p .`) |
 | The Phaser package compiles alone (the DOM, Phaser's types and the runtime), loads by the contract and draws frames pixel for pixel | `tests/phaser/standalone.test.ts`; `tests/phaser/loader.test.ts` (node); `tests/phaser/smoke.test.ts` (Chromium, canvas renderer, generated sheets) |
 | Snippets in the guides and skills compile; every markdown link, heading link and backticked repository path exists; the skills, guides, READMEs and templates do not teach through the sample (its names are on a denylist); every `npm run` script they mention is in `package.json` | `tests/docs/docs.test.ts` |
-| The engine, the runtime, the Phaser package, the commands and the viewer's logic | `tests/engine/`, `tests/runtime/` (with conformance traces recorded from exported characters, `tests/runtime/conformance/`), `tests/phaser/`, `tests/cli/`, `tests/viewer/` |
+| The engine, the runtime, the Phaser package, the commands, the API and the viewer's logic | `tests/engine/`, `tests/runtime/` (with conformance traces recorded from exported characters, `tests/runtime/conformance/`), `tests/phaser/`, `tests/cli/`, `tests/server/`, `tests/viewer/` |
 
-`npm test` runs all six suites through `tests/run.ts` (every `*.test.ts` under `tests/engine/`, `tests/docs/`, `tests/runtime/`, `tests/viewer/`, `tests/phaser/` and `tests/cli/`, in that order, then a summary of which passed); `npm run test:engine`, `test:docs`, `test:runtime`, `test:viewer`, `test:phaser` and `test:cli` run one. A test file outside those folders fails the run, so a new test cannot be left out.
+`npm test` runs all seven suites through `tests/run.ts` (every `*.test.ts` under `tests/engine/`, `tests/docs/`, `tests/runtime/`, `tests/server/`, `tests/viewer/`, `tests/phaser/` and `tests/cli/`, in that order, then a summary of which passed); `npm run test:engine`, `test:docs`, `test:runtime`, `test:server`, `test:viewer`, `test:phaser` and `test:cli` run one. A test file outside those folders fails the run, so a new test cannot be left out.
 
 CI (`.github/workflows/ci.yml`) runs both type checks and `npm test` on every pull request and on `main`. `main` is protected: changes land through pull requests, which merge only when CI passes. [AGENTS.md](../AGENTS.md) is the workflow from issue to pull request, for coding agents and the people who drive them; `.github/ISSUE_TEMPLATE/` and `.github/pull_request_template.md` carry its checks. A change that can touch generated images is proven with `npm run compare-exports` (save before, compare after).
 

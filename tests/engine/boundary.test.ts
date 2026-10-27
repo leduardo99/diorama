@@ -160,7 +160,7 @@ const MAY_IMPORT: Record<Layer, Layer[]> = {
 const DRAW_MAY_USE_TOP = new Set(['core/random', 'core/noise', 'core/color']);
 
 /** Folders the engine never imports. */
-const NOT_ENGINE = ['tools', 'scripts', 'viewer', 'projects', 'examples', 'templates', 'tests', 'docs'];
+const NOT_ENGINE = ['tools', 'scripts', 'server', 'viewer', 'projects', 'examples', 'templates', 'tests', 'docs'];
 
 for (const file of scanFiles('core')) {
   const from = layerOf(rel(file))!;
@@ -244,7 +244,61 @@ for (const file of [...outsideEngine, ...scanFiles('tests'), ...scanFiles('scrip
 }
 
 // ---------------------------------------------------------------------------------------------
-// 4. Nothing imports tests/.
+// 4. The server: it imports its own files and tools/ alone, and nothing imports it but
+//    vite.config.ts, its own tests and the viewer — which imports server/src/contract.ts alone,
+//    and with `import type` only, so none of the server ships in the viewer's bundle
+//    (docs/ARCHITECTURE.md).
+// ---------------------------------------------------------------------------------------------
+
+const CONTRACT = 'server/src/contract';
+
+/** True only when every occurrence of `spec` in `file` is an `import type` or `export type` statement. */
+function typeOnlyImport(file: string, spec: string): boolean {
+  const code = stripComments(readFileSync(file, 'utf8'));
+  const esc = spec.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const typed = code.match(new RegExp(`\\b(?:import|export)\\s+type\\b[^;'"]*\\bfrom\\s*['"]${esc}['"]`, 'gm')) ?? [];
+  const any = code.match(new RegExp(`(['"])${esc}\\1`, 'g')) ?? [];
+  return typed.length === any.length;
+}
+
+const serverFiles = scanFiles('server');
+for (const file of serverFiles) {
+  for (const spec of specifiersOf(file)) {
+    const landed = target(file, spec);
+    if (landed && !inside(landed, 'server') && !inside(landed, 'tools')) {
+      report(`${rel(file)} imports "${spec}" (${landed}): server/ imports its own files and tools/ alone (packages like hono aside).`);
+    }
+  }
+}
+
+const outsideServer = [
+  ...scanFiles('core'),
+  ...scanFiles('packages'),
+  ...scanFiles('tools'),
+  ...scanFiles('scripts'),
+  ...scanFiles('viewer'),
+  ...scanFiles('templates'),
+  ...scanFiles('examples'),
+  ...scanFiles('projects'),
+  ...scanFiles('tests'),
+  resolve('vite.config.ts'),
+];
+for (const file of outsideServer) {
+  for (const spec of specifiersOf(file)) {
+    const landed = target(file, spec);
+    if (!landed || !inside(landed, 'server')) continue;
+    const allowed =
+      rel(file) === 'vite.config.ts' ||
+      inside(rel(file), 'tests') ||
+      (inside(rel(file), 'viewer') && landed === CONTRACT && typeOnlyImport(file, spec));
+    if (!allowed) {
+      report(`${rel(file)} imports "${spec}" (${landed}): nothing imports server/ but vite.config.ts, tests/ and the viewer (server/src/contract.ts, with import type alone).`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------------------------
+// 5. Nothing imports tests/.
 // ---------------------------------------------------------------------------------------------
 
 const everythingButTests = [
@@ -252,6 +306,7 @@ const everythingButTests = [
   ...scanFiles('packages'),
   ...scanFiles('tools'),
   ...scanFiles('scripts'),
+  ...scanFiles('server'),
   ...scanFiles('viewer'),
   ...scanFiles('templates'),
   ...scanFiles('examples'),
@@ -266,7 +321,7 @@ for (const file of everythingButTests) {
 }
 
 // ---------------------------------------------------------------------------------------------
-// 5. The checker itself: the rules above can only fail if these hold.
+// 6. The checker itself: the rules above can only fail if these hold.
 // ---------------------------------------------------------------------------------------------
 
 assert.equal(target(resolve('core/draw/shapes/shape.ts'), '../../volume/camera.js'), 'core/volume/camera', 'a relative import resolves to its repository path');
@@ -291,6 +346,9 @@ assert.ok(pathIntoPackage(resolve('tools/probe.ts'), '../packages/runtime/src/in
 assert.equal(pathIntoPackage(resolve('viewer/src/probe-path.ts'), '@diorama/runtime'), null, 'the alias is the way in');
 assert.equal(pathIntoPackage(resolve(`${RUNTIME}/src/actor.ts`), './frames.js'), null, 'a package\'s own files are its own business');
 assert.deepEqual(specifiersOf(resolve('tests/engine/boundary.test.ts')).filter(spec => spec.startsWith('.')), [], 'comments and strings do not count as imports');
+assert.ok(serverFiles.length >= 4 && serverFiles.some(f => rel(f) === 'server/src/app.ts'), 'the scanner finds the server');
+assert.equal(typeOnlyImport(resolve('viewer/src/lib/types.ts'), '../../../server/src/contract'), true, 'the viewer reads the contract by type alone');
+assert.equal(typeOnlyImport(resolve('vite.config.ts'), './server/src/app'), false, 'the dev server imports the app itself');
 
 assert.equal(problems.length, 0, `Boundary problems:\n${problems.map(p => `  - ${p}`).join('\n')}`);
 

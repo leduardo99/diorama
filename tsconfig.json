@@ -25,6 +25,7 @@
     "core/**/*",
     "packages/**/*",
     "tools/**/*",
+    "server/**/*",
     "viewer/**/*",
     "templates/**/*",
     "projects/**/*",

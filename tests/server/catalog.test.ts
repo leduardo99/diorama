@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { cpSync, mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { buildAssetCatalog, buildProjectCatalog } from '../../viewer/server/catalog';
+import { buildAssetCatalog, buildProjectCatalog } from '../../server/src/catalog';
 import { createTranslator } from '../../viewer/src/i18n/core';
 import { characterLabel, detailsTitle, readableName, roleDetail, roleOf } from '../../viewer/src/lib/asset-role';
 import { exportTarget, isStale, pendingExports, progressPercent, projectTotals } from '../../viewer/src/lib/export-state';

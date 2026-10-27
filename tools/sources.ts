@@ -1,7 +1,7 @@
 /**
  * Diorama - what a sheet reaches. A sheet is a thin file: the drawing is in `src/`, often several imports deep
  * (sheet -> character -> clips -> shared skins -> theme). Both the engine of an export and its freshness follow
- * that whole chain. Shared by the viewer's catalog (`viewer/server/catalog.ts`) and `npm run export -- --changed`;
+ * that whole chain. Shared by the viewer's catalog (`server/src/catalog.ts`) and `npm run export -- --changed`;
  * the rule for "out of date" is in `tools/freshness.ts`.
  *
  * Only relative imports are followed, so the engine (`@core/...`) and npm packages do not count: after a change to

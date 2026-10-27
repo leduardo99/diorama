@@ -11,7 +11,7 @@ import {
   restoreProject,
   safeProjectName,
   safeSubpath,
-} from '../../viewer/server/assets-fs';
+} from '../../server/src/assets-fs';
 
 console.log('🧪 Checking the viewer delete / undo endpoint (path validation, trash, restore)...\n');
 

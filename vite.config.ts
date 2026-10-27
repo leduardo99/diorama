@@ -1,56 +1,12 @@
-import { defineConfig, type Connect, type Plugin } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { tanstackRouter } from '@tanstack/router-plugin/vite';
+import { getRequestListener } from '@hono/node-server';
 import { existsSync } from 'node:fs';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
 import { resolve, extname, join, relative, sep } from 'node:path';
-import { execFile } from 'node:child_process';
-import type { IncomingMessage, ServerResponse } from 'node:http';
-import { buildAssetCatalog, buildProjectCatalog } from './viewer/server/catalog';
-import { cliArgs } from './viewer/server/cli-args';
-import { EXAMPLE_LOCK, lockHolder } from './tools/lock';
+import { createApp, isApiPath } from './server/src/app';
 import { LAYOUT, PROJECT_ROOTS, listProjects } from './tools/project';
-import { PathError, deleteAsset, deleteProject, planDelete, restoreAsset, restoreProject } from './viewer/server/assets-fs';
-
-function sendJson(res: ServerResponse, status: number, body: unknown) {
-  res.statusCode = status;
-  res.setHeader('Content-Type', 'application/json');
-  res.end(JSON.stringify(body));
-}
-
-function sendError(res: ServerResponse, err: unknown) {
-  const message = err instanceof Error ? err.message : String(err);
-  sendJson(res, err instanceof PathError ? 400 : 500, { ok: false, error: message });
-}
-
-// Mutating endpoints only accept JSON: a cross-site form post cannot send that without a CORS preflight.
-function readJsonBody(req: IncomingMessage): Promise<any> {
-  return new Promise((resolveBody, reject) => {
-    if (!String(req.headers['content-type'] ?? '').startsWith('application/json')) {
-      reject(new PathError('Content-Type must be application/json.'));
-      return;
-    }
-    let raw = '';
-    req.on('data', (chunk) => { raw += chunk; });
-    req.on('end', () => {
-      try {
-        resolveBody(JSON.parse(raw || '{}'));
-      } catch {
-        reject(new PathError('Body is not valid JSON.'));
-      }
-    });
-    req.on('error', reject);
-  });
-}
-
-function postOnly(handler: (req: IncomingMessage, res: ServerResponse) => Promise<void>): Connect.NextHandleFunction {
-  return (req, res) => {
-    if (req.method !== 'POST') return sendJson(res, 405, { ok: false, error: 'Use POST.' });
-    handler(req, res).catch((err) => sendError(res, err));
-  };
-}
 
 // "@/..." resolves to the viewer sources. Added by a plugin so the shared resolve.alias block stays as it is.
 function viewerPathsPlugin(): Plugin {
@@ -95,112 +51,15 @@ function dioramaApiPlugin(): Plugin {
         next();
       });
 
-      // Who this server is: `npm run game` asks, to tell this repository's dev server from any other program on its port.
-      server.middlewares.use('/__api/server', (_req, res) => sendJson(res, 200, { app: 'diorama', root: repo }));
-
-      server.middlewares.use('/__api/assets', async (_req, res) => {
-        try {
-          sendJson(res, 200, await buildAssetCatalog(repo));
-        } catch (err) {
-          sendError(res, err);
-        }
+      // The API is a Hono app of its own (server/src/app.ts), mounted here so `npm run view` stays one command and one
+      // process; `npm run server` runs it alone. A request reaches it when its path borders a route on "/", "." or the
+      // end, the rule the connect mounts above applied: everything else falls through to Vite as before.
+      const api = getRequestListener(createApp({ root: repo }).fetch, { overrideGlobalObjects: false });
+      server.middlewares.use((req, res, next) => {
+        const path = (req.url ?? '').split('?')[0];
+        if (!isApiPath(path)) return next();
+        api(req, res).catch(next);
       });
-
-      server.middlewares.use('/__api/projects', async (_req, res) => {
-        try {
-          sendJson(res, 200, await buildProjectCatalog(repo));
-        } catch (err) {
-          sendError(res, err);
-        }
-      });
-
-      // The exact files a delete would move, so the confirm dialog shows what the server will really do.
-      server.middlewares.use('/__api/asset-files', async (req, res) => {
-        try {
-          const params = new URL(req.url ?? '', 'http://localhost').searchParams;
-          sendJson(res, 200, await planDelete(repo, params.get('project') ?? '', params.get('subpath') ?? ''));
-        } catch (err) {
-          sendError(res, err);
-        }
-      });
-
-      // Deleting moves files into .diorama-trash/assets/<project>/<id>/ so it can be undone.
-      server.middlewares.use('/__api/delete', postOnly(async (req, res) => {
-        const body = await readJsonBody(req);
-        const result = await deleteAsset(repo, body.project, body.subpath, { deleteSheet: body.deleteSheet === true });
-        sendJson(res, 200, { ok: true, ...result });
-      }));
-
-      server.middlewares.use('/__api/restore', postOnly(async (req, res) => {
-        const body = await readJsonBody(req);
-        sendJson(res, 200, { ok: true, ...(await restoreAsset(repo, body.project, body.trashId)) });
-      }));
-
-      // Deleting a project of projects/ moves the whole folder to <repo>/.diorama-trash/projects/ so it can be undone too.
-      server.middlewares.use('/__api/delete-project', postOnly(async (req, res) => {
-        const body = await readJsonBody(req);
-        sendJson(res, 200, { ok: true, ...(await deleteProject(repo, body.project)) });
-      }));
-
-      server.middlewares.use('/__api/restore-project', postOnly(async (req, res) => {
-        const body = await readJsonBody(req);
-        sendJson(res, 200, { ok: true, ...(await restoreProject(repo, body.project, body.trashId)) });
-      }));
-
-      // `npm run example` brings the sample in one run at a time (tools/lock.ts). A run is going on while this server runs
-      // one (from the moment it is asked for, before the script takes the lock) or while another process holds the lock
-      // (a terminal, another server): "Try the sample" shows it as running and does not start another.
-      let exampleInFlight: { startedAt: string } | undefined;
-      const exampleRun = (): { running: boolean; startedAt?: string } => {
-        const holder = lockHolder(join(repo, EXAMPLE_LOCK));
-        if (exampleInFlight || holder) return { running: true, startedAt: exampleInFlight?.startedAt ?? (holder?.startedAt || undefined) };
-        return { running: false };
-      };
-      server.middlewares.use('/__api/example-run', (_req, res) => sendJson(res, 200, exampleRun()));
-
-      // Runs new-project, new-asset, new-outfit-character, new-scene, gear-items, export and example from the viewer
-      server.middlewares.use('/__api/cli', postOnly(async (req, res) => {
-        let args: string[];
-        let isExample = false;
-        // An outfit or a scene travels as a file: the script reads it from a temp folder that is removed when it ends.
-        let outfitDir: string | undefined;
-        const cleanup = () => (outfitDir ? rm(outfitDir, { recursive: true, force: true }) : undefined);
-        try {
-          const body = await readJsonBody(req);
-          let outfitFile: string | undefined;
-          if (body?.command === 'new-outfit-character' || body?.command === 'new-scene') {
-            const isScene = body.command === 'new-scene';
-            const data = isScene ? body.scene : body.outfit;
-            const list = isScene ? data?.props : data?.pieces;
-            if (!data || typeof data !== 'object' || Array.isArray(data) || !Array.isArray(list)) throw new Error(isScene ? 'scene must be an object with a props list.' : 'outfit must be an object with a pieces list.');
-            outfitDir = await mkdtemp(join(tmpdir(), isScene ? 'diorama-scene-' : 'diorama-outfit-'));
-            outfitFile = join(outfitDir, isScene ? 'scene.json' : 'outfit.json');
-            await writeFile(outfitFile, JSON.stringify(data, null, 2));
-          }
-          args = cliArgs(body, outfitFile);
-          isExample = body.command === 'example';
-        } catch (err: any) {
-          await cleanup();
-          return sendJson(res, 400, { ok: false, output: `Error: ${err.message}` });
-        }
-        if (isExample) {
-          // A second "Try the sample" (another tab, a double request) while one runs: answered as running, never started.
-          if (exampleRun().running) return sendJson(res, 409, { ok: false, running: true, output: 'npm run example is already running: it brings the sample in.' });
-          exampleInFlight = { startedAt: new Date().toISOString() };
-        }
-        // Same entry point as the npm scripts, without a shell. Plain text output: no ANSI colors.
-        const { FORCE_COLOR: _forceColor, ...env } = process.env;
-        execFile(
-          process.execPath,
-          ['--import', 'tsx', ...args],
-          { cwd: server.config.root, env: { ...env, NO_COLOR: '1' } },
-          async (err, stdout, stderr) => {
-            if (isExample) exampleInFlight = undefined;
-            await cleanup();
-            sendJson(res, 200, { ok: !err, output: (stdout + stderr).trim() });
-          },
-        );
-      }));
 
       // Tell the open viewer to refetch whenever an export, a sheet, a source file or a delete changes the catalog. A folder of
       // projects/ with a dot name is no project (npm run example copies into one, then renames it into place).

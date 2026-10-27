@@ -16,6 +16,7 @@ Direct dependencies of the exporter, the CLI and the viewer (`dependencies` in `
 | @ebay/nice-modal-react | 1.2.13 | MIT |
 | @floating-ui/react-dom | 2.1.9 | MIT |
 | @fontsource-variable/inter | 5.3.0 | OFL-1.1 |
+| @hono/node-server | 2.1.5 | MIT |
 | @tailwindcss/vite | 4.3.3 | MIT |
 | @tanstack/react-query | 5.104.5 | MIT |
 | @tanstack/react-router | 1.170.45 | MIT |
@@ -25,6 +26,7 @@ Direct dependencies of the exporter, the CLI and the viewer (`dependencies` in `
 | class-variance-authority | 0.7.1 | Apache-2.0 |
 | cmdk | 1.1.1 | MIT |
 | cn | 0.5.0 | MIT |
+| hono | 4.13.13 | MIT |
 | lucide-react | 1.61.0 | ISC |
 | paper | 0.12.18 | MIT |
 | picocolors | 1.1.1 | ISC |
