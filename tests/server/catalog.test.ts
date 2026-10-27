@@ -69,7 +69,17 @@ try {
   put('assets', 'characters/spider/idle.png', 1000);
   put('assets', 'characters/spider/idle.json', 1000, clipAtlas(8, { name: 'bone-spider', skeleton: 'spider' }));
 
+  // A trimmed sheet in three pages (tools/trim.ts): one asset, whose size counts every page; a numbered name with no
+  // atlas beside it stays an asset of its own.
+  put('assets', 'trimmed/run.png', 1000, 'a'.repeat(100));
+  put('assets', 'trimmed/run.1.png', 1000, 'b'.repeat(40));
+  put('assets', 'trimmed/run.2.png', 1000, 'c'.repeat(2));
+  put('assets', 'trimmed/run.json', 1000, JSON.stringify({ meta: { mode: 'directions', frameCount: 4, directions: ['S'], trimmed: true, pages: ['run.png', 'run.1.png', 'run.2.png'] } }));
+  put('assets', 'trimmed/v2.1.png', 1000);
+
   const assets = await buildAssetCatalog(root);
+  const trimmed = assets.filter((a) => a.subpath.startsWith('trimmed/')).map((a) => [a.subpath, a.size]);
+  assert.deepEqual(trimmed, [['trimmed/run.png', 142], ['trimmed/v2.1.png', 1]], 'extra pages are part of their sheet, which counts them');
   const byPath = (subpath: string) => assets.find((a) => a.subpath === subpath)!;
 
   // 1. The freshness of an asset follows its source and the local files that source imports.

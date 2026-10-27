@@ -41,7 +41,7 @@ import { execFileSync } from 'node:child_process';
 import { cpSync, existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, readlinkSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { basename, dirname, extname, join, relative, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { deflateSync, inflateSync } from 'node:zlib';
+import { decodePng as decodePngFile, encodePng, type Decoded } from './png';
 import pc from 'picocolors';
 import { IMAGE_RE } from './freshness.js';
 import { FIRST_PIECE, KIT_KINDS, kitFiles, readKitTheme, type KitKind, type KitTheme } from './kits.js';
@@ -678,73 +678,13 @@ async function game(positionals: string[], flags: Record<string, string | true>)
 // inspect (PNG only, 8-bit RGB or RGBA, non-interlaced)
 // ---------------------------------------------------------------------------
 
-interface Decoded {
-  width: number;
-  height: number;
-  channels: number;
-  pixels: Buffer;
-}
-
+/** A PNG's pixels (tools/png.ts); a file it cannot read stops the command with the reason. */
 function decodePng(buffer: Buffer): Decoded {
-  const signature = buffer.subarray(0, 8).toString('hex');
-  if (signature !== '89504e470d0a1a0a') fail('inspect only reads PNG files.');
-
-  let offset = 8;
-  let width = 0;
-  let height = 0;
-  let colorType = 0;
-  let interlace = 0;
-  const idat: Buffer[] = [];
-
-  while (offset < buffer.length) {
-    const length = buffer.readUInt32BE(offset);
-    const type = buffer.toString('ascii', offset + 4, offset + 8);
-    const data = buffer.subarray(offset + 8, offset + 8 + length);
-    if (type === 'IHDR') {
-      width = data.readUInt32BE(0);
-      height = data.readUInt32BE(4);
-      const bitDepth = data[8];
-      colorType = data[9];
-      interlace = data[12];
-      if (bitDepth !== 8) fail(`inspect supports 8-bit PNG only (found ${bitDepth}-bit).`);
-      if (colorType !== 6 && colorType !== 2) fail(`inspect supports RGB and RGBA PNG only (found color type ${colorType}).`);
-      if (interlace !== 0) fail('inspect does not support interlaced PNG.');
-    } else if (type === 'IDAT') {
-      idat.push(data);
-    } else if (type === 'IEND') {
-      break;
-    }
-    offset += 12 + length;
+  try {
+    return decodePngFile(buffer);
+  } catch (err) {
+    fail(`inspect reads PNG only: ${(err as Error).message}`);
   }
-
-  const channels = colorType === 6 ? 4 : 3;
-  const stride = width * channels;
-  const raw = inflateSync(Buffer.concat(idat));
-  const pixels = Buffer.alloc(height * stride);
-
-  for (let y = 0; y < height; y++) {
-    const filter = raw[y * (stride + 1)];
-    const src = y * (stride + 1) + 1;
-    for (let x = 0; x < stride; x++) {
-      const left = x >= channels ? pixels[y * stride + x - channels] : 0;
-      const up = y > 0 ? pixels[(y - 1) * stride + x] : 0;
-      const upLeft = y > 0 && x >= channels ? pixels[(y - 1) * stride + x - channels] : 0;
-      let value = raw[src + x];
-      if (filter === 1) value += left;
-      else if (filter === 2) value += up;
-      else if (filter === 3) value += (left + up) >> 1;
-      else if (filter === 4) {
-        const p = left + up - upLeft;
-        const pa = Math.abs(p - left);
-        const pb = Math.abs(p - up);
-        const pc2 = Math.abs(p - upLeft);
-        value += pa <= pb && pa <= pc2 ? left : pb <= pc2 ? up : upLeft;
-      }
-      pixels[y * stride + x] = value & 255;
-    }
-  }
-
-  return { width, height, channels, pixels };
 }
 
 function inspect(positionals: string[], flags: Record<string, string | true>): void {
@@ -1071,41 +1011,6 @@ function qualityOf(image: Decoded): { valueSpread: number; toneLevels: number; i
 // are never touched.
 // ---------------------------------------------------------------------------
 
-const CRC_TABLE = Array.from({ length: 256 }, (_, n) => {
-  let c = n;
-  for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-  return c >>> 0;
-});
-
-function crc32(buf: Buffer): number {
-  let c = 0xffffffff;
-  for (const b of buf) c = CRC_TABLE[(c ^ b) & 0xff] ^ (c >>> 8);
-  return (c ^ 0xffffffff) >>> 0;
-}
-
-function encodePng(width: number, height: number, rgba: Buffer): Buffer {
-  const chunk = (type: string, data: Buffer) => {
-    const len = Buffer.alloc(4);
-    len.writeUInt32BE(data.length);
-    const body = Buffer.concat([Buffer.from(type, 'ascii'), data]);
-    const crc = Buffer.alloc(4);
-    crc.writeUInt32BE(crc32(body));
-    return Buffer.concat([len, body, crc]);
-  };
-  const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(width, 0);
-  ihdr.writeUInt32BE(height, 4);
-  ihdr[8] = 8;
-  ihdr[9] = 6;
-  const raw = Buffer.alloc((width * 4 + 1) * height);
-  for (let y = 0; y < height; y++) rgba.copy(raw, y * (width * 4 + 1) + 1, y * width * 4, (y + 1) * width * 4);
-  return Buffer.concat([
-    Buffer.from('89504e470d0a1a0a', 'hex'),
-    chunk('IHDR', ihdr),
-    chunk('IDAT', deflateSync(raw)),
-    chunk('IEND', Buffer.alloc(0)),
-  ]);
-}
 
 /** Widest contact sheet the automatic zoom produces: wider sheets fall back to a smaller zoom (an explicit --zoom still wins). */
 const CONTACT_AUTO_MAX_WIDTH = 4000;
