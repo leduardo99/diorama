@@ -106,3 +106,18 @@ export function cliArgs(body: any, outfitFile?: string): string[] {
       throw new Error('command must be new-project, new-asset, new-outfit-character, new-scene, gear-items, export or example.');
   }
 }
+
+/**
+ * The name in projects/ a request's command writes to, and what an export exports: the job's project and subpaths
+ * (contract.ts). Call it after `cliArgs` has accepted the body. `example` brings in the sample `tools/cli.ts` copies by
+ * default, which lands in projects/ under its own name.
+ */
+export function jobTarget(body: any): { project: string; subpaths: string[] } {
+  if (body.command === 'example') return { project: EXAMPLE_PROJECT, subpaths: [] };
+  const project = String(body.command === 'new-project' ? body.name : body.project).trim();
+  const subpath = body.command === 'export' ? String(body.subpath ?? '').trim() : '';
+  return { project, subpaths: subpath ? [subpath] : [] };
+}
+
+/** The project `npm run example` brings in when it names no sample (`DEFAULT_SAMPLE` in tools/cli.ts). */
+export const EXAMPLE_PROJECT = 'soulkeeper';

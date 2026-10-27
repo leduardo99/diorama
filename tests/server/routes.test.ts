@@ -288,6 +288,67 @@ try {
 
   // The app's route table is what the dev server forwards (vite.config.ts reads it).
   assert.ok(API_ROUTES.includes('/__api/cli') && API_ROUTES.length === 10, 'every route of the API is mounted');
+  for (const path of ['/__api/jobs', '/__api/jobs/job-1', '/__api/events']) assert.ok(isApiPath(path), `${path} reaches the API`);
+  assert.ok(!isApiPath('/__api/jobsx') && !isApiPath('/__api/eventsource'), 'the job routes border on "/", "." or the end too');
+
+  // 11. The job routes: POST queues (202 and the job), GET lists and finds, the rest is refused.
+  {
+    calls.length = 0;
+    const queued = await app.request('/__api/jobs', post({ command: 'export', project, subpath: 'props/' }));
+    assert.equal(queued.status, 202);
+    const { job } = (await queued.json()) as { job: Record<string, unknown> };
+    assert.deepEqual([job.command, job.project, job.subpaths], ['export', project, ['props/']]);
+    assert.ok(job.state === 'queued' || job.state === 'running');
+    await untilCalled(1);
+    assert.deepEqual(calls[0].args, ['tools/export.ts', `projects/${project}`, 'props/', '--progress'], 'a job exports with --progress, for its progress');
+    for (let i = 0; i < 100 && (await (await app.request(`/__api/jobs/${job.id}`)).json()).state !== 'succeeded'; i++) await new Promise((r) => setImmediate(r));
+
+    const one = await app.request(`/__api/jobs/${job.id}`);
+    assert.equal(one.status, 200);
+    const ended = (await one.json()) as Record<string, unknown>;
+    assert.deepEqual([ended.id, ended.state, ended.output], [job.id, 'succeeded', 'done'], 'one job, finished, with its output');
+    assert.ok(typeof ended.startedAt === 'string' && typeof ended.finishedAt === 'string', 'with when it started and ended');
+    const list = (await (await app.request('/__api/jobs')).json()) as Array<{ id: string }>;
+    assert.ok(list.some((j) => j.id === job.id), 'the list has the finished job');
+
+    const created = await app.request('/__api/jobs', post({ command: 'new-project', name: 'fresh' }));
+    assert.equal(((await created.json()) as { job: { project: string } }).job.project, 'fresh', 'a new project is the project its job writes to');
+
+    const missing = await app.request('/__api/jobs/job-999');
+    assert.equal(missing.status, 404);
+    assert.deepEqual(await missing.json(), { ok: false, error: 'No job job-999.' });
+    assert.equal((await app.request(`/__api/jobs/${job.id}`, { method: 'DELETE' })).status, 405);
+    assert.equal((await app.request('/__api/jobs', { method: 'PUT' })).status, 405);
+
+    const bad = await app.request('/__api/jobs', post({ command: 'export', project: '../x' }));
+    assert.equal(bad.status, 400);
+    assert.deepEqual(await bad.json(), { ok: false, error: 'project must be the name of a project in projects/.' });
+    const form = await app.request('/__api/jobs', post('x=1', 'application/x-www-form-urlencoded'));
+    assert.equal(form.status, 400, 'POST takes JSON alone');
+
+    // "Try the sample" twice while this server brings it in: the second answers the first job.
+    let release: (result: CommandResult) => void;
+    onRun = () => new Promise((r) => { release = r; });
+    const before = calls.length;
+    const first = (await (await app.request('/__api/jobs', post({ command: 'example' }))).json()) as { job: { id: string; project: string } };
+    assert.equal(first.job.project, 'soulkeeper', 'example writes to the sample\'s copy in projects/');
+    await untilCalled(before + 1);
+    const again = await app.request('/__api/jobs', post({ command: 'example' }));
+    assert.equal(again.status, 202);
+    assert.equal(((await again.json()) as { job: { id: string } }).job.id, first.job.id, 'the run going on answers');
+    assert.equal(calls.length, before + 1, 'and no second run starts');
+    release!({ ok: true, output: 'brought in' });
+    onRun = undefined;
+
+    // While another process holds the lock: a 409, and nothing runs.
+    for (let i = 0; i < 100 && (await (await app.request('/__api/example-run')).json()).running; i++) await new Promise((r) => setImmediate(r));
+    writeFileSync(join(root, EXAMPLE_LOCK), JSON.stringify({ pid: process.pid, startedAt: '', command: 'npm run example' }));
+    const held = await app.request('/__api/jobs', post({ command: 'example' }));
+    assert.equal(held.status, 409);
+    assert.equal(((await held.json()) as { running: boolean }).running, true);
+    assert.equal(calls.length, before + 1);
+    rmSync(join(root, EXAMPLE_LOCK));
+  }
 
   console.log('✅ API route checks passed');
 } finally {

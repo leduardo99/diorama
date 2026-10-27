@@ -223,6 +223,27 @@ They are errors. `src/theme.ts` holds the palette, so its color literals are the
 
 `--changed` exports only the sheets whose image is missing or older than the sheet or a local file it imports, followed to the end of the chain (`tools/sources.ts`), with a second of slack (`tools/freshness.ts`). The viewer's stale badge reads the same two files, so the sheets it marks are the ones `--changed` exports. The engine (`core/`) and `diorama.config.json` do not count: after changing them, export everything.
 
+### The server
+
+`server/` is the viewer's API (`server/src/app.ts`), on Hono. `npm run view` mounts it inside Vite's dev server, so the viewer and the API are one command and one process; `npm run server` runs it alone, API only, on `localhost`.
+- **What it owns:** the catalog (`catalog.ts`), deletes and the trash (`assets-fs.ts`), and the queue of the commands that write (`jobs.ts`).
+- **What the commands own:** everything they do. The server only turns a request into a command and its arguments (`cli-args.ts`), and runs it as `node --import tsx <script>`, the way the npm scripts do.
+
+The commands that write run as jobs. `POST /__api/jobs` queues one and answers `202` with it; `GET /__api/jobs` and `GET /__api/jobs/<id>` read them. The queue's rules:
+- one job per project at a time, in the order they arrived;
+- at most one `export` or `example` at a time across all projects, because each starts headless Chromium with a lane per core;
+- a request equal to a job still queued answers that job;
+- a failed job does not stop the queue.
+
+A job's export runs with `--progress`, which prints one JSON line on stderr per finished sheet; the server reads those lines into the job's progress and leaves them out of its output. `/__api/cli` queues a job too, and answers once it has finished.
+
+`GET /__api/events` streams what happens as Server-Sent Events:
+- `job.queued`, `job.started`, `job.progress` and `job.finished`;
+- `catalog.changed`, with the projects whose `assets/`, `sheets/` or `src/` changed, or which appeared or went away, grouped over 150 ms;
+- `example.changed`, when a run of `npm run example` starts or ends, in this server or in another process holding its lock.
+
+Nothing is replayed: a client that connects or reconnects reads `GET /__api/jobs` and the catalog, then follows the events. The types of the jobs and events are in `server/src/contract.ts`, the only file of `server/` the viewer imports, and only its types.
+
 ## What enforces what
 
 | Rule | Enforced by |
@@ -233,6 +254,7 @@ They are errors. `src/theme.ts` holds the palette, so its color literals are the
 | The export is the same with any `--jobs`, and `--changed` exports what is out of date and nothing else | `tests/cli/cli.test.ts` compares the files of `--jobs 3` with `--jobs 1` byte for byte, and touches a file two imports below one sheet |
 | The viewer shows `projects/` only, and `npm run example` brings the sample in | `tests/server/catalog.test.ts` (a sample of `examples/` is in neither catalog, its copy in `projects/` is), `tests/server/delete.test.ts` (no delete or restore reaches a sample), `tests/server/routes.test.ts` (every `/__api/*` route's status and body), `tests/cli/cli.test.ts` (`example` copies everything but `review/` with its times, keeps an existing copy, and `--force` moves that one to the trash, where the viewer's restore finds it) |
 | A new kit works with its commands | `tests/cli/cli.test.ts` runs `new-kit` for each kit, its generator, `new-scene`, the export and `check --strict` |
+| The server's queue, its events and its routes | `tests/server/jobs.test.ts` (one job per project, one export at a time, the order, duplicates, failures, the events of a job, the progress lines), `tests/server/events.test.ts` (which changes are `catalog.changed`, grouping, `example.changed`, the event stream), `tests/server/routes.test.ts` (every route's status and body) |
 | The dependency direction, the public entrypoints, the server's import rules, nothing imports `tests/` | `tests/engine/boundary.test.ts` (scans every import of `core/`, `packages/`, `tools/`, `scripts/`, `server/`, `viewer/`, `templates/`, `examples/` and `projects/`, and those of `tests/` for paths into `packages/`) |
 | The runtime compiles alone (lib ES2022, no DOM, no dependencies) and core's producer types fit its contract types | `tests/runtime/standalone.test.ts`; `tests/runtime/contract.test.ts` (it compiles itself, and is part of `npx tsc --noEmit -p .`) |
 | The Phaser package compiles alone (the DOM, Phaser's types and the runtime), loads by the contract and draws frames pixel for pixel | `tests/phaser/standalone.test.ts`; `tests/phaser/loader.test.ts` (node); `tests/phaser/smoke.test.ts` (Chromium, canvas renderer, generated sheets) |

@@ -87,11 +87,14 @@ interface CliArgs {
 
   // How many sheets render at once (pages kept open side by side); default: defaultJobs().
   jobs?: number;
+
+  // One JSON line on stderr per finished sheet, for a program that shows the run's progress (the viewer's server).
+  progress?: boolean;
 }
 
 const ALLOWED_FLAGS = [
   'grid', 'compact', 'gap', 'cols', 'sheet-name', 'out-dir', 'both', 'no-json',
-  'scale', 'format', 'server', 'mockup', 'json', 'force', 'changed', 'jobs', 'help',
+  'scale', 'format', 'server', 'mockup', 'json', 'force', 'changed', 'jobs', 'progress', 'help',
 ];
 const VALUE_OPTIONS = ['gap', 'cols', 'sheet-name', 'out-dir', 'scale', 'format', 'server', 'jobs'];
 
@@ -216,6 +219,7 @@ function parseArguments(): CliArgs {
     force: Boolean(flags['force']),
     changed: Boolean(flags['changed']),
     jobs: jobsValue,
+    progress: Boolean(flags['progress']),
   };
 }
 
@@ -276,6 +280,7 @@ ${pc.bold('Options:')}
   --force              Export even when the project has type errors (skips the type check that runs first; for experiments)
   --changed            Only the sheets never exported, or older than the sheet or a local file it imports
   --jobs=<n>           Sheets rendered at once (default: ${defaultJobs()} here, the performance cores less one; at most ${MAX_DEFAULT_JOBS} by default)
+  --progress           Print one JSON line on stderr per finished sheet: {"diorama":"progress","done":3,"total":12,"sheet":"props/crate"}
   --help, -h           Show this help message
 `);
 }
@@ -1007,6 +1012,13 @@ async function main() {
   let successCount = 0;
   let failCount = 0;
 
+  // --progress: the sheets finished (exported or failed) of those this run exports, as they finish.
+  const progressTotal = (isSheetExport ? 1 : 0) + (!isSheetExport || args.both ? tasks.length : 0);
+  let progressDone = 0;
+  const progress = (sheet: string) => {
+    if (args.progress) process.stderr.write(JSON.stringify({ diorama: 'progress', done: ++progressDone, total: progressTotal, sheet }) + '\n');
+  };
+
   try {
     browser = await chromium.launch({
       headless: true,
@@ -1063,6 +1075,7 @@ async function main() {
           `  ${pc.red('✖')} Sheet Export Failed: ${err.message || err}`
         );
       }
+      progress(args.sheetName ?? 'sheet');
     }
 
     // 2. Export individual assets (when not sheet export, or when --both flag is passed): `jobs` lanes take the next
@@ -1133,6 +1146,7 @@ async function main() {
                 pc.red(`FAILED: ${message}`)
               );
             }
+            progress(task.outRelBase);
           }
         } finally {
           await lane.reset();
