@@ -109,6 +109,39 @@ export function useCli() {
   });
 }
 
+/**
+ * Starts a kit in a project (`new-kit`: the kit's catalog, its index and a first piece), as a job. The empty project
+ * offers the scenery kit (the scene painter's) and the gear kit (Customize's).
+ */
+export function useNewKit() {
+  const refresh = useRefreshCatalog();
+  const navigate = useNavigate();
+  const { t } = useT();
+  return useMutation({
+    mutationFn: async ({ project, kit }: { project: string; kit: 'scenery' | 'gear' }) => {
+      const toastId = toast.loading(t(kit === 'scenery' ? 'assets.empty.newSceneryKit' : 'assets.empty.newGearKit'));
+      try {
+        const result = await api.run({ command: 'new-kit', project, kit });
+        if (!result.ok) {
+          toast.error(t('assets.empty.kitFailed'), { id: toastId, description: result.output.split('\n').slice(-4).join('\n') });
+          return;
+        }
+        await refresh();
+        // The tab that works with the kit reads it from src/ at once: no export needed to start.
+        const tab = kit === 'scenery' ? '/p/$project/scenery' : '/p/$project/customize';
+        toast.success(t('assets.empty.kitCreated'), {
+          id: toastId,
+          description: `${projectDir(project)}/src/${kit}/`,
+          duration: 10000,
+          action: { label: t('assets.empty.openTab', { tab: t(kit === 'scenery' ? 'sections.scenery' : 'sections.customize') }), onClick: () => void navigate({ to: tab, params: { project } }) },
+        });
+      } catch (error) {
+        toast.error(t('assets.empty.kitFailed'), { id: toastId, description: error instanceof Error ? error.message : String(error) });
+      }
+    },
+  });
+}
+
 /** The project `npm run example` brings in: Soulkeeper, the sample game, copied from examples/soulkeeper to projects/soulkeeper. */
 export const SAMPLE_PROJECT = 'soulkeeper';
 

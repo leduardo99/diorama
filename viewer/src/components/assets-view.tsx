@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useRef } from 'react';
 import NiceModal from '@ebay/nice-modal-react';
 import { useSuspenseQuery } from '@tanstack/react-query';
-import { PackageOpenIcon, PlusIcon, SearchXIcon } from 'lucide-react';
+import { CopyIcon, PackageOpenIcon, PlusIcon, SearchXIcon } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
 import { assetsQuery, projectsQuery } from '@/lib/queries';
 import { assetsRoute } from '@/lib/routes';
 import { useT } from '@/i18n';
+import { copyText } from '@/lib/clipboard';
+import { useNewKit } from '@/lib/mutations';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { folderTree } from '@/lib/folders';
 import { pendingExports } from '@/lib/export-state';
 import { entryCover, entryKey, entryOf, groupAnimations, type AssetEntry } from '@/lib/groups';
@@ -126,6 +130,7 @@ export function AssetsView() {
               </Button>
               {sheetCount > 0 && <Button onClick={() => void NiceModal.show(NewModal, { tab: 'export', project })}>{t('assets.empty.exportProject')}</Button>}
             </EmptyContent>
+            {sheetCount === 0 && <StartProject project={project} />}
           </Empty>
         ) : shown === 0 ? (
           <Empty>
@@ -163,5 +168,50 @@ export function AssetsView() {
         />
       )}
     </>
+  );
+}
+
+/**
+ * What an empty project offers besides New asset: the kits it has not got (each a `new-kit` job, which writes the kit's
+ * catalog and a first piece), and the prompt that hands the project to a coding agent, to copy.
+ */
+function StartProject({ project }: { project: string }) {
+  const { t } = useT();
+  const { data: projects } = useSuspenseQuery(projectsQuery);
+  const meta = projects.find((p) => p.name === project);
+  const newKit = useNewKit();
+  const prompt = t('assets.empty.agentPromptText', { project });
+  const kits = [
+    ...(meta?.hasSceneryKit ? [] : [{ kit: 'scenery' as const, label: t('assets.empty.newSceneryKit') }]),
+    ...(meta?.hasGearKit ? [] : [{ kit: 'gear' as const, label: t('assets.empty.newGearKit') }]),
+  ];
+  return (
+    <EmptyContent className="max-w-md">
+      {kits.length > 0 && (
+        <>
+          <p className="text-muted-foreground">{t('assets.empty.startKits')}</p>
+          <div className="flex flex-wrap justify-center gap-2">
+            {kits.map(({ kit, label }) => (
+              <Button key={kit} variant="outline" disabled={newKit.isPending} onClick={() => newKit.mutate({ project, kit })}>
+                {label}
+              </Button>
+            ))}
+          </div>
+        </>
+      )}
+      <p className="text-muted-foreground">{t('assets.empty.agentPrompt')}</p>
+      <div className="flex w-full items-start gap-2 rounded-md bg-muted/50 p-2 text-left">
+        <Badge variant="outline">{t('assets.empty.promptLabel')}</Badge>
+        <p className="min-w-0 flex-1 text-xs">{prompt}</p>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon-xs" aria-label={t('assets.empty.copyPrompt')} onClick={() => void copyText(prompt, t('assets.empty.promptLabel'))}>
+              <CopyIcon />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t('assets.empty.copyPrompt')}</TooltipContent>
+        </Tooltip>
+      </div>
+    </EmptyContent>
   );
 }

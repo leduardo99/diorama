@@ -5,7 +5,7 @@ description: Prepare a Diorama checkout to run the tests, the viewer and asset e
 
 # Diorama setup
 
-This skill prepares the environment and checks that it works. It is the environment only: for starting a project and its first assets use `diorama-style`, for the production rules `diorama`, for checking what was produced `diorama-review`.
+This skill prepares the environment and checks that it works. It is the environment only: for starting a project and its first assets use `diorama-style` (ask the user which kind of game they are making before creating the project: `npm run new-project -- --help` lists the presets, and `src/space.ts` changes it later), for the production rules `diorama`, for checking what was produced `diorama-review`.
 
 ## 1. Check the environment
 
