@@ -15,6 +15,8 @@ assets/characters/<folder>/<key>.json  atlas: frames, meta (layout), meta.data (
 
 Every sheet's JSON repeats the whole character manifest, so reading any one sheet is enough to know every clip, its file and its meaning.
 
+A sheet exported with `--trim` is packed instead of laid out in rows: each frame is cut to its drawn pixels, and the pieces are packed into pages no larger than `--max-page` px (4096 by default). The first page keeps the sheet's name (`<key>.png`), and the next ones add their index (`<key>.1.png`, `<key>.2.png`). A trimmed sheet is a smaller file and a much smaller texture, and its frames land exactly where the untrimmed frames did.
+
 ## 2. Layout (`meta`)
 
 | Field | Meaning |
@@ -25,6 +27,9 @@ Every sheet's JSON repeats the whole character manifest, so reading any one shee
 | `meta.pivot` | Where the feet stand in a cell: `x`, `y` in exported px, plus `logical`. Draw the cell so the pivot lands on the character's ground position. |
 | `meta.scale` | Exported px per logical px (usually 2). World units in `meta.data` are logical px. |
 | `meta.fps` | Frames ÷ seconds of this clip. |
+| `meta.trimmed`, `meta.pages` | Set on a trimmed sheet (`--trim`). `meta.pages` lists its page files when there is more than one; `meta.width` and `meta.height` are then the first page's size. |
+| `frames[…].ox`, `oy`, `cellW`, `cellH` | A trimmed frame: its piece is `x`, `y`, `width`, `height` on its page; draw it at (`ox`, `oy`) inside a cell of `cellW` × `cellH`, and place that cell as an untrimmed one (the pivot is in the cell). |
+| `frames[…].page` | The page that holds a trimmed frame, as an index of `meta.pages`; absent when the sheet has one page. |
 
 ## 3. Clip data (`meta.data`)
 

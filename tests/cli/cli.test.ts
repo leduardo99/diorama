@@ -7,6 +7,7 @@ import { join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { crc32, deflateSync, inflateSync } from 'node:zlib';
 import { restoreProject } from '../../tools/trash';
+import { decodePng } from '../../tools/png';
 import { exportTypeErrors } from '../../viewer/src/lib/export-errors';
 import { roleOf } from '../../viewer/src/lib/asset-role';
 
@@ -979,6 +980,51 @@ export default defineAsset({
   assert.equal(exportedSheets.length, 2, `two sheets exported: ${tracked.stdout}`);
   assert.deepEqual(progressLines.map(p => [p.done, p.total]), [[1, 2], [2, 2]], `one line per sheet, counting up to the sheets it exports: ${tracked.stderr}`);
   assert.deepEqual(progressLines.map(p => p.sheet).sort(), exportedSheets, 'each line names the sheet that finished');
+  // --trim: every frame cut to its drawn pixels and packed in pages no larger than --max-page. Put back at (ox, oy) in a
+  // cell of cellW × cellH, each frame is the untrimmed export's cell pixel for pixel; extra pages belong to their sheet
+  // (no orphan); an untrimmed export after it removes them.
+  const trimmedRun = run(`npm run --silent export -- ${kitsProject} --trim --max-page 128 --json`);
+  assert.equal(trimmedRun.code, 0, `export --trim failed: ${trimmedRun.stderr}`);
+  const trimSummary = JSON.parse(trimmedRun.stdout);
+  assert.ok(trimSummary.trim?.sheets > 0 && trimSummary.trim.after < trimSummary.trim.before, `the summary reports the bytes before and after: ${JSON.stringify(trimSummary.trim)}`);
+  let multiPage = 0;
+  let trimmedSheets = 0;
+  for (const [rel, bytes] of oneLane.files) {
+    if (!rel.endsWith('.json')) continue;
+    const before = JSON.parse(bytes.toString('utf8'));
+    const after = JSON.parse(readFileSync(resolve(kitsDir, 'assets', rel), 'utf8'));
+    if (!after.meta.trimmed) continue;
+    trimmedSheets++;
+    const dir = rel.includes('/') ? rel.slice(0, rel.lastIndexOf('/') + 1) : '';
+    const untrimmed = decodePng(oneLane.files.get(rel.replace(/\.json$/, '.png'))!);
+    const pages = ((after.meta.pages as string[] | undefined) ?? [after.meta.image]).map(file => decodePng(readFileSync(resolve(kitsDir, 'assets', dir + file))));
+    if (pages.length > 1) multiPage++;
+    for (const page of pages) assert.ok(page.width <= 128 && page.height <= 128, `${rel}: a page is ${page.width} × ${page.height}, at most --max-page`);
+    for (const [name, cell] of Object.entries<{ x: number; y: number; width: number; height: number }>(before.frames)) {
+      const cut = after.frames[name];
+      const page = pages[cut.page ?? 0];
+      assert.deepEqual([cut.cellW, cut.cellH], [cell.width, cell.height], `${rel} ${name}: the frame says its cell's size`);
+      for (let y = 0; y < cell.height; y++) {
+        for (let x = 0; x < cell.width; x++) {
+          const inPiece = x >= cut.ox && x < cut.ox + cut.width && y >= cut.oy && y < cut.oy + cut.height;
+          const at = ((cell.y + y) * untrimmed.width + cell.x + x) * untrimmed.channels;
+          const want = untrimmed.pixels[at + 3];
+          const got = inPiece ? page.pixels[((cut.y + y - cut.oy) * page.width + cut.x + x - cut.ox) * 4 + 3] : 0;
+          assert.equal(got, want, `${rel} ${name}: alpha at ${x},${y} of its cell`);
+          if (want > 0) assert.deepEqual([...page.pixels.subarray(((cut.y + y - cut.oy) * page.width + cut.x + x - cut.ox) * 4, ((cut.y + y - cut.oy) * page.width + cut.x + x - cut.ox) * 4 + 3)], [...untrimmed.pixels.subarray(at, at + 3)], `${rel} ${name}: colour at ${x},${y}`);
+        }
+      }
+    }
+  }
+  assert.ok(trimmedSheets > 0 && multiPage > 0, `some sheets were trimmed (${trimmedSheets}) and some split into pages (${multiPage})`);
+  const trimmedLayout = run(`npm run --silent layout -- ${kitsProject} --json`);
+  assert.ok(!trimmedLayout.stdout.includes('orphan'), `extra pages belong to their sheet: ${trimmedLayout.stdout}`);
+  assert.equal(run(`npm run --silent export -- ${kitsProject}`).code, 0);
+  const untrimmedAgain = assetBytes();
+  assert.deepEqual([...untrimmedAgain.keys()], [...oneLane.files.keys()], 'an untrimmed export removes the extra pages a trimmed one wrote');
+  for (const flags of ['--trim --grid', '--max-page 10', '--max-page big']) {
+    assert.notEqual(run(`npm run --silent export -- ${kitsProject} icons/ ${flags}`).code, 0, `export ${flags} is refused`);
+  }
   // Without a space profile the scenery catalog takes the theme's camera and a grid of its own.
   assert.equal(run(`npm run --silent new-project -- ${bareKitsProject}`).code, 0);
   for (const kit of ['scenery', 'vfx']) assert.equal(run(`npm run --silent new-kit -- ${bareKitsProject} ${kit}`).code, 0);

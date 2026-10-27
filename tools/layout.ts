@@ -13,6 +13,7 @@ import { dirname, join, posix, relative, resolve, sep } from 'node:path';
 import ts from 'typescript';
 import { ALLOWED_CONFIG_KEYS, GENERATED_SHEETS, LAYOUT, OS_METADATA, isSheetFile, walkFiles, type GeneratedFolder } from './project.js';
 import { codeReferences, cssReferences, htmlReferences, type Reference } from './references.js';
+import { isExtraPage } from './trim.js';
 
 export { ALLOWED_CONFIG_KEYS };
 
@@ -393,6 +394,7 @@ export function checkLayout(projectDir: string, name: string, repo = resolve(pro
   // assets/: outputs only, mirroring sheets/ (rules 5 and 7).
   const assetsDir = join(projectDir, LAYOUT.assets);
   const assets = walkFiles(assetsDir);
+  const assetSet = new Set(assets);
   const sheetSet = new Set(sheets);
   const groupSheets = new Set<string>();
   for (const rel of assets.filter(r => r.endsWith('.json'))) {
@@ -415,6 +417,8 @@ export function checkLayout(projectDir: string, name: string, repo = resolve(pro
     const stem = rel.slice(0, -ext.length);
     if (IMAGE_EXT.includes(ext)) exported.add(stem);
     if (groupSheets.has(stem) || sheetSet.has(stem)) continue;
+    // A trimmed sheet's extra page (`idle.1.png` next to `idle.json`) is part of that sheet's export.
+    if (isExtraPage(rel, (other) => assetSet.has(other))) continue;
     warn('orphan', path, `${path} has no sheet (sheets/${stem}.ts does not exist, rule 5): delete it, or export the sheet that now writes it.`);
   }
   for (const stem of sheets) {

@@ -8,10 +8,11 @@
  * An export lands at its sheet's own path, so `assets/a/b.png` comes from `sheets/a/b.ts`.
  */
 
-import { existsSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { open, readFile, readdir, stat } from 'node:fs/promises';
 import { extname, join, resolve } from 'node:path';
 import { IMAGE_RE } from '../../tools/freshness';
+import { isExtraPage, pageFile } from '../../tools/trim';
 import { LAYOUT, VIEWER_ROOTS, isSheetFile, listProjects, walkFiles } from '../../tools/project';
 import { createSourceReader, type Engine } from '../../tools/sources';
 
@@ -170,6 +171,16 @@ function pickEngine(engines: Set<Engine>): Engine | null {
   return engines.has('rig') ? 'rig' : engines.has('volume') ? 'volume' : null;
 }
 
+/** The bytes of a trimmed sheet's pages after the first (`idle.1.png`, `idle.2.png`...), so an asset counts all its pages. */
+function extraPagesSize(assetsDir: string, base: string, ext: string): number {
+  let total = 0;
+  for (let page = 1; ; page++) {
+    const file = resolve(assetsDir, pageFile(base, page, ext));
+    if (!existsSync(file)) return total;
+    total += statSync(file).size;
+  }
+}
+
 export async function buildAssetCatalog(repo: string): Promise<AssetFileMeta[]> {
   const assets: AssetFileMeta[] = [];
   const reach = createSourceReader();
@@ -177,7 +188,8 @@ export async function buildAssetCatalog(repo: string): Promise<AssetFileMeta[]> 
     const assetsDir = join(dir, LAYOUT.assets);
     const sheetsDir = join(dir, LAYOUT.sheets);
     for (const subpath of walkFiles(assetsDir)) {
-      if (!IMAGE_RE.test(subpath)) continue;
+      // A trimmed sheet's extra pages (`idle.1.png`) belong to its first page's asset (tools/trim.ts).
+      if (!IMAGE_RE.test(subpath) || isExtraPage(subpath, (rel) => existsSync(resolve(assetsDir, rel)))) continue;
       const file = resolve(assetsDir, subpath);
       const ext = extname(file).toLowerCase().slice(1);
       const info = await stat(file);
@@ -199,7 +211,7 @@ export async function buildAssetCatalog(repo: string): Promise<AssetFileMeta[]> 
         subpath,
         filename: subpath.split('/').pop() ?? subpath,
         format: ext === 'jpg' ? 'jpeg' : ext,
-        size: info.size,
+        size: info.size + extraPagesSize(assetsDir, base, ext),
         mtime: info.mtimeMs,
         url: `/${rel}/${LAYOUT.assets}/${subpath}`,
         width: png?.width ?? atlasInfo?.width ?? null,

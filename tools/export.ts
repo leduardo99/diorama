@@ -38,7 +38,7 @@
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright';
 import { createServer, type ViteDevServer } from 'vite';
 import { resolve, relative, dirname, basename } from 'node:path';
-import { stat, mkdir, writeFile, readFile, copyFile } from 'node:fs/promises';
+import { stat, mkdir, writeFile, readFile, copyFile, rm } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { availableParallelism } from 'node:os';
@@ -48,6 +48,8 @@ import { ALLOWED_CONFIG_KEYS, LAYOUT, REVIEW, findProject, isSheetFile, missingP
 import { createSourceReader } from './sources.js';
 import { serverOn } from './dev-server.js';
 import { typeCheckProject } from './typecheck.js';
+import { decodePng, encodePng } from './png.js';
+import { DEFAULT_MAX_PAGE, pageFile, trimSheet } from './trim.js';
 
 interface CliArgs {
   project?: string;
@@ -90,13 +92,17 @@ interface CliArgs {
 
   // One JSON line on stderr per finished sheet, for a program that shows the run's progress (the viewer's server).
   progress?: boolean;
+
+  // Cut each frame to its drawn pixels and pack them in pages (tools/trim.ts), no side larger than maxPage.
+  trim?: boolean;
+  maxPage?: number;
 }
 
 const ALLOWED_FLAGS = [
   'grid', 'compact', 'gap', 'cols', 'sheet-name', 'out-dir', 'both', 'no-json',
-  'scale', 'format', 'server', 'mockup', 'json', 'force', 'changed', 'jobs', 'progress', 'help',
+  'scale', 'format', 'server', 'mockup', 'json', 'force', 'changed', 'jobs', 'progress', 'trim', 'max-page', 'help',
 ];
-const VALUE_OPTIONS = ['gap', 'cols', 'sheet-name', 'out-dir', 'scale', 'format', 'server', 'jobs'];
+const VALUE_OPTIONS = ['gap', 'cols', 'sheet-name', 'out-dir', 'scale', 'format', 'server', 'jobs', 'max-page'];
 
 /** The default --jobs never goes past this: each lane is a page, and a large sheet holds a few hundred MB while it renders. */
 const MAX_DEFAULT_JOBS = 6;
@@ -192,6 +198,15 @@ function parseArguments(): CliArgs {
     process.exit(1);
   }
 
+  const maxPageValue = flags['max-page'] !== undefined ? Number(flags['max-page']) : undefined;
+  if (maxPageValue !== undefined && (!Number.isInteger(maxPageValue) || maxPageValue < 64)) {
+    console.error(pc.red(`Error: --max-page must be a whole number of px, 64 or more, got "${flags['max-page']}".`));
+    process.exit(1);
+  }
+  if (flags['trim'] && (gridFlag || compactFlag)) {
+    console.error(pc.red('Error: --trim cuts the frames of each sheet; --grid and --compact pack a folder of sheets into one. Use one or the other.'));
+    process.exit(1);
+  }
   const formatValue = flags['format'] !== undefined ? String(flags['format']) : undefined;
   if (formatValue !== undefined && formatValue !== 'png' && formatValue !== 'jpeg') {
     console.error(pc.red(`Error: --format must be "png" or "jpeg", got "${formatValue}".`));
@@ -220,6 +235,8 @@ function parseArguments(): CliArgs {
     changed: Boolean(flags['changed']),
     jobs: jobsValue,
     progress: Boolean(flags['progress']),
+    trim: Boolean(flags['trim']),
+    maxPage: maxPageValue,
   };
 }
 
@@ -281,6 +298,9 @@ ${pc.bold('Options:')}
   --changed            Only the sheets never exported, or older than the sheet or a local file it imports
   --jobs=<n>           Sheets rendered at once (default: ${defaultJobs()} here, the performance cores less one; at most ${MAX_DEFAULT_JOBS} by default)
   --progress           Print one JSON line on stderr per finished sheet: {"diorama":"progress","done":3,"total":12,"sheet":"props/crate"}
+  --trim               Cut each frame of a sheet with frames or directions to its drawn pixels and pack them in pages: much
+                       smaller files, the same picture (the atlas says where each frame sat in its cell; PNG only)
+  --max-page=<px>      Largest side of a trimmed page (default: ${DEFAULT_MAX_PAGE}); a sheet that does not fit gets more pages
   --help, -h           Show this help message
 `);
 }
@@ -370,6 +390,8 @@ interface SingleResult {
   jsonRelPath?: string;
   frameList?: Array<{ id: string; x: number; y: number; width: number; height: number }>;
   fps?: number;
+  /** A trimmed sheet's bytes, untrimmed and trimmed (all its pages). */
+  bytes?: { before: number; after: number };
 }
 
 /**
@@ -546,6 +568,7 @@ async function exportSingleAsset(
   });
 
   let jsonRelPath: string | undefined;
+  let trimBytes: { before: number; after: number } | undefined;
   const frameList: Array<{ id: string; x: number; y: number; width: number; height: number }> = [];
 
   // Multi-frame strips, multi-direction sheets and assets that carry `data` (a scene's layout, a
@@ -584,6 +607,42 @@ async function exportSingleAsset(
       });
     }
 
+    // --trim: each frame cut to its drawn pixels, packed in pages (tools/trim.ts). The atlas then says where each frame
+    // sits on its page and where it sat in its cell, so it lands where it did.
+    let trimmedMeta: Record<string, unknown> = {};
+    if (args.trim && ext === 'png' && !args.noJson && (frameCount > 1 || directionCount > 1)) {
+      const before = (await stat(outputPath)).size;
+      const cells = Object.entries(frames).map(([name, f]) => ({ name, x: f.x, y: f.y, width: f.width, height: f.height }));
+      let trimmed: ReturnType<typeof trimSheet>;
+      try {
+        trimmed = trimSheet(decodePng(await readFile(outputPath)), cells, args.maxPage ?? DEFAULT_MAX_PAGE);
+      } catch (err) {
+        throw new SheetError(String((err as Error).message));
+      }
+      const pageNames = trimmed.pages.map((_, page) => pageFile(basename(task.outRelBase), page, ext));
+      let after = 0;
+      for (const [page, image] of trimmed.pages.entries()) {
+        // Flat-coloured art often packs smaller without row filters, soft shading with them: keep the smaller of the two.
+        const plain = encodePng(image.width, image.height, image.pixels, { filter: 'none', level: 9 });
+        const filtered = encodePng(image.width, image.height, image.pixels, { filter: 'adaptive', level: 9 });
+        const bytes = filtered.length < plain.length ? filtered : plain;
+        await writeFile(resolve(assetsDir, dirname(task.outRelBase), pageNames[page]), bytes);
+        after += bytes.length;
+      }
+      for (const [name, cut] of Object.entries(trimmed.frames)) {
+        const { page, ...rect } = cut;
+        frames[name] = { ...frames[name], ...rect, ...(trimmed.pages.length > 1 ? { page } : {}) };
+      }
+      trimmedMeta = {
+        trimmed: true,
+        ...(trimmed.pages.length > 1 ? { pages: pageNames } : {}),
+        width: trimmed.pages[0].width,
+        height: trimmed.pages[0].height,
+      };
+      trimBytes = { before, after };
+    }
+    await removeExtraPages(resolve(assetsDir, task.outRelBase), ext, args.trim ? Number((trimmedMeta.pages as string[] | undefined)?.length ?? 1) : 1);
+
     if (!args.noJson) {
       const jsonOutputPath = resolve(assetsDir, `${task.outRelBase}.json`);
       const atlasPayload = {
@@ -611,6 +670,7 @@ async function exportSingleAsset(
           format,
           image: `${basename(task.outRelBase)}.${ext}`,
           ...(meta.animations ? { animations: meta.animations } : {}),
+          ...trimmedMeta,
         },
         frames,
       };
@@ -635,7 +695,13 @@ async function exportSingleAsset(
     jsonRelPath,
     frameList: frameList.length > 0 ? frameList : undefined,
     fps,
+    bytes: trimBytes,
   };
+}
+
+/** Removes the pages after `keep` of a sheet (`idle.1.png`...) that an earlier, longer trimmed export left. */
+async function removeExtraPages(base: string, ext: string, keep: number): Promise<void> {
+  for (let page = Math.max(1, keep); existsSync(`${base}.${page}.${ext}`); page++) await rm(`${base}.${page}.${ext}`);
 }
 
 async function exportGroupSheet(
@@ -1012,6 +1078,9 @@ async function main() {
   let successCount = 0;
   let failCount = 0;
 
+  // --trim: what the trimmed sheets weighed untrimmed and weigh now, for the summary.
+  const trimTotals = { sheets: 0, before: 0, after: 0 };
+
   // --progress: the sheets finished (exported or failed) of those this run exports, as they finish.
   const progressTotal = (isSheetExport ? 1 : 0) + (!isSheetExport || args.both ? tasks.length : 0);
   let progressDone = 0;
@@ -1161,6 +1230,11 @@ async function main() {
           return;
         }
         const { result } = outcome;
+        if (result.bytes) {
+          trimTotals.sheets++;
+          trimTotals.before += result.bytes.before;
+          trimTotals.after += result.bytes.after;
+        }
         report.outputs.push({
           asset: task.outRelBase,
           path: relative(rootDir, result.outputPath).replace(/\\/g, '/'),
@@ -1195,8 +1269,13 @@ async function main() {
     pc.dim(` in ${totalTime}s\n`)
   );
 
+  if (trimTotals.sheets > 0) {
+    const mb = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+    console.log(pc.cyan(`Trimmed ${trimTotals.sheets} sheet${trimTotals.sheets === 1 ? '' : 's'}: ${mb(trimTotals.before)} untrimmed, ${mb(trimTotals.after)} trimmed (${Math.round((1 - trimTotals.after / trimTotals.before) * 100)}% smaller).\n`));
+  }
+
   if (args.json) {
-    process.stdout.write(JSON.stringify({ ...report, successCount, failCount }, null, 2) + '\n');
+    process.stdout.write(JSON.stringify({ ...report, successCount, failCount, ...(trimTotals.sheets > 0 ? { trim: trimTotals } : {}) }, null, 2) + '\n');
   }
 
   if (failCount > 0) {
