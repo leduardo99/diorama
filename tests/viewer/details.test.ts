@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { DIRECTION_NAMES } from '@core/volume';
-import { facingsOf } from '../../viewer/server/catalog';
+import { facingsOf } from '../../server/src/catalog';
 import { createTranslator } from '../../viewer/src/i18n/core';
 import { entryKey, entryOf, groupAnimations, peersOf } from '../../viewer/src/lib/groups';
 import type { AssetFileMeta } from '../../viewer/src/lib/types';

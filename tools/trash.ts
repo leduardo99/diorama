@@ -1,7 +1,7 @@
 /**
  * The trash a project goes to when it is deleted: `<repo>/.diorama-trash/projects/<id>/<project>`, outside every project,
  * so no tool that lists projects or checks a layout ever sees it, and a delete can be undone by moving the folder back.
- * The viewer's "Delete project" (viewer/server/assets-fs.ts) and `npm run example -- --force` (tools/cli.ts) share it;
+ * The viewer's "Delete project" (server/src/assets-fs.ts) and `npm run example -- --force` (tools/cli.ts) share it;
  * the viewer's asset deletes keep their own entries beside it, in `.diorama-trash/assets/`.
  *
  * Only the projects of `projects/` (VIEWER_ROOTS) are moved: a sample of `examples/` ships with Diorama.

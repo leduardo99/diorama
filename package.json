@@ -7,6 +7,7 @@
   "type": "module",
   "scripts": {
     "view": "vite",
+    "server": "tsx server/src/main.ts",
     "build": "vite build",
     "export": "tsx tools/export.ts",
     "export:sample": "tsx tools/export.ts examples/soulkeeper",
@@ -35,6 +36,7 @@
     "test:engine": "tsx tests/run.ts engine",
     "test:docs": "tsx tests/run.ts docs",
     "test:runtime": "tsx tests/run.ts runtime",
+    "test:server": "tsx tests/run.ts server",
     "test:phaser": "tsx tests/run.ts phaser",
     "test:cli": "tsx tests/run.ts cli",
     "test:viewer": "tsx tests/run.ts viewer"
@@ -48,6 +50,7 @@
     "@ebay/nice-modal-react": "^1.2.13",
     "@floating-ui/react-dom": "^2.1.9",
     "@fontsource-variable/inter": "^5.3.0",
+    "@hono/node-server": "^2.1.5",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/react-query": "^5.104.5",
     "@tanstack/react-router": "^1.170.45",
@@ -57,6 +60,7 @@
     "class-variance-authority": "^0.7.1",
     "cmdk": "^1.1.1",
     "cn": "^0.5.0",
+    "hono": "^4.13.13",
     "lucide-react": "^1.61.0",
     "paper": "^0.12.18",
     "picocolors": "^1.1.1",

@@ -5,7 +5,7 @@ import { heightLabel, stateLabel } from './scenery/labels';
  * What the rows of a sheet are. They are not always facings: an interface piece's rows are its states, a wall or fence in
  * several heights has a row per height (`data.rows: 'heights'`), and a scenery clip sheet says the facing and the variant
  * of each row (`data.rows: [{ row, dir, variant }]`). Any other sheet has a row per facing, named in `meta.directions`.
- * The asset cards count the facings by the same rule (`viewer/server/catalog.ts: facingsOf`, held to this one by
+ * The asset cards count the facings by the same rule (`server/src/catalog.ts: facingsOf`, held to this one by
  * `tests/viewer/details.test.ts`); the Details window turns the facings with its compass and steps through the rest by
  * what they are.
  */

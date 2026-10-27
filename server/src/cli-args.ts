@@ -8,7 +8,7 @@
  * The viewer's projects are those of projects/ alone, so a project is passed to the scripts as `projects/<name>`: what the
  * viewer saves never lands in a sample of examples/, even when no project of that name is left (a bare name would find
  * examples/<name> then). The scripts do all the validation; this only rejects values that would be read as flags or paths.
- * Tested in tests/viewer/cli-args.test.ts.
+ * Tested in tests/server/cli-args.test.ts.
  */
 
 /** The commands `/__api/cli` runs. */
