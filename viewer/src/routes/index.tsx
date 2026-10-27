@@ -36,7 +36,7 @@ export const Route = createFileRoute('/')({
 
 /**
  * The app with no project in `projects/`: what Diorama is, and the two ways in, a new project (the New dialog) or the
- * sample, which `npm run example` copies into `projects/` and exports (run here through the CLI endpoint, or in a terminal).
+ * sample, which `npm run example` copies into `projects/` and exports (run here as a job of the server, or in a terminal).
  * A run that is going on anywhere (this page, another tab, a terminal: `/__api/example-run`) shows as running, and no
  * second one starts. Once the copy is in the catalog and nothing runs (a run that failed in its export, or one that
  * ended elsewhere), the page says so and opens it.
@@ -46,12 +46,12 @@ function NoProjects() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const sample = useTrySample();
-  // Read every second while a run goes on, to see it end.
-  const { data: run } = useQuery({ ...exampleRunQuery, refetchInterval: (query) => (query.state.data?.running ? 1000 : false) });
+  // The server's events keep both fresh (lib/server-events.ts): example.changed when a run starts or ends anywhere,
+  // catalog.changed as the copy shows up and its sheets get their exports.
+  const { data: run } = useQuery(exampleRunQuery);
   const elsewhere = Boolean(run?.running);
   const running = sample.isPending || elsewhere;
-  // While the sample comes in, the catalog is read every second: the copy shows up, then its sheets get their exports.
-  const { data: projects = [] } = useQuery({ ...projectsQuery, refetchInterval: running ? 1000 : false });
+  const { data: projects = [] } = useQuery(projectsQuery);
   // A run that ends elsewhere has no callback here: read the catalog once more when the server says it ended.
   useEffect(() => {
     if (!elsewhere) void queryClient.invalidateQueries({ queryKey: projectsQuery.queryKey });

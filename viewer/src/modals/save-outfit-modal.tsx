@@ -44,10 +44,10 @@ export const SaveOutfitModal = NiceModal.create(({ project, characterId, outfit,
 
   const save = useMutation({
     mutationFn: async (): Promise<Saved> => {
-      const created = await api.cli({ command: 'new-outfit-character', project, name, from: characterId, outfit, force });
+      const created = await api.run({ command: 'new-outfit-character', project, name, from: characterId, outfit, force });
       if (!created.ok) throw new Error(created.output);
       // The folder is new: export all of it, so the sheets exist when the user opens the playground.
-      const exported = await api.cli({ command: 'export', project, subpath: `characters/${name}/` });
+      const exported = await api.run({ command: 'export', project, subpath: `characters/${name}/` });
       return { name, output: [created.output, exported.ok ? exported.output : exportFailureText(exported.output, t('toasts.fixTypeErrors'))].filter(Boolean).join('\n\n'), exported: exported.ok };
     },
     // The catalog changed under the viewer whether or not the export worked.

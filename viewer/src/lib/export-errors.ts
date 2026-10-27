@@ -37,3 +37,12 @@ export function clipToAdd(output: string): string | undefined {
   const plain = output.replace(/\x1b\[[0-9;]*m/g, '').replace(/\r\n/g, '\n');
   return plain.split('\n').map(line => line.trim()).find(line => line.startsWith('Add the clip to `clips` in '));
 }
+
+/**
+ * The sheets an export reported as failed (`✖ <sheet> FAILED: <message>`, tools/export.ts): the export goes on past
+ * them, so the others are on disk. Empty when none did, or when it failed before rendering (a type check refusal).
+ */
+export function failedSheets(output: string): string[] {
+  const plain = output.replace(/\x1b\[[0-9;]*m/g, '').replace(/\r\n/g, '\n');
+  return [...plain.matchAll(/^\s*✖ (\S+) FAILED:/gm)].map((m) => m[1]);
+}

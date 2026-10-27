@@ -1,5 +1,5 @@
 /**
- * The commands the viewer runs through `/__api/cli` (vite.config.ts): a request from the "New" dialog, the customizer, the
+ * The commands the viewer runs as jobs (`POST /__api/jobs`, server/src/app.ts): a request from the "New" dialog, the customizer, the
  * scene painter, an export or "Try the sample" becomes a tools/ script and its arguments (the layout of
  * docs/ARCHITECTURE.md: new-asset writes src/ + sheets/, new-scene src/scenes/ + sheets/scenes/, gear-items sheets/gear/,
  * new-outfit-character src/characters/<name>/ + sheets/characters/<name>/; export takes paths relative to sheets/; example
@@ -11,7 +11,16 @@
  * Tested in tests/server/cli-args.test.ts.
  */
 
-/** The commands `/__api/cli` runs. */
+/** What an export request exports: `subpaths` (a list) or `subpath` (one), each checked like any value. */
+function exportSubpaths(body: any): string[] {
+  const list: unknown[] = Array.isArray(body.subpaths) ? body.subpaths : body.subpath !== undefined ? [body.subpath] : [];
+  return list.map((value) => String(value ?? '').trim()).filter(Boolean).map((value) => {
+    if (value.startsWith('-')) throw new Error('subpath cannot start with "-".');
+    return value;
+  });
+}
+
+/** The commands the jobs run (`POST /__api/jobs`). */
 export const CLI_COMMANDS = ['new-project', 'new-asset', 'new-outfit-character', 'new-scene', 'gear-items', 'export', 'example'] as const;
 
 /**
@@ -83,10 +92,9 @@ export function cliArgs(body: any, outfitFile?: string): string[] {
       return args;
     }
     case 'export': {
-      // The subpath is relative to sheets/. Empty exports the whole project; a trailing "/" exports a folder.
-      const args = ['tools/export.ts', project(body.project)];
-      const subpath = optional(body.subpath, 'subpath');
-      if (subpath) args.push(subpath);
+      // Subpaths are relative to sheets/: none exports the whole project, a trailing "/" exports a folder, and several
+      // export in one run (one headless browser for all of them).
+      const args = ['tools/export.ts', project(body.project), ...exportSubpaths(body)];
       if (body.sheet === 'grid' || body.sheet === 'compact') {
         args.push(`--${body.sheet}`);
         const gap = optional(body.gap, 'gap');
@@ -115,8 +123,7 @@ export function cliArgs(body: any, outfitFile?: string): string[] {
 export function jobTarget(body: any): { project: string; subpaths: string[] } {
   if (body.command === 'example') return { project: EXAMPLE_PROJECT, subpaths: [] };
   const project = String(body.command === 'new-project' ? body.name : body.project).trim();
-  const subpath = body.command === 'export' ? String(body.subpath ?? '').trim() : '';
-  return { project, subpaths: subpath ? [subpath] : [] };
+  return { project, subpaths: body.command === 'export' ? exportSubpaths(body) : [] };
 }
 
 /** The project `npm run example` brings in when it names no sample (`DEFAULT_SAMPLE` in tools/cli.ts). */

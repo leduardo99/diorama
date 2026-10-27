@@ -50,10 +50,10 @@ export const SaveSceneModal = NiceModal.create(({ project, scene, defaultName, o
 
   const save = useMutation({
     mutationFn: async (): Promise<Saved> => {
-      const created = await api.cli({ command: 'new-scene', project, name, scene, force });
+      const created = await api.run({ command: 'new-scene', project, name, scene, force });
       if (!created.ok) throw new Error(created.output);
       onSaved(name);
-      const exported = await api.cli({ command: 'export', project, subpath: `scenes/${name}` });
+      const exported = await api.run({ command: 'export', project, subpath: `scenes/${name}` });
       return { name, output: [created.output, exported.ok ? exported.output : exportFailureText(exported.output, t('toasts.fixTypeErrors'))].filter(Boolean).join('\n\n'), exported: exported.ok };
     },
     // The catalog changed under the viewer whether or not the export worked.

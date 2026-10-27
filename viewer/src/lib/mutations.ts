@@ -3,10 +3,12 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useRouter } from '@tanstack/react-router';
 import { toast } from 'sonner';
 import { api } from './api';
-import { exportFailureText } from './export-errors';
+import { exportFailureText, failedSheets } from './export-errors';
+import type { JobHooks } from './server-events';
 import { exportTarget, pendingExports, progressPercent } from './export-state';
 import { ToastProgress } from '../components/toast-progress';
 import { useT } from '../i18n';
+import type { Translator } from '../i18n/core';
 import { stripExtension } from './format';
 import { projectDir } from './project-paths';
 import { assetsQuery, exampleRunQuery, projectsQuery } from './queries';
@@ -95,11 +97,11 @@ export function useDeleteProject() {
   });
 }
 
-/** Runs tools/cli.ts or tools/export.ts; the New dialog shows the output itself. */
+/** Runs tools/cli.ts or tools/export.ts as a job; the New dialog shows the output itself. */
 export function useCli() {
   const refresh = useRefreshCatalog();
   return useMutation({
-    mutationFn: api.cli,
+    mutationFn: (payload: Record<string, unknown>) => api.run(payload),
     // Awaited, so callers that navigate right after a create see the new project in the catalog.
     onSuccess: async (result) => {
       if (result.ok) await refresh();
@@ -126,7 +128,7 @@ export function useTrySample() {
   const queryClient = useQueryClient();
   const { t } = useT();
   return useMutation({
-    mutationFn: () => api.cli({ command: 'example' }),
+    mutationFn: () => api.run({ command: 'example' }),
     onSuccess: async (result) => {
       // A run that failed half way may still have copied the project: the catalog shows what is there either way.
       await Promise.all([refresh(), queryClient.invalidateQueries({ queryKey: exampleRunQuery.queryKey })]);
@@ -143,31 +145,52 @@ export function useTrySample() {
 }
 
 /**
- * Re-runs tools/export.ts for one asset. The callbacks live on the hook, not on mutate():
+ * Keeps an export's toast up to date with its job: waiting behind another job, then the sheets as they finish. The
+ * bar fills with the sheets already on disk; the title counts the one being exported.
+ */
+function exportToastHooks(toastId: string | number, project: string, t: Translator['t']): JobHooks {
+  return {
+    onQueued: () => toast.loading(t('toasts.exportQueued', { project }), { id: toastId }),
+    onStarted: () => toast.loading(t('toasts.exporting'), { id: toastId, description: null }),
+    onProgress: ({ done, total, current }) => {
+      const title = t('toasts.exportingProgress', { current: Math.min(done + 1, total), total });
+      toast.loading(title, { id: toastId, description: createElement(ToastProgress, { detail: current ?? '', value: progressPercent(done, total), label: title }) });
+    },
+  };
+}
+
+/**
+ * Re-runs tools/export.ts for one asset, as a job. The callbacks live on the hook, not on mutate():
  * the menu that triggers this unmounts as soon as it closes, and mutate-level callbacks die with it.
  */
 export function useReexport() {
   const refresh = useRefreshCatalog();
   const { t } = useT();
   return useMutation({
-    mutationFn: ({ project, subpath }: { project: string; subpath: string }) =>
-      api.cli({ command: 'export', project, subpath: stripExtension(subpath) }),
-    onMutate: ({ subpath }) => toast.loading(t('toasts.exporting'), { description: subpath }),
-    onSuccess: async (result, { subpath }, toastId) => {
-      if (!result.ok) {
-        toast.error(t('toasts.exportFailed'), { id: toastId, description: exportFailureText(result.output, t('toasts.fixTypeErrors')) });
-        return;
+    mutationFn: async ({ project, subpath }: { project: string; subpath: string }) => {
+      const toastId = toast.loading(t('toasts.exporting'), { description: subpath });
+      try {
+        const result = await api.run({ command: 'export', project, subpaths: [stripExtension(subpath)] }, {
+          ...exportToastHooks(toastId, project, t),
+          onProgress: undefined,
+          onStarted: () => toast.loading(t('toasts.exporting'), { id: toastId, description: subpath }),
+        });
+        if (!result.ok) {
+          toast.error(t('toasts.exportFailed'), { id: toastId, description: exportFailureText(result.output, t('toasts.fixTypeErrors')) });
+          return;
+        }
+        await refresh();
+        toast.success(t('toasts.exportedAgain'), { id: toastId, description: subpath });
+      } catch (error) {
+        toast.error(t('toasts.exportFailed'), { id: toastId, description: error instanceof Error ? error.message : String(error) });
       }
-      await refresh();
-      toast.success(t('toasts.exportedAgain'), { id: toastId, description: subpath });
     },
-    onError: (error, _input, toastId) => toast.error(t('toasts.exportFailed'), { id: toastId, description: error.message }),
   });
 }
 
 /**
- * Exports sheets one at a time (each run starts a headless browser) behind a single toast that counts them.
- * It stops at the first failure: the ones before it are already on disk.
+ * Exports sheets in one job, so one headless browser renders them all, behind a single toast that counts them. The
+ * export goes on past a sheet that fails: the toast at the end names the ones that failed.
  */
 export function useExportSheets() {
   const refresh = useRefreshCatalog();
@@ -175,23 +198,20 @@ export function useExportSheets() {
   return useMutation({
     mutationFn: async ({ project, sheets }: { project: string; sheets: string[] }) => {
       const toastId = toast.loading(t('toasts.exporting'));
-      let done = 0;
       try {
-        for (const sheet of sheets) {
-          const title = t('toasts.exportingProgress', { current: done + 1, total: sheets.length });
-          // The bar fills with the sheets already on disk; the title counts the one being exported.
-          toast.loading(title, { id: toastId, description: createElement(ToastProgress, { detail: sheet, value: progressPercent(done, sheets.length), label: title }) });
-          const result = await api.cli({ command: 'export', project, subpath: exportTarget(sheet) });
-          if (!result.ok) throw new Error(`${sheet}\n${exportFailureText(result.output, t('toasts.fixTypeErrors'))}`);
-          done++;
+        const result = await api.run({ command: 'export', project, subpaths: sheets.map(exportTarget) }, exportToastHooks(toastId, project, t));
+        if (result.ok) {
+          // The bar goes with the run: the toast that counted it says only how many were exported.
+          toast.success(plural('toasts.assetsExported', sheets.length), { id: toastId, description: null });
+          return;
         }
-        // The bar goes with the run: the toast that counted it says only how many were exported.
-        toast.success(plural('toasts.assetsExported', done), { id: toastId, description: null });
-      } catch (error) {
-        toast.error(done > 0 ? t('toasts.exportStopped', { done, total: sheets.length }) : t('toasts.exportFailed'), {
+        const failed = failedSheets(result.output);
+        toast.error(failed.length ? t('toasts.exportSomeFailed', { failed: failed.length, total: sheets.length }) : t('toasts.exportFailed'), {
           id: toastId,
-          description: error instanceof Error ? error.message : String(error),
+          description: failed.length ? failed.join('\n') : exportFailureText(result.output, t('toasts.fixTypeErrors')),
         });
+      } catch (error) {
+        toast.error(t('toasts.exportFailed'), { id: toastId, description: error instanceof Error ? error.message : String(error) });
       }
     },
     onSettled: refresh,
@@ -213,7 +233,7 @@ export function useRefreshGearItems() {
     mutationFn: async ({ project }: { project: string }) => {
       const toastId = toast.loading(t('toasts.gearUpdating'));
       try {
-        const created = await api.cli({ command: 'gear-items', project });
+        const created = await api.run({ command: 'gear-items', project });
         if (!created.ok) throw new Error(created.output);
         await refresh();
         const assets = (queryClient.getQueryData(assetsQuery.queryKey) ?? []).filter((a) => a.project === project && a.subpath.startsWith(GEAR_ITEMS));
@@ -225,7 +245,7 @@ export function useRefreshGearItems() {
           return;
         }
         toast.loading(t('toasts.gearExporting'), { id: toastId, description: plural('toasts.gearChanged', count) });
-        const exported = await api.cli({ command: 'export', project, subpath: GEAR_ITEMS });
+        const exported = await api.run({ command: 'export', project, subpaths: [GEAR_ITEMS] });
         if (!exported.ok) throw new Error(exportFailureText(exported.output, t('toasts.fixTypeErrors')));
         toast.success(t('toasts.gearUpdated'), { id: toastId, description: plural('toasts.gearExported', count) });
       } catch (error) {

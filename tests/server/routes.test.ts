@@ -41,7 +41,7 @@ const post = (body: unknown, contentType = 'application/json') => ({
   body: typeof body === 'string' ? body : JSON.stringify(body),
 });
 
-/** Waits until the command of a `/__api/cli` request is running (its handler is async). */
+/** Waits until the command of a job is running (the queue starts it asynchronously). */
 const untilCalled = async (n: number) => {
   for (let i = 0; i < 100 && calls.length < n; i++) await new Promise((r) => setImmediate(r));
   assert.equal(calls.length, n, `the command was to run (${calls.length} of ${n})`);
@@ -193,73 +193,58 @@ try {
     rmSync(lock);
   }
 
-  // 8. /__api/cli answers { ok, output }: 405 without POST, 400 (with output) for a bad request,
-  // 409 for a second example, and the runner's result for a good one.
+  // 8. POST /__api/jobs refuses a bad request with a 400 and the reason; a good one reaches the runner with the
+  // script's arguments, the repository as cwd and a plain-text env, and the job ends as the command did. While an
+  // example runs, /__api/example-run says so with the time it started.
   {
-    assert.equal((await app.request('/__api/cli')).status, 405);
-    const form = await app.request('/__api/cli', post('x=1', 'application/x-www-form-urlencoded'));
+    const form = await app.request('/__api/jobs', post('x=1', 'application/x-www-form-urlencoded'));
     assert.equal(form.status, 400);
-    assert.deepEqual(await form.json(), { ok: false, output: 'Error: Content-Type must be application/json.' });
-
-    const empty = await app.request('/__api/cli', post({}));
-    assert.equal(empty.status, 400);
-    assert.equal((await empty.json()).ok, false);
-    const noCommand = await app.request('/__api/cli', post({}));
-    assert.match((await noCommand.json()).output, /Error: command must be/);
-
-    const outfit = await app.request('/__api/cli', post({ command: 'new-outfit-character', project, name: 'x', from: 'y', outfit: {} }));
+    assert.deepEqual(await form.json(), { ok: false, error: 'Content-Type must be application/json.' });
+    const noCommand = await app.request('/__api/jobs', post({}));
+    assert.equal(noCommand.status, 400);
+    assert.match((await noCommand.json()).error, /^command must be/);
+    const outfit = await app.request('/__api/jobs', post({ command: 'new-outfit-character', project, name: 'x', from: 'y', outfit: {} }));
     assert.equal(outfit.status, 400);
-    assert.deepEqual(await outfit.json(), { ok: false, output: 'Error: outfit must be an object with a pieces list.' });
+    assert.deepEqual(await outfit.json(), { ok: false, error: 'outfit must be an object with a pieces list.' });
 
-    // A good request reaches the runner with the script's arguments, the repository as cwd and a plain-text env.
+    const finished = async (id: string) => {
+      for (let i = 0; i < 200; i++) {
+        const job = (await (await app.request(`/__api/jobs/${id}`)).json()) as { state: string; output?: string };
+        if (job.state === 'succeeded' || job.state === 'failed') return job;
+        await new Promise((r) => setImmediate(r));
+      }
+      throw new Error(`job ${id} never finished`);
+    };
+
     calls.length = 0;
-    const res = await app.request('/__api/cli', post({ command: 'export', project }));
-    assert.equal(res.status, 200);
-    assert.deepEqual(await res.json(), { ok: true, output: 'done' });
+    const good = (await (await app.request('/__api/jobs', post({ command: 'gear-items', project }))).json()) as { job: { id: string } };
+    const goodJob = await finished(good.job.id);
+    assert.deepEqual([goodJob.state, goodJob.output], ['succeeded', 'done'], 'the job ends as the command did, with its output');
     assert.equal(calls.length, 1);
-    assert.deepEqual(calls[0].args, ['tools/export.ts', `projects/${project}`]);
+    assert.deepEqual(calls[0].args, ['tools/cli.ts', 'gear-items', `projects/${project}`]);
     assert.equal(calls[0].cwd, root);
     assert.equal(calls[0].env.NO_COLOR, '1', 'no ANSI colors in the output');
     assert.equal('FORCE_COLOR' in calls[0].env, false);
 
-    // A failed command is still a 200, with ok:false and its output (the viewer shows it).
     onRun = () => Promise.resolve({ ok: false, output: 'failed hard' });
-    const failed = await app.request('/__api/cli', post({ command: 'export', project }));
-    assert.equal(failed.status, 200);
-    assert.deepEqual(await failed.json(), { ok: false, output: 'failed hard' });
+    const bad = (await (await app.request('/__api/jobs', post({ command: 'gear-items', project, force: true }))).json()) as { job: { id: string } };
+    const failedJob = await finished(bad.job.id);
+    assert.deepEqual([failedJob.state, failedJob.output], ['failed', 'failed hard'], 'a failed command is a failed job, with its output');
     onRun = undefined;
 
-    // `example` while this server runs one: the second is a 409, never started. While it runs,
-    // /__api/example-run says so with the time it started.
     let release: (result: CommandResult) => void;
     onRun = () => new Promise((r) => { release = r; });
     const before = calls.length;
-    const first = app.request('/__api/cli', post({ command: 'example' }));
+    const sample = (await (await app.request('/__api/jobs', post({ command: 'example' }))).json()) as { job: { id: string } };
     await untilCalled(before + 1);
-    const running = await app.request('/__api/example-run');
-    const state = (await running.json()) as { running: boolean; startedAt?: string };
-    assert.equal(state.running, true, 'the in-flight run shows');
+    assert.deepEqual(calls[before].args, ['tools/cli.ts', 'example', '--progress'], 'example runs with --progress, for the export inside it');
+    const state = (await (await app.request('/__api/example-run')).json()) as { running: boolean; startedAt?: string };
+    assert.equal(state.running, true, 'the job going on shows');
     assert.ok(typeof state.startedAt === 'string' && !Number.isNaN(Date.parse(state.startedAt)), 'with when it started');
-
-    const second = await app.request('/__api/cli', post({ command: 'example' }));
-    assert.equal(second.status, 409);
-    assert.deepEqual(await second.json(), { ok: false, running: true, output: 'npm run example is already running: it brings the sample in.' });
-    assert.equal(calls.length, before + 1, 'the second example never ran');
-
     release!({ ok: true, output: 'brought in' });
-    const done = await first;
-    assert.equal(done.status, 200);
-    assert.deepEqual(await done.json(), { ok: true, output: 'brought in' });
+    await finished(sample.job.id);
     assert.deepEqual(await (await app.request('/__api/example-run')).json(), { running: false });
     onRun = undefined;
-
-    // `example` while another process holds the lock: a 409 too, and nothing runs.
-    writeFileSync(join(root, EXAMPLE_LOCK), JSON.stringify({ pid: process.pid, startedAt: '', command: 'npm run example' }));
-    const held = await app.request('/__api/cli', post({ command: 'example' }));
-    assert.equal(held.status, 409);
-    assert.equal((await held.json()).running, true);
-    assert.equal(calls.length, before + 1);
-    rmSync(join(root, EXAMPLE_LOCK));
   }
 
   // 9. A mounted path also answers under it (the connect mounts' rule: "/" borders a route); a path
@@ -278,16 +263,17 @@ try {
   // including a path that only happens to have "/" or "." at a route's length (tools/runner.html,
   // which the exporter's pages load).
   {
-    for (const path of ['/__api/server', '/__api/assets/extra', '/__api/assets.json', '/__api/cli/']) {
+    for (const path of ['/__api/server', '/__api/assets/extra', '/__api/assets.json', '/__api/delete/']) {
       assert.ok(isApiPath(path), `${path} reaches the API`);
     }
-    for (const path of ['/', '/index.html', '/viewer/', '/viewer/index.html', '/tools/runner.html', '/tools/sheet-runner.html', '/projects/demo/game/', '/packages/phaser/demo/', '/__api', '/__api/assetsx', '/__api/cli2', '/__apis/assets', '/@vite/client', '/src/app.ts']) {
+    for (const path of ['/', '/index.html', '/viewer/', '/viewer/index.html', '/tools/runner.html', '/tools/sheet-runner.html', '/projects/demo/game/', '/packages/phaser/demo/', '/__api', '/__api/assetsx', '/__api/delete2', '/__apis/assets', '/@vite/client', '/src/app.ts']) {
       assert.ok(!isApiPath(path), `${path} stays with Vite`);
     }
   }
 
   // The app's route table is what the dev server forwards (vite.config.ts reads it).
-  assert.ok(API_ROUTES.includes('/__api/cli') && API_ROUTES.length === 10, 'every route of the API is mounted');
+  assert.ok(API_ROUTES.includes('/__api/delete') && API_ROUTES.length === 9, 'every route of the API is mounted');
+  assert.ok(!isApiPath('/__api/cli'), 'the old command route is gone: commands are jobs');
   for (const path of ['/__api/jobs', '/__api/jobs/job-1', '/__api/events']) assert.ok(isApiPath(path), `${path} reaches the API`);
   assert.ok(!isApiPath('/__api/jobsx') && !isApiPath('/__api/eventsource'), 'the job routes border on "/", "." or the end too');
 
