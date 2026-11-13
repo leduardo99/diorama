@@ -60,7 +60,7 @@
     "class-variance-authority": "^0.7.1",
     "cmdk": "^1.1.1",
     "cn": "^0.5.0",
-    "hono": "^4.13.13",
+    "hono": "^4.13.18",
     "lucide-react": "^1.61.0",
     "paper": "^0.12.18",
     "picocolors": "^1.1.1",
